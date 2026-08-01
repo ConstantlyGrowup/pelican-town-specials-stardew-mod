@@ -6,8 +6,8 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.0 | MVP 运行形态、模块、数据模型、API、工作流、错误处理和 Mod 编译协议 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.2 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.1 | MVP 运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.4 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界，以及 Yibu 证据如何进入 Task 11 |
 | `StarValleyCook_项目设计源索引与状态快照.md` | 设计源索引、产品命名、阶段状态和文档同步线索；保持 ignored |
 | `docs/development/STATUS.md` | 当前开发 Session、工作树事实、阻塞和下一步；是开发状态唯一真源 |
 | `docs/development/sessions/` | 每个 Session 的追加式历史证据 |
@@ -24,6 +24,20 @@
 - 问问 Gus 使用完整原子重生成；料理蓝图只复用原始图片和基础模板；收集品不可编辑且不暴露来源模式。
 - Mod 目标为 Stardew Valley 1.6.15、Content Patcher 2.9.0、纯 JSON/PNG 内容包；本地 Mods 路径只从 `PTS_STARDEW_MODS_DIR` 获取。
 - `AuthorName` 在工作区首次创建时生成并持久化为 `D<YYYYMMDD>`；第三期重新讨论身份策略。
+
+## Yibu API 用户实测记录
+
+2026-08-01 下午，用户报告已经通过本地调用案例成功走通 Yibu API 核心链路。当前只把它作为 Provider Adapter 的真实能力证据，不把它视为 MVP 已启动或最终模型选择：
+
+- Base URL 候选：`https://yibuapi.com/v1`；鉴权使用 Bearer API Key。
+- 文本/视觉候选：OpenAI-compatible `POST /chat/completions`，请求携带多模态 `image_url` data URL；案例使用 `gpt-5.6-luna` 和 `reasoning_effort=high`。
+- 图像编辑成功路径：`POST /images/edits` multipart，案例使用 `gpt-image-2-max`、原图、Prompt 和 `size=3840x2160`；SDK 案例读取 `data[0].b64_json`。
+- 当前样例同时记录 `gpt-image-2`、`gpt-image-2-max`、URL/`b64_json`、尺寸/比例和质量参数；这些参数变体不能全部视为已由真实 provider 单独验证。
+- 当前样例记录含 `pro` 的图像模型会返回 500，因此 MVP 不默认使用 `gpt-image-2-pro`，也不做静默模型 fallback。
+- 多图案例以本地路径或 HTTP URL 加载，最多 10 张；这是调用案例能力，不直接冻结正式 MVP 上传上限。
+- `/images/generations`、JSON Schema、最终超时/限流、费用基线和正式产品模型仍需 Task 11 的显式 capability probe。
+
+证据位置：`samples/gpt-image-2-edit-multi.py`、`samples/gpt-image-2-edit-multi-url.py`、`samples/yibu-api-probe/`、`docs/development/sessions/2026-08-01-yibu-api-probe.md`。不得把真实 Key、原图或完整模型响应写入这些文件或 Git。
 
 ## 编码与测试约束
 

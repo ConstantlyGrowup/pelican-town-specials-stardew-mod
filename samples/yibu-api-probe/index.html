@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>一步 API · 模型能力测试</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #111827;
+        --panel: rgba(31, 41, 55, 0.92);
+        --panel-soft: #1f2937;
+        --line: #374151;
+        --text: #f3f4f6;
+        --muted: #9ca3af;
+        --accent: #f59e0b;
+        --accent-strong: #fbbf24;
+        --success: #34d399;
+        --danger: #fb7185;
+        --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% 0%, rgba(245, 158, 11, 0.16), transparent 32rem),
+          radial-gradient(circle at 95% 15%, rgba(16, 185, 129, 0.1), transparent 28rem),
+          var(--bg);
+        font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button, input, textarea, select { font: inherit; }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        color: #111827;
+        background: var(--accent);
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+      }
+
+      button:hover:not(:disabled) { background: var(--accent-strong); transform: translateY(-1px); }
+      button:disabled { cursor: not-allowed; opacity: 0.42; }
+
+      input[type="file"] { width: 100%; color: var(--muted); }
+
+      textarea, select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 0.8rem 0.9rem;
+        color: var(--text);
+        background: #111827;
+        outline: none;
+      }
+
+      textarea:focus, select:focus, input:focus-visible, button:focus-visible {
+        outline: 2px solid rgba(251, 191, 36, 0.75);
+        outline-offset: 2px;
+      }
+
+      textarea { min-height: 148px; resize: vertical; }
+
+      .shell { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 2.5rem 0 4rem; }
+      .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.5rem; }
+      .eyebrow { margin: 0 0 0.4rem; color: var(--accent-strong); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; }
+      h1, h2, p { margin-top: 0; }
+      h1 { max-width: 720px; margin-bottom: 0.55rem; font-size: clamp(2rem, 5vw, 4rem); line-height: 1; letter-spacing: -0.06em; }
+      .hero-copy { max-width: 700px; color: var(--muted); font-size: 1.03rem; }
+      .hero-note { max-width: 250px; margin: 0; color: #d1d5db; font-size: 0.86rem; text-align: right; }
+
+      .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1rem; }
+      .card { grid-column: span 12; border: 1px solid rgba(156, 163, 175, 0.18); border-radius: 20px; padding: 1.15rem; background: var(--panel); box-shadow: var(--shadow); }
+      .card.half { grid-column: span 6; }
+      .card h2 { margin-bottom: 0.25rem; font-size: 1.1rem; }
+      .section-note { margin-bottom: 1rem; color: var(--muted); font-size: 0.9rem; }
+
+      .status-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+      .status-pill { display: inline-flex; align-items: center; gap: 0.45rem; border-radius: 999px; padding: 0.35rem 0.7rem; color: #111827; background: var(--success); font-size: 0.8rem; font-weight: 800; }
+      .status-pill.pending { color: #111827; background: var(--accent); }
+      .status-pill.error { color: white; background: var(--danger); }
+      .status-detail { color: var(--muted); font-size: 0.85rem; }
+
+      .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.65rem; margin: 0; }
+      .fact { min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 0.65rem 0.75rem; background: rgba(17, 24, 39, 0.65); }
+      .fact dt { color: var(--muted); font-size: 0.72rem; }
+      .fact dd { overflow: hidden; margin: 0.2rem 0 0; color: var(--text); font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
+
+      .input-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1rem; }
+      .drop-zone { display: grid; place-items: center; min-height: 245px; border: 1px dashed #6b7280; border-radius: 16px; padding: 1rem; background: rgba(17, 24, 39, 0.55); text-align: center; }
+      .drop-zone.has-image { display: block; padding: 0.65rem; border-style: solid; border-color: rgba(52, 211, 153, 0.65); }
+      .drop-zone img { display: block; width: 100%; max-height: 285px; border-radius: 11px; object-fit: contain; background: #030712; }
+      .upload-copy { color: var(--muted); }
+      .upload-copy strong { display: block; margin-bottom: 0.35rem; color: var(--text); }
+      .field { margin-bottom: 1rem; }
+      label { display: block; margin-bottom: 0.45rem; color: #d1d5db; font-size: 0.86rem; font-weight: 700; }
+      .hint { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.78rem; }
+      .meta-line { min-height: 1.3rem; margin: 0.65rem 0 0; color: var(--muted); font-size: 0.82rem; }
+      .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; }
+      .secondary { color: var(--text); background: #374151; }
+      .secondary:hover:not(:disabled) { background: #4b5563; }
+
+      .prompt-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 1rem; }
+      .prompt-layout button { white-space: nowrap; }
+      .mode-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: end; }
+      .result-frame { min-height: 360px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #030712; }
+      .result-frame img { display: block; width: 100%; max-height: 600px; object-fit: contain; }
+      .result-empty { padding: 2rem; color: #6b7280; text-align: center; }
+      .error-box { display: none; margin-top: 1rem; border: 1px solid rgba(251, 113, 133, 0.45); border-radius: 12px; padding: 0.8rem; color: #fecdd3; background: rgba(127, 29, 29, 0.28); white-space: pre-wrap; }
+      .error-box.visible { display: block; }
+      .badge-note { display: inline-block; border-radius: 999px; padding: 0.16rem 0.5rem; color: #fef3c7; background: rgba(245, 158, 11, 0.2); font-size: 0.72rem; font-weight: 800; }
+
+      @media (max-width: 760px) {
+        .shell { width: min(100% - 1rem, 680px); padding-top: 1.4rem; }
+        .hero { display: block; }
+        .hero-note { max-width: none; margin-top: 1rem; text-align: left; }
+        .card.half { grid-column: span 12; }
+        .input-grid, .mode-grid, .prompt-layout { grid-template-columns: 1fr; }
+        .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Provider Smoke Test · Local Only</p>
+          <h1>把一句话，变成可用的图像指令。</h1>
+          <p class="hero-copy">上传一张图片，让多模态文本模型先理解“原图 + 你的想法”，再交给图像模型生成结果。Prompt 会先展示给你检查和修改。</p>
+        </div>
+        <p class="hero-note">API Key 只在本地 Python 进程中使用。这个页面不会要求你把 Key 填进浏览器。</p>
+      </header>
+
+      <div class="grid">
+        <section class="card" aria-labelledby="connection-title">
+          <div class="status-row">
+            <span id="statusPill" class="status-pill pending">连接检查中</span>
+            <span id="statusDetail" class="status-detail">正在读取本地服务状态…</span>
+          </div>
+          <h2 id="connection-title">连接状态</h2>
+          <p class="section-note">只显示非机密配置和 Key 是否已注入，不显示 Key 内容。</p>
+          <dl class="facts">
+            <div class="fact"><dt>Base URL</dt><dd id="baseUrl">—</dd></div>
+            <div class="fact"><dt>Prompt 模型</dt><dd id="textModel">—</dd></div>
+            <div class="fact"><dt>图像模型</dt><dd id="imageModel">—</dd></div>
+            <div class="fact"><dt>图像配置</dt><dd id="imageSettings">—</dd></div>
+          </dl>
+        </section>
+
+        <section class="card half" aria-labelledby="input-title">
+          <h2 id="input-title">1 · 上传图片与描述</h2>
+          <p class="section-note">图片只保留在当前页面内存中，支持 PNG、JPEG、WEBP，默认上限 10 MiB。</p>
+          <div class="input-grid">
+            <div>
+              <div id="dropZone" class="drop-zone">
+                <div class="upload-copy">
+                  <strong>选择一张原图</strong>
+                  <span>它会同时用于视觉理解和编辑实验</span>
+                </div>
+                <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
+              </div>
+              <p id="imageMeta" class="meta-line">尚未选择图片</p>
+            </div>
+            <div>
+              <div class="field">
+                <label for="instructionInput">你想怎么改？</label>
+                <textarea id="instructionInput" maxlength="2000" placeholder="例如：把背景改成春天的樱花森林，保留主体和原来的姿势。"></textarea>
+                <p class="hint">用一句话描述变化即可，模型会补充可执行的视觉细节。</p>
+              </div>
+              <div class="field">
+                <label for="reasoningEffort">文本模型推理强度</label>
+                <select id="reasoningEffort">
+                  <option value="high" selected>high · 更重视细节</option>
+                  <option value="medium">medium · 平衡速度与细节</option>
+                  <option value="low">low · 更快</option>
+                </select>
+              </div>
+              <div class="actions">
+                <button id="generatePromptButton" type="button">生成编辑指令</button>
+                <span id="promptStatus" class="status-detail"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card half" aria-labelledby="prompt-title">
+          <h2 id="prompt-title">2 · 检查编辑 Prompt</h2>
+          <p class="section-note">这是文本模型生成的结果，你可以在交给图像模型前直接修改。</p>
+          <textarea id="promptOutput" placeholder="生成后，编辑指令会出现在这里。" aria-label="可编辑的图像 Prompt"></textarea>
+          <p id="promptMeta" class="meta-line">尚未生成 Prompt</p>
+        </section>
+
+        <section class="card" aria-labelledby="image-title">
+          <div class="mode-grid">
+            <div>
+              <h2 id="image-title">3 · 生成图片</h2>
+              <p id="modeHint" class="section-note">默认按 gpt-image-2-edit-multi*.py 实测路径调用：原图 + Prompt → /images/edits。</p>
+            </div>
+            <div class="field">
+              <label for="imageMode">图像模式</label>
+              <select id="imageMode">
+                <option value="edit" selected>图生图编辑（推荐，已实测可用）</option>
+                <option value="generate">从文本生成（无原图参与）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="imageModelSelect">图像模型</label>
+              <select id="imageModelSelect">
+                <option value="gpt-image-2">gpt-image-2</option>
+                <option value="gpt-image-2-max" selected>gpt-image-2-max</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="imageSizeTierSelect">输出尺寸（分辨率）</label>
+              <select id="imageSizeTierSelect">
+                <option value="1K">1K · 1280 长边</option>
+                <option value="2K" selected>2K · 2560 长边</option>
+                <option value="4K">4K · 3840 长边</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="imageAspectRatioSelect">输出比例</label>
+              <select id="imageAspectRatioSelect">
+                <option value="1:1" selected>1:1 · 方形</option>
+                <option value="16:9">16:9 · 横向</option>
+                <option value="9:16">9:16 · 竖向</option>
+                <option value="4:3">4:3 · 横向</option>
+                <option value="3:4">3:4 · 竖向</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="generateImageButton" type="button" disabled>生成图片</button>
+            <span id="imageStatus" class="status-detail"></span>
+          </div>
+          <div class="result-frame" style="margin-top: 1rem;">
+            <div id="resultEmpty" class="result-empty">生成的图片会显示在这里。</div>
+            <img id="resultImage" alt="生成结果" hidden />
+          </div>
+          <p id="resultMeta" class="meta-line">结果尚未生成</p>
+          <p id="revisedPrompt" class="meta-line"></p>
+          <div id="errorBox" class="error-box" role="alert"></div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      (() => {
+        let maxUploadBytes = 10 * 1024 * 1024;
+        const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+        const state = { imageDataUrl: "", fileName: "", prompt: "" };
+
+        const $ = (id) => document.getElementById(id);
+        const imageInput = $("imageInput");
+        const dropZone = $("dropZone");
+        const imagePreview = document.createElement("img");
+        imagePreview.alt = "原图预览";
+        imagePreview.hidden = true;
+        dropZone.insertBefore(imagePreview, dropZone.firstChild);
+
+        function showError(message) {
+          const box = $("errorBox");
+          box.textContent = message || "发生了未知错误。";
+          box.classList.add("visible");
+        }
+
+        function clearError() {
+          $("errorBox").textContent = "";
+          $("errorBox").classList.remove("visible");
+        }
+
+        function setBusy(button, busy, busyText) {
+          if (!button.dataset.idleText) button.dataset.idleText = button.textContent;
+          button.disabled = busy;
+          button.textContent = busy ? busyText : button.dataset.idleText;
+        }
+
+        async function requestJson(path, options = {}) {
+          const response = await fetch(path, {
+            ...options,
+            headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            const error = payload.error || {};
+            const detail = error.upstreamStatus ? `（上游状态 ${error.upstreamStatus}）` : "";
+            throw new Error(`${error.message || `请求失败：${response.status}`}${detail}`);
+          }
+          return payload;
+        }
+
+        function formatUsage(usage) {
+          if (!usage || typeof usage !== "object") return "";
+          if (usage.total_tokens != null) return `usage ${usage.total_tokens} tokens`;
+          if (usage.totalTokens != null) return `usage ${usage.totalTokens} tokens`;
+          return "";
+        }
+
+        function formatMiB(bytes) {
+          return (bytes / 1024 / 1024).toFixed(0) + " MiB";
+        }
+
+        async function loadHealth() {
+          try {
+            const health = await requestJson("/api/health", { method: "GET", headers: {} });
+            $("baseUrl").textContent = health.baseUrl || "—";
+            $("textModel").textContent = `${health.textModel || "—"} · ${health.textReasoningEffort || "—"}`;
+            $("imageModel").textContent = health.imageModel || "—";
+            const modelSelect = $("imageModelSelect");
+            if (["gpt-image-2", "gpt-image-2-max"].includes(health.imageModel)) {
+              modelSelect.value = health.imageModel;
+            }
+            const sizeTierSelect = $("imageSizeTierSelect");
+            if (
+              sizeTierSelect &&
+              typeof health.imageSizeTier === "string" &&
+              [...sizeTierSelect.options].some((option) => option.value === health.imageSizeTier)
+            ) {
+              sizeTierSelect.value = health.imageSizeTier;
+            }
+            const aspectRatioSelect = $("imageAspectRatioSelect");
+            if (
+              aspectRatioSelect &&
+              typeof health.imageAspectRatio === "string" &&
+              [...aspectRatioSelect.options].some((option) => option.value === health.imageAspectRatio)
+            ) {
+              aspectRatioSelect.value = health.imageAspectRatio;
+            }
+            if (Number.isFinite(health.maxUploadBytes) && health.maxUploadBytes > 0) {
+              maxUploadBytes = health.maxUploadBytes;
+            }
+            $("imageSettings").textContent = `${health.imageSize || "—"} · ${health.imageResponseFormat || "—"}`;
+            const pill = $("statusPill");
+            if (health.apiKeyConfigured) {
+              pill.textContent = "本地服务已连接 · Key 已配置";
+              pill.className = "status-pill";
+              $("statusDetail").textContent = "可以开始生成 Prompt。";
+            } else {
+              pill.textContent = "本地服务已连接 · 未配置 Key";
+              pill.className = "status-pill pending";
+              $("statusDetail").textContent = "启动服务的终端需要注入 API Key。";
+            }
+          } catch (error) {
+            $("statusPill").textContent = "本地服务不可用";
+            $("statusPill").className = "status-pill error";
+            $("statusDetail").textContent = "请先启动 samples/yibu-api-probe/server.py。";
+            showError(error.message);
+          }
+        }
+
+        function handleFile(file) {
+          clearError();
+          if (!file) return;
+          if (!ALLOWED_TYPES.has(file.type)) {
+            showError("图片格式不支持，请选择 PNG、JPEG 或 WEBP。 ");
+            return;
+          }
+          if (file.size > maxUploadBytes) {
+            showError("图片超过 " + formatMiB(maxUploadBytes) + " 上限，请先压缩后再试。 ");
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            state.imageDataUrl = String(reader.result || "");
+            state.fileName = file.name;
+            imagePreview.src = state.imageDataUrl;
+            imagePreview.hidden = false;
+            dropZone.classList.add("has-image");
+            $("imageMeta").textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MiB`;
+            $("generateImageButton").disabled = !state.prompt;
+          };
+          reader.onerror = () => showError("浏览器读取图片失败，请重新选择。 ");
+          reader.readAsDataURL(file);
+        }
+
+        imageInput.addEventListener("change", () => handleFile(imageInput.files[0]));
+        $("imageMode").addEventListener("change", (event) => {
+          if (event.target.value === "edit") {
+            $("modeHint").innerHTML = '<span class="badge-note">推荐</span> 原图 + Prompt → /images/edits，与 gpt-image-2-edit-multi*.py 成功案例一致。';
+          } else {
+            $("modeHint").innerHTML = '<span class="badge-note">备选</span> 仅 Prompt → /images/generations，原图不参与生成。';
+          }
+        });
+
+        $("generatePromptButton").addEventListener("click", async () => {
+          clearError();
+          const instruction = $("instructionInput").value.trim();
+          if (!state.imageDataUrl) return showError("请先上传一张图片。 ");
+          if (!instruction) return showError("请先写一句图片修改需求。 ");
+          const button = $("generatePromptButton");
+          setBusy(button, true, "生成中…");
+          $("promptStatus").textContent = "正在调用多模态文本模型…";
+          try {
+            const result = await requestJson("/api/prompt", {
+              method: "POST",
+              body: JSON.stringify({
+                imageDataUrl: state.imageDataUrl,
+                userInstruction: instruction,
+                reasoningEffort: $("reasoningEffort").value,
+              }),
+            });
+            state.prompt = result.prompt || "";
+            $("promptOutput").value = state.prompt;
+            $("promptMeta").textContent = `${result.model || "文本模型"} · ${result.elapsedMs ?? "—"} ms · ${formatUsage(result.usage)}`;
+            $("promptStatus").textContent = "Prompt 已生成，可继续修改。";
+            $("generateImageButton").disabled = !state.prompt || !state.imageDataUrl;
+          } catch (error) {
+            $("promptStatus").textContent = "Prompt 生成失败";
+            showError(error.message);
+          } finally {
+            setBusy(button, false, "生成中…");
+          }
+        });
+
+        $("promptOutput").addEventListener("input", (event) => {
+          state.prompt = event.target.value.trim();
+          $("generateImageButton").disabled = !state.prompt || !state.imageDataUrl;
+        });
+
+        $("generateImageButton").addEventListener("click", async () => {
+          clearError();
+          state.prompt = $("promptOutput").value.trim();
+          if (!state.imageDataUrl) return showError("请先上传一张图片。 ");
+          if (!state.prompt) return showError("请先生成或填写编辑 Prompt。 ");
+          const button = $("generateImageButton");
+          setBusy(button, true, "生成中…");
+          $("imageStatus").textContent = "正在调用图像模型，可能需要几分钟…";
+          try {
+            const result = await requestJson("/api/image", {
+              method: "POST",
+              body: JSON.stringify({
+                imageDataUrl: state.imageDataUrl,
+                prompt: state.prompt,
+                mode: $("imageMode").value,
+                model: $("imageModelSelect").value,
+                sizeTier: $("imageSizeTierSelect").value,
+                aspectRatio: $("imageAspectRatioSelect").value,
+              }),
+            });
+            const imageSource = result.imageDataUrl || result.imageUrl;
+            if (!imageSource) throw new Error("供应商没有返回图片 URL 或 base64 图片。 ");
+            $("resultImage").src = imageSource;
+            $("resultImage").hidden = false;
+            $("resultEmpty").hidden = true;
+            $("revisedPrompt").textContent = result.revisedPrompt
+              ? "模型修订 Prompt：" + result.revisedPrompt
+              : "";
+            const urlNote = result.imageUrl ? " · 临时 URL" : " · 内存图片";
+            $("resultMeta").textContent = `${result.model || "图像模型"} · ${result.elapsedMs ?? "—"} ms · ${formatUsage(result.usage)}${urlNote}`;
+            $("imageStatus").textContent = "图片已返回。";
+          } catch (error) {
+            $("imageStatus").textContent = "图片生成失败";
+            showError(error.message);
+          } finally {
+            setBusy(button, false, "生成中…");
+          }
+        });
+
+        loadHealth();
+      })();
+    </script>
+  </body>
+</html>
