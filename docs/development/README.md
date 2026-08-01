@@ -33,4 +33,4 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-本项目目前只完成开发控制面的初始化，产品代码和 MVP Task 仍未开始。以 `STATUS.md` 中的活动 Session 和下一步为准。
+本项目已完成 MVP Task 2（FastAPI 后端骨架与 OpenAPI 真源），当前没有活动产品 Session；核心产品流程与前端仍未开始。以 `STATUS.md` 中的当前 Session 和下一步为准。

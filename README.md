@@ -5,4 +5,4 @@ Put your dish on Pelican Town's next menu.
 
 ## 当前状态
 
-产品实现尚未开始，本仓库处于初始化阶段。MVP Task 1 的范围仅为仓库骨架（忽略规则、文本归一化、许可证、根级命令与仓库级验证脚本），不包含任何可运行的产品代码。
+当前已完成 MVP Task 2：FastAPI 后端最小骨架、健康检查接口和 OpenAPI 真源已提交。核心产品流程与前端仍未开始；下一步 MVP Task 3 需用户明确授权后，以新的修改型 Session 启动。

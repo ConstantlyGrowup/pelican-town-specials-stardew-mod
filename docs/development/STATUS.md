@@ -9,10 +9,10 @@
 | `overall_state` | `committed` |
 | `project_phase` | `mvp-m0-runnable-skeleton` |
 | `product_implementation_started` | `true` |
-| `active_session_id` | 无（`2026-08-01-task-2-backend-shell` 已 committed 关闭） |
+| `active_session_id` | 无（`2026-08-01-control-plane-tooling-cleanup` 已 committed 关闭） |
 | `active_session_state` | 无 |
 | `active_session_type` | 无 |
-| `current_task` | 无活动 Task；MVP Task 2 已完成并提交推送 |
+| `current_task` | 无活动 Task；MVP Task 2 与控制面维护已完成并提交 |
 | `blocker` | 无 |
 | `next_action` | MVP Task 3（React 前端骨架与生成式 API Client）等待用户另行明确授权后，以新修改型 Session 启动 |
 
@@ -24,18 +24,18 @@
 | 当前分支 | `feat/mvp-implementation`（正式实现功能分支，已推送） |
 | `origin` | `https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git` |
 | 初始提交 | `517f844 chore: add serial agent handoff control plane` |
-| 最新提交 | Task 2 focused commit：`feat: add FastAPI application shell`（feat/mvp-implementation） |
-| 远端操作 | main 已由用户推送；feat/mvp-implementation 已由主 Agent 推送（用户授权）；无 fetch 冲突 |
-| 当前未提交变更 | 无（Task 2 范围已全部进入上述 focused commit） |
+| 最新提交 | 控制面维护 focused commit：`chore: align agent control plane and remove uv lockfile`（feat/mvp-implementation） |
+| 远端操作 | main 与 feat/mvp-implementation 的既有推送保持不变；本次维护未 push |
+| 当前未提交变更 | 无（本次维护范围已进入上述 focused commit） |
 
-## 本次 Session 范围
+## 本次维护 Session 范围
 
-- `backend/` 骨架：pyproject（§1.5 版本范围）、`__init__.py`、`config.py`（AppConfig 仅读 `PTS_` 前缀）、`api/app.py`（create_app）、`api/routes/health.py`、`domain/common.py`（camelCase alias 基类）。
-- `backend/tests/api/test_health.py` 先失败后通过（TDD）；`scripts/export_openapi.py` 生成 `frontend/openapi.json`。
-- `backend/uv.lock` 生成并提交；`backend/.venv/` 保持 ignored。
-- 不启动 Task 3，不做真实模型调用；提交与推送均在本 Session 验收后按授权执行。
+- 更新 `AGENTS.md`，纠正已完成 Task 2 与当前无活动产品 Session 的状态，并明确开发工具不等于产品功能。
+- 同步 `README.md` 与 `docs/development/README.md` 的当前状态说明。
+- 移除仓库中的 uv 专属依赖 lockfile `backend/uv.lock`；保留 `backend/pyproject.toml` 的依赖/构建声明与 `.gitignore` 的通用 `.venv/` 保护规则。
+- 不修改业务实现、不启动 Task 3、不做真实模型调用。
 
-## 验收前检查
+## 已完成 Task 2 的验收证据
 
 - [x] `uv sync --project backend --all-groups` 成功，生成 `backend/uv.lock` 无冲突（CPython 3.13.14）。
 - [x] health 测试先确认失败（红：ModuleNotFoundError），实现后通过（绿：1 passed）。
@@ -44,6 +44,15 @@
 - [x] Review Subagent 规格符合性与代码质量检查通过（PASS）。
 - [x] 用户已验收 verification 结果（2026-08-01：“task2可以验收并推送”；用户已查看本地 /docs 与 health 响应）。
 - [x] 已创建一个 focused commit（`feat: add FastAPI application shell`）并推送 feat/mvp-implementation。
+
+## 本次维护检查
+
+- [x] 未发现 `backend/.venv`、`backend/venv` 或 `backend/virtualenv` 目录。
+- [x] `backend/pyproject.toml` 保留为后端依赖、构建和工具声明；未删除运行所需的 FastAPI/Uvicorn 等依赖。
+- [x] 未修改业务源代码、测试或 OpenAPI 契约。
+- [x] uv 相关内容仅在已关闭 Task 2 的历史验收记录中保留，未篡改历史证据。
+- [x] 用户已明确验收本次控制面维护（2026-08-01：“当前验收通过”）。
+- [x] 已创建 focused commit；本次未推送远端。
 
 ## 状态规则
 

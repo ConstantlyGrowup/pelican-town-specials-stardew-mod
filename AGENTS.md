@@ -6,7 +6,7 @@
 
 1. 读取本文件。
 2. 读取 `docs/development/STATUS.md`，确认唯一活动 Session、Session 状态和精确下一步。
-3. 读取 `docs/development/sessions/` 中由 `STATUS.md` 指定的当前 Session 记录。
+3. 读取 `docs/development/sessions/` 中由 `STATUS.md` 指定的当前 Session 记录；如果没有活动 Session，则读取最近一次已关闭 Session 和本次明确的维护 Session。
 4. 读取 `docs/development/CONSTRAINTS.md`。
 5. 根据任务范围读取 `docs/architecture/MVP_TECHNICAL_DESIGN.md`、`docs/plans/MVP_IMPLEMENTATION_PLAN.md` 和项目设计源索引。
 6. 在修改前检查 `git status --short`、`git diff` 和最近 Git 历史；需要时再读取历史 Session。
@@ -15,13 +15,21 @@
 
 ## 当前工作模式
 
-当前项目处于“开发控制面已建立、产品开发尚未开始”阶段。除非用户明确授权开始实施，否则：
+当前项目处于“开发控制面已建立、MVP Task 2 已完成并提交、当前无活动产品 Session”阶段。除非用户明确授权启动新的修改型 Session，否则：
 
-- 不执行 MVP 的 Task 1 或后续 Task；
+- 不重复执行已完成的 MVP Task 1 或 Task 2；
+- 不启动 MVP Task 3 或后续 Task；
 - 不派发实现型 Subagent；
-- 不创建业务代码、依赖、前端或后端骨架；
-- 不把“控制面初始化”误记为产品功能完成；
+- 不创建新的业务代码、依赖、前端或后端功能骨架；
+- 不把开发工具整理或控制面维护误记为产品功能完成；
 - 不创建自动提交、自动推送或自动发布流程。
+
+## 开发工具与产品范围
+
+- `backend/pyproject.toml` 仅负责 Python 依赖、构建和检查工具声明；它不是产品功能。
+- `uv`、依赖 lockfile 和本地 `.venv` 属于开发工具链，不属于应用运行时或产品主线；不得把环境创建、依赖解析或 lockfile 维护计入 MVP 功能进度。
+- 本地虚拟环境必须保持在 Git 之外；`.gitignore` 中的 `.venv/` 是通用保护规则，不代表仓库需要提交虚拟环境。
+- 若要重新引入某个依赖管理工具或 lockfile，必须作为单独的工具链维护任务明确授权，不得在产品 Task 中顺手加入。
 
 ## 串行 Session 规则
 
