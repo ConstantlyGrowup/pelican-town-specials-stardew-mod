@@ -31,6 +31,7 @@ test-results/
 # Local agent and verification scratch space
 output/
 .superpowers/
+.workbuddy/
 
 # User-provided document and archive assets should not be committed by default.
 *.docx

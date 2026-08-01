@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | `overall_state` | `committed` |
-| `project_phase` | `auxiliary-provider-probe` |
-| `product_implementation_started` | `false` |
-| `active_session_id` | 无（`2026-08-01-yibu-api-probe` 已 committed 关闭） |
+| `project_phase` | `mvp-m1-repo-skeleton` |
+| `product_implementation_started` | `true` |
+| `active_session_id` | 无（`2026-08-01-task-1-repo-init` 已 committed 关闭） |
 | `active_session_state` | 无 |
 | `active_session_type` | 无 |
-| `current_task` | 无活动 Task；用户已授权启动 MVP Task 1 |
+| `current_task` | 无活动 Task；MVP Task 1 已完成并提交 |
 | `blocker` | 无 |
-| `next_action` | 以新修改型 Session 启动 MVP Task 1（初始化仓库、忽略策略与开发工具链） |
+| `next_action` | MVP Task 2（FastAPI 后端骨架与 OpenAPI 真源）等待用户另行明确授权后，以新修改型 Session 启动 |
 
 ## 当前 Git 状态事实
 
@@ -24,29 +24,25 @@
 | 初始分支 | `main` |
 | `origin` | `https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git` |
 | 初始提交 | `517f844 chore: add serial agent handoff control plane` |
-| 最新提交 | 本辅助 Session 的 focused commit：`test: add yibu api provider smoke test sample` |
+| 最新提交 | Task 1 focused commit：`chore: initialize Pelican Town Specials repository` |
 | 远端操作 | 仅写入本地 remote 配置；尚未 fetch、pull 或 push |
-| 当前未提交变更 | 无（本辅助 Session 范围已全部进入上述 focused commit） |
+| 当前未提交变更 | 无（Task 1 范围已全部进入上述 focused commit） |
 
 ## 本次 Session 范围
 
-- 创建 `samples/yibu-api-probe/` 独立 provider smoke test、启动脚本和使用说明。
-- 将 API Key 限定为当前 PowerShell/Python 进程的 `PTS_OPENAI_API_KEY`，不写入 HTML、日志、请求 URL 或仓库。
-- 记录用户已手动成功走通的 `gpt-5.6-luna` 多模态 Prompt 与 `gpt-image-2-max` `/images/edits` 路径；generation、JSON Schema 和最终模型选择仍不冻结。
-- 更新本辅助 Session 的设计、实施计划和状态记录；不执行 MVP Task 1，不创建正式产品前后端骨架，不发起真实中转站调用。
+- 复核并补齐 `.gitignore`（设计资料五路径等最小集，另补 agent 本地 `.workbuddy/` 目录）。
+- 创建 `.gitattributes`、`README.md`、`LICENSE`（MIT）、根级 `package.json`、`scripts/verify_local_docs_ignored.ps1`。
+- 完成计划 Step 1–4 验证；Step 5 提交在验收后由主 Agent 执行。
+- 不启动 Task 2，不安装依赖，不修改 `samples/` 和设计资料，不进行远端操作。
 
 ## 验收前检查
 
-- [x] 控制面文件路径已建立。
-- [x] 设计资料与本地规划路径已写入 `.gitignore`。
-- [x] Git 仓库当前分支为 `main`，基线为 `517f844`。
-- [x] `origin` 已配置；本 Session 尚未进行 fetch、pull、push 或发布。
-- [x] 样例自动化测试已通过（39 tests）。
-- [x] 本地服务路由、无 Key health、API Key 脱敏和默认 `gpt-image-2-max` 编辑参数已通过代码级验证。
-- [x] 主 Agent 未执行真实中转站调用；用户已报告其本地 Key 下成功走通 Chat 与图像编辑链路，证据已写入辅助 Session。
-- [x] 用户实测的 Base URL、模型候选、multipart 参数、尺寸和 `b64_json` 响应路径已同步技术设计、实施计划和项目索引。
-- [x] MVP 产品实现仍未开始。
-- [x] 用户已验收 verification 结果（2026-08-01：“验收。并且可以进行task1”）。
+- [x] `.gitignore` 复核补齐，五个本地文档路径 `git check-ignore --quiet` 全部命中。
+- [x] `.gitattributes`、`README.md`、`LICENSE`、`package.json`、验证脚本已创建且内容符合计划。
+- [x] Step 2 验证命令（git toplevel、remote、验证策略）全部通过；pwsh 脚本端到端退出码因本环境 PowerShell 工具故障未能记录，已用等价 `git check-ignore` 逐路径验证，留作用户侧人工验证。
+- [x] Step 4：`git status --short` 只列仓库骨架与控制面候选；`git status --ignored --short` 设计目录显示 `!!`。
+- [x] Review Subagent 规格符合性与代码质量检查通过（PASS）。
+- [x] 用户已验收 verification 结果（2026-08-01：“task1通过验收”；LICENSE 版权人 `ConstantlyGrowup` 随验收确认）。
 - [x] 已创建一个 focused commit；未 push。
 
 ## 状态规则

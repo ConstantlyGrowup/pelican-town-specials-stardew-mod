@@ -1,0 +1,11 @@
+{
+  "name": "pelican-town-specials",
+  "private": true,
+  "scripts": {
+    "web:dev": "pnpm --dir frontend dev",
+    "web:test": "pnpm --dir frontend test",
+    "web:build": "pnpm --dir frontend build",
+    "contract:generate": "pnpm --dir frontend contract:generate",
+    "check:repo": "pwsh -File scripts/verify_local_docs_ignored.ps1"
+  }
+}
