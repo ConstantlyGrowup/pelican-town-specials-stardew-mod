@@ -23,6 +23,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.4,<10",
+    "httpx2>=2,<3",
     "pytest-asyncio>=1,<2",
     "respx>=0.22,<1",
     "ruff>=0.12,<1",

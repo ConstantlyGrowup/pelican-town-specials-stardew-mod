@@ -6,60 +6,78 @@
 
 | 字段 | 值 |
 |---|---|
-| `overall_state` | `committed` |
-| `project_phase` | `mvp-m0-runnable-skeleton` |
-| `product_implementation_started` | `true` |
-| `active_session_id` | 无（`2026-08-01-control-plane-tooling-cleanup` 已 committed 关闭） |
-| `active_session_state` | 无 |
-| `active_session_type` | 无 |
-| `current_task` | 无活动 Task；MVP Task 2 与控制面维护已完成并提交 |
-| `blocker` | 无 |
-| `next_action` | MVP Task 3（React 前端骨架与生成式 API Client）等待用户另行明确授权后，以新修改型 Session 启动 |
+| overall_state | accepted |
+| project_phase | mvp-m0-runnable-skeleton |
+| product_implementation_started | true |
+| active_session_id | 2026-08-02-task-3-frontend-shell |
+| active_session_state | accepted |
+| active_session_type | mvp-task-implementation |
+| current_task | MVP Task 3 与本地启动闭环：React 前端骨架、typed health probe、标准 Uvicorn 启动入口；已验收 |
+| blocker | 无（Task 3 验收已通过；独立启动/环境配置改动不属于本 Session） |
+| next_action | Task 3 与后端启动闭环共同使用 `feat: add React application shell` amend 边界；结果以 Git 与 origin 状态为准 |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | `feat/mvp-implementation`（正式实现功能分支，已推送） |
-| `origin` | `https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git` |
-| 初始提交 | `517f844 chore: add serial agent handoff control plane` |
-| 最新提交 | 控制面维护 focused commit：`chore: align agent control plane and remove uv lockfile`（feat/mvp-implementation） |
-| 远端操作 | main 与 feat/mvp-implementation 的既有推送保持不变；本次维护未 push |
-| 当前未提交变更 | 无（本次维护范围已进入上述 focused commit） |
+| 当前分支 | feat/mvp-implementation（正式实现功能分支，已推送） |
+| origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
+| 初始提交 | 517f844 chore: add serial agent handoff control plane |
+| 最新提交 | 以 Git HEAD 为准；Task 3 focused commit 边界为 `feat: add React application shell` |
+| 远端操作 | Task 3 与后端启动闭环的 amend/push 已获用户授权；最终状态以 origin/feat/mvp-implementation 为准 |
+| 当前工作树范围 | Task 3 前端文件、后端启动入口/开发依赖/回归测试及 `docs/superpowers/plans/2026-08-02-startup-dependency-fix.md` 共同属于 `feat: add React application shell` amend 边界 |
 
-## 本次维护 Session 范围
+## 当前 Task 3 Session（已验收）
 
-- 更新 `AGENTS.md`，纠正已完成 Task 2 与当前无活动产品 Session 的状态，并明确开发工具不等于产品功能。
-- 同步 `README.md` 与 `docs/development/README.md` 的当前状态说明。
-- 移除仓库中的 uv 专属依赖 lockfile `backend/uv.lock`；保留 `backend/pyproject.toml` 的依赖/构建声明与 `.gitignore` 的通用 `.venv/` 保护规则。
-- 不修改业务实现、不启动 Task 3、不做真实模型调用。
+- `2026-08-02-task-3-frontend-shell` 已完成 verification 并通过用户验收，范围严格限定为 MVP Task 3：React/Vite/TypeScript 前端骨架、OpenAPI 生成类型、same-origin typed client、正式产品首屏和启动健康检查。
+- 用户明确反馈已手动启动 Vite 与后端，首页显示正常，Network 中 health 请求返回 200，并确认“task3可以验收通过了”。
+- 本 Session 的 focused commit amend 边界包含前端壳层、标准 Uvicorn `app` 入口、开发依赖兼容性调整和启动回归测试；不改变 API 路由、不调用真实模型、不实现 Task 4 或后续领域页面。
+- Task 3 保持不重新引入 `uv.lock`、`.venv` 或其他 Python 虚拟环境配置；前端依赖使用 pnpm workspace 与根 `pnpm-lock.yaml`。
+
+## 上一已关闭维护 Session 范围
+
+- 更新 AGENTS.md，纠正已完成 Task 2 与当前无活动产品 Session 的状态，并明确开发工具不等于产品功能。
+- 同步 README.md 与 docs/development/README.md 的当前状态说明。
+- 移除仓库中的 uv 专属依赖 lockfile backend/uv.lock；保留 backend/pyproject.toml 的依赖/构建声明与 .gitignore 的通用 .venv/保护规则。
+- 不修改业务实现、不启动 Task 3、不做真实模型调用；该 Session 已在 c4cedf0 提交并推送。
 
 ## 已完成 Task 2 的验收证据
 
-- [x] `uv sync --project backend --all-groups` 成功，生成 `backend/uv.lock` 无冲突（CPython 3.13.14）。
+- [x] uv sync --project backend --all-groups 成功，生成 backend/uv.lock 无冲突（CPython 3.13.14）。
 - [x] health 测试先确认失败（红：ModuleNotFoundError），实现后通过（绿：1 passed）。
-- [x] `ruff check backend` 与 `mypy backend/src` 通过（0 issues，strict 亦验证通过）。
-- [x] `frontend/openapi.json` 含 `/api/v1/health` 与 `HealthResponse`（camelCase `apiVersion`）。
+- [x] ruff check backend 与 mypy backend/src 通过（0 issues，strict 亦验证通过）。
+- [x] frontend/openapi.json 含 /api/v1/health 与 HealthResponse（camelCase apiVersion）。
 - [x] Review Subagent 规格符合性与代码质量检查通过（PASS）。
-- [x] 用户已验收 verification 结果（2026-08-01：“task2可以验收并推送”；用户已查看本地 /docs 与 health 响应）。
-- [x] 已创建一个 focused commit（`feat: add FastAPI application shell`）并推送 feat/mvp-implementation。
+- [x] 用户已验收 verification 结果，并允许创建 focused commit。
+- [x] 已创建一个 focused commit（feat: add FastAPI application shell）并推送 feat/mvp-implementation。
 
-## 本次维护检查
+## 上一轮控制面维护检查
 
-- [x] 未发现 `backend/.venv`、`backend/venv` 或 `backend/virtualenv` 目录。
-- [x] `backend/pyproject.toml` 保留为后端依赖、构建和工具声明；未删除运行所需的 FastAPI/Uvicorn 等依赖。
+- [x] 未发现 backend/.venv、backend/venv 或 backend/virtualenv 目录。
+- [x] 保留 backend/pyproject.toml 的后端依赖、构建和工具声明；未删除运行所需的 FastAPI/Uvicorn 等依赖。
 - [x] 未修改业务源代码、测试或 OpenAPI 契约。
 - [x] uv 相关内容仅在已关闭 Task 2 的历史验收记录中保留，未篡改历史证据。
-- [x] 用户已明确验收本次控制面维护（2026-08-01：“当前验收通过”）。
-- [x] 已创建 focused commit；本次未推送远端。
+- [x] 用户已明确验收本次控制面维护，并授权随后推送。
+- [x] Task 3 与后端启动闭环已验收，统一纳入 `feat: add React application shell` 的 amend/push。
+
+## Task 3 与本地启动闭环设计与验收边界
+
+- 输入：现有 frontend/openapi.json，其中已冻结 GET /api/v1/health 与 HealthResponse。
+- 产出：frontend/package.json、Vite/TypeScript 配置、React 入口与 Providers、apiClient、生成的 schema.d.ts、PRODUCT_COPY 和首屏测试；同时提供标准 Uvicorn `app` 入口、开发依赖兼容性配置和启动回归测试；构建产物为 frontend/dist。
+- 首屏只显示正式中文产品名“鹈鹕镇新菜单”和主宣传语“把你做的菜，写进鹈鹕镇的下一张菜单。”；启动入口通过 typed client 发起 same-origin health probe。
+- 不包含领域页面、草稿/收集品生命周期、真实模型调用、Mod 导出、认证会话或 Task 4+ 接口。
+- [x] `pnpm install --frozen-lockfile`、`pnpm --dir frontend contract:generate`、`pnpm --dir frontend test:run`（1 file / 1 test）、`pnpm --dir frontend lint` 和 `pnpm --dir frontend build` 均通过。
+- [x] `python -m pytest backend/tests -q` 通过（2 passed）；`pwsh -File scripts/verify_local_docs_ignored.ps1` 和 `git diff --check` 通过。
+- [x] `python -m ruff check backend`、`python -m mypy backend/src`、Uvicorn 直连 health 和 Vite 代理 health 均通过；两端返回 `status=ok`、`app=PelicanTownSpecials`、`apiVersion=v1`。
+- [x] 用户手动启动 Vite 与后端，确认首页显示以及 Network 中 `/api/v1/health` 返回 200；这补充了真实运行时联调证据。
+- [x] amend 范围为前端文件、pnpm workspace/lockfile、后端标准 ASGI 启动入口、开发依赖、回归测试和两份 Task 3/启动控制面记录；不包含 uv.lock、.venv 或其他虚拟环境。
+- 已知限制：受限执行器曾对 Node 子进程报告 `spawn EPERM`；在真实 Windows 权限下的用户手动启动与浏览器联调已通过，不影响 Task 3 验收。
 
 ## 状态规则
 
 修改型 Session 只能按以下顺序推进：
 
-```text
-planned → active → verification → awaiting_user_acceptance → accepted → committed
-```
+    planned → active → verification → awaiting_user_acceptance → accepted → committed
 
-任何状态冲突、脏工作树、重复活动 Session 或缺失下一步都必须停下并报告。Session 历史见 `docs/development/sessions/`，不能用历史记录覆盖本文件的当前结论。
+任何状态冲突、脏工作树、重复活动 Session 或缺失下一步都必须停下并报告。Session 历史见 docs/development/sessions/，不能用历史记录覆盖本文件的当前结论。

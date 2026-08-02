@@ -10,3 +10,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.state.config = app_config
     app.include_router(health.router, prefix="/api/v1")
     return app
+
+
+app = create_app()
