@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | committed |
-| project_phase | mvp-task-4-domain-contracts |
+| project_phase | mvp-task-5-persistence |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | MVP Task 4：领域模型、错误协议与显式 Draft 状态机已验收并创建 focused commit |
-| blocker | 无；Task4 已验收，等待用户授权下一个产品 Task |
-| next_action | 等待用户授权开始下一个 MVP Task |
+| current_task | MVP Task 5：实现工作区、原子 JSON Repository 与 Asset Store，已验收并创建 focused commit |
+| blocker | 无；Task5 已验收并提交，等待授权下一产品 Task |
+| next_action | 等待用户授权开始 MVP Task 6 |
 
 ## 当前 Git 状态事实
 
@@ -24,9 +24,9 @@
 | 当前分支 | feat/mvp-implementation（正式实现功能分支，已推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | MVP Task 4 focused commit；本地 HEAD 与 origin 状态以 Git 核验为准 |
+| 最新提交 | MVP Task 5 focused commit；本地 HEAD 与 origin 状态以 Git 核验为准 |
 | 远端操作 | Task4 focused commit 已创建；远端状态以 origin/feat/mvp-implementation 核验为准 |
-| 当前工作树范围 | Task4 已提交的领域实现、测试和控制面同步；工作树应保持干净 |
+| 当前工作树范围 | Task5 实现、测试、控制面、设计和计划文档已纳入 focused commit；工作树应保持干净 |
 
 ## 已关闭 Task 3 Session（committed）
 
@@ -43,6 +43,16 @@
 - 已完成证据：Task 1–4 implementer/reviewer 串行执行；全量 `python -m pytest backend/tests -q -p no:cacheprovider` 通过；Ruff、mypy、`git diff --check`、生产旧枚举扫描和文档忽略检查通过。Task4 已验收并创建 focused commit；推送结果以 Git 核验为准。
 
 - uv 是否必需已完成本地评估：uv 不在 PATH，但现有 Python/FastAPI 依赖、pytest（2 passed）、ruff、mypy 和直接 Python/Uvicorn health 均通过；因此 uv 不属于产品运行或发布媒介。
+
+## 当前 Task 5 Session（committed）
+
+- 2026-08-02-task-5-persistence 已获用户授权启动，当前状态为 committed；实现、两轮独立复审和自动验证已完成，focused commit 已创建，当前等待下一 Task 授权。本 Session 只处理本地工作区、原子 JSON 写入、领域 Repository、Asset Store 与短期回收站。
+- Task5 消费 Task4 的领域记录，建立 %LOCALAPPDATA%\\PelicanTownSpecials\\workspace 的可恢复持久化边界；实体记录与资产内容是真实来源，索引只作为可重建加速层。
+- 本 Session 不实现 API、Secret Store、模型调用、前端页面、Launcher、数据库或 Mod 编译；uv 不作为前置工具，不提交 Python lockfile 或虚拟环境。
+- 设计说明与实施计划：docs/superpowers/specs/2026-08-02-task-5-persistence-design.md、docs/superpowers/plans/2026-08-02-task-5-persistence.md。
+- 范围边界：本 Session 按 Task5 实施计划完成；正式技术设计中更完整的 WorkspaceRecord 字段、应用根 bootstrap、进程锁、更强迁移恢复和统一异常层未在本 Task 扩展，若要求纳入需另行收敛设计和实现。
+- 验收证据：持久化测试 21 passed；领域+持久化回归 107 passed；完整后端回归 109 passed；Ruff、mypy、git diff --check 均通过。默认 pytest 临时目录曾出现 WinError 5，使用全新 C:\tmp basetemp 后测试通过。
+- focused commit 已创建；本次未 push，等待下一 Task 授权。
 ## 上一已关闭维护 Session 范围
 
 - 更新 AGENTS.md，纠正已完成 Task 2 与当前无活动产品 Session 的状态，并明确开发工具不等于产品功能。
