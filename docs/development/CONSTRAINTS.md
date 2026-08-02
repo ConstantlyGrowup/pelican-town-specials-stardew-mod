@@ -20,7 +20,7 @@
 - MVP 采用 Windows 本地 Web、React + TypeScript + Vite、FastAPI + Pydantic、PyInstaller onedir、JSON 工作区和 OpenAI-compatible gateway。
 - 用户发布媒介冻结为 PyInstaller onedir：发布包自带 Python 运行时与依赖，普通用户不安装 uv、Python、Node.js 或包管理器。开发态使用 backend/pyproject.toml 和当前 Python 环境；uv 仅为可选开发便利，不作为产品或功能 Task 的依赖。
 - 默认工作区为 `%LOCALAPPDATA%\\PelicanTownSpecials\\workspace`；浏览器不直接访问任意本地文件路径。
-- API Key 默认进入 Windows Credential Locker，不得进入 JSON、日志、错误正文、前端状态、测试快照、Context Packet 或 Git。
+- 为降低小白用户配置门槛，应用维护当前 Windows 用户级环境变量 PTS_OPENAI_API_KEY；支持新增、更新和删除，不写机器级环境变量，不要求管理员权限。Key 不得进入 JSON、日志、错误正文、前端状态、测试快照、Context Packet 或 Git。
 - MVP 使用同步请求和 NDJSON 阶段事件；不提前引入数据库、登录、队列、全局 Registry 或跨用户缓存。
 - 问问 Gus 使用完整原子重生成；料理蓝图只复用原始图片和基础模板；收集品不可编辑且不暴露来源模式。
 - Mod 目标为 Stardew Valley 1.6.15、Content Patcher 2.9.0、纯 JSON/PNG 内容包；本地 Mods 路径只从 `PTS_STARDEW_MODS_DIR` 获取。

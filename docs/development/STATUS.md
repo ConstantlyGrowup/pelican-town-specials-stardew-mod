@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | committed |
-| project_phase | mvp-task-5-persistence |
+| project_phase | mvp-task-6-provider-settings |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | MVP Task 5：实现工作区、原子 JSON Repository 与 Asset Store，已验收并创建 focused commit |
-| blocker | 无；Task5 已验收并提交，等待授权下一产品 Task |
-| next_action | 等待用户授权开始 MVP Task 6 |
+| current_task | MVP Task 6：实现用户级环境变量 Secret Store、Provider Settings 与统一错误映射，已验收并创建 focused commit |
+| blocker | 无；Task6 已验收并提交，等待用户授权下一 Task |
+| next_action | 等待用户授权开始 MVP Task 7；推送需单独授权 |
 
 ## 当前 Git 状态事实
 
@@ -24,9 +24,9 @@
 | 当前分支 | feat/mvp-implementation（正式实现功能分支，已推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | MVP Task 5 focused commit；本地 HEAD 与 origin 状态以 Git 核验为准 |
-| 远端操作 | Task4 focused commit 已创建；远端状态以 origin/feat/mvp-implementation 核验为准 |
-| 当前工作树范围 | Task5 实现、测试、控制面、设计和计划文档已纳入 focused commit；工作树应保持干净 |
+| 最新提交 | 本次 Task6 focused commit |
+| 远端操作 | Task5 focused commit 已推送；Task6 focused commit 尚未推送 |
+| 当前工作树范围 | Task6 已纳入 focused commit；工作树应保持干净 |
 
 ## 已关闭 Task 3 Session（committed）
 
@@ -52,7 +52,18 @@
 - 设计说明与实施计划：docs/superpowers/specs/2026-08-02-task-5-persistence-design.md、docs/superpowers/plans/2026-08-02-task-5-persistence.md。
 - 范围边界：本 Session 按 Task5 实施计划完成；正式技术设计中更完整的 WorkspaceRecord 字段、应用根 bootstrap、进程锁、更强迁移恢复和统一异常层未在本 Task 扩展，若要求纳入需另行收敛设计和实现。
 - 验收证据：持久化测试 21 passed；领域+持久化回归 107 passed；完整后端回归 109 passed；Ruff、mypy、git diff --check 均通过。默认 pytest 临时目录曾出现 WinError 5，使用全新 C:\tmp basetemp 后测试通过。
-- focused commit 已创建；本次未 push，等待下一 Task 授权。
+- focused commit 已创建并推送到 origin/feat/mvp-implementation；Task5 已关闭.
+
+## 已完成 Task 6 Session（committed）
+
+- 2026-08-02-task-6-provider-settings 已获用户授权启动，设计说明和实施计划均已通过，自动验证已完成并通过用户验收，focused commit 已创建；本 Session 只处理用户级环境变量 Key、非机密 Provider Settings 和统一 ErrorEnvelope。
+- 用户明确选择易用优先：应用直接新增、更新和删除当前 Windows 用户级 PTS_OPENAI_API_KEY，不要求用户手动配置环境变量；不写机器级变量，不实现 Credential Locker 作为默认持久化路径。
+- Task6 设计说明：docs/superpowers/specs/2026-08-02-task-6-provider-settings-design.md；实施计划：docs/superpowers/plans/2026-08-02-task-6-provider-settings.md。
+- 已实现文件：backend/src/pelican_town_specials/persistence/secret_store.py、application/settings.py、api/routes/settings.py、api/error_handlers.py，以及 api/app.py/config.py；对应 persistence/application/api 测试已补齐。
+- 本 Session 不实现真实模型调用、Launcher、会话安全、CSRF、前端设置页面、数据库或 Mod 编译。
+- 验收证据：全量 backend/tests 通过（152 passed）；Ruff、mypy、git diff --check 通过；依赖与敏感配置扫描无 keyring、setx、机器级环境变量或 Credential Locker 实现；生产 create_app 装配与 API 脱敏集成测试通过。
+- focused commit：feat: configure provider settings and environment secrets；本次未推送，推送需单独授权。
+
 ## 上一已关闭维护 Session 范围
 
 - 更新 AGENTS.md，纠正已完成 Task 2 与当前无活动产品 Session 的状态，并明确开发工具不等于产品功能。

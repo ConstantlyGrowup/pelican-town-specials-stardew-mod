@@ -15,12 +15,12 @@
 
 ## 当前工作模式
 
-当前项目处于“MVP Task 5 已验收并创建 focused commit，当前无活动产品 Session”阶段。Task 5 沿用已批准的技术设计与正式实施计划；当前不启动下一 Task，等待用户授权：
+当前项目处于“MVP Task 6 已验收并创建 focused commit，当前无活动产品 Session”阶段。Task 6 已将 API Key 配置落为当前 Windows 用户环境变量，并沿用已批准的串行实施与验收流程：
 
 - 不重复执行已完成的 MVP Task 1、Task 2 或 Task 3；
-- 不启动 MVP Task 6 或后续 Task；
+- 不启动 MVP Task 7 或后续 Task；等待用户授权下一 Task；
 - 不派发产品实现型 Subagent；等待用户授权下一 Task；
-- 不创建 API、Secret Store、模型调用、前端或 Mod 编译功能；
+- 不创建新的业务代码、依赖、前端或后端功能骨架；
 - 不把开发工具整理或控制面维护误记为产品功能完成；
 - 不创建自动提交、自动推送或自动发布流程。
 
