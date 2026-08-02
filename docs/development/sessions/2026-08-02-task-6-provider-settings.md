@@ -14,7 +14,7 @@
 - 用户已明确授权开始 Task6，并验收通过 Task6 设计说明。
 - 用户确认优先易用性：应用直接维护当前 Windows 用户级环境变量 PTS_OPENAI_API_KEY，支持新增、更新和删除；不要求用户手动配置环境变量。
 - 详细实施计划已写入 docs/superpowers/plans/2026-08-02-task-6-provider-settings.md。
-- 用户已验收，focused commit 已创建；本 Session 已关闭，未推送。
+- 用户已验收，focused commit 已创建并推送到 origin/feat/mvp-implementation；本 Session 已关闭。
 
 ## 目标
 
@@ -43,10 +43,10 @@
 - Settings API、生产 app wiring、health、统一错误和日志脱敏：13 passed；Ruff、mypy 通过。
 - 复审代理已检查 Secret Store、Provider Settings、Settings API 和 ErrorEnvelope；边界问题已补测试并修正。
 - 全量验收已完成：backend/tests 152 passed；Ruff、mypy、git diff --check 通过；依赖与敏感配置扫描无 keyring、setx、机器级环境变量或 Credential Locker 实现；create_app 生产装配和 API 脱敏集成测试通过。
-- focused commit：feat: configure provider settings and environment secrets。
+- focused commit：feat: configure provider settings and environment secrets，已推送到 origin/feat/mvp-implementation。
 
 ## 设计与下一步
 
 - 设计说明：docs/superpowers/specs/2026-08-02-task-6-provider-settings-design.md。
 - 实施计划：docs/superpowers/plans/2026-08-02-task-6-provider-settings.md。
-- Session 已关闭；后续等待用户授权 Task7；推送需单独授权。
+- Session 已关闭；后续等待用户授权 Task7；Task6 已完成推送。

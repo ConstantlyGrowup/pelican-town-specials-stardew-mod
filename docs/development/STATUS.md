@@ -14,7 +14,7 @@
 | active_session_type | none |
 | current_task | MVP Task 6：实现用户级环境变量 Secret Store、Provider Settings 与统一错误映射，已验收并创建 focused commit |
 | blocker | 无；Task6 已验收并提交，等待用户授权下一 Task |
-| next_action | 等待用户授权开始 MVP Task 7；推送需单独授权 |
+| next_action | 等待用户授权开始 MVP Task 7 |
 
 ## 当前 Git 状态事实
 
@@ -24,8 +24,8 @@
 | 当前分支 | feat/mvp-implementation（正式实现功能分支，已推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 本次 Task6 focused commit |
-| 远端操作 | Task5 focused commit 已推送；Task6 focused commit 尚未推送 |
+| 最新提交 | Task6 相关提交 |
+| 远端操作 | Task5 与 Task6 focused commit 均已推送到 origin/feat/mvp-implementation |
 | 当前工作树范围 | Task6 已纳入 focused commit；工作树应保持干净 |
 
 ## 已关闭 Task 3 Session（committed）
@@ -62,7 +62,7 @@
 - 已实现文件：backend/src/pelican_town_specials/persistence/secret_store.py、application/settings.py、api/routes/settings.py、api/error_handlers.py，以及 api/app.py/config.py；对应 persistence/application/api 测试已补齐。
 - 本 Session 不实现真实模型调用、Launcher、会话安全、CSRF、前端设置页面、数据库或 Mod 编译。
 - 验收证据：全量 backend/tests 通过（152 passed）；Ruff、mypy、git diff --check 通过；依赖与敏感配置扫描无 keyring、setx、机器级环境变量或 Credential Locker 实现；生产 create_app 装配与 API 脱敏集成测试通过。
-- focused commit：feat: configure provider settings and environment secrets；本次未推送，推送需单独授权。
+- focused commit：feat: configure provider settings and environment secrets；已推送到 origin/feat/mvp-implementation。
 
 ## 上一已关闭维护 Session 范围
 
