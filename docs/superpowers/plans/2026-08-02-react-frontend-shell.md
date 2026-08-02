@@ -17,7 +17,7 @@
 - App 的冻结渲染测试必须可以直接调用 render(<App />)，不要求 QueryClient 或网络。
 - 启动 health probe 失败不能阻塞首屏，也不能伪装成业务状态。
 - 不实现草稿、料理蓝图、收集品、菜单打包、游戏安装、认证、CSRF store、真实模型调用或 Task 4+。
-- 不新增或恢复 uv.lock、.venv 或后端 Python 虚拟环境配置；前端依赖使用 pnpm，并允许生成前端依赖锁文件。
+- uv 不是 Task 3 的启动前置；不提交 Python lockfile 或后端 Python 虚拟环境配置；前端依赖使用 pnpm，并允许生成前端依赖锁文件。
 - 保护现有未提交控制面文档；实现 Agent 不得覆盖或重写它们。
 - 按 TDD 先写并观察首屏测试失败，再创建 App 等产品代码；配置文件和生成文件属于 TDD 允许的前置例外。
 - 按项目 AGENTS.md，用户验收前不创建 commit；实现 Agent 完成后保留工作树变更供只读 Review 和主 Agent 验收。
@@ -131,7 +131,7 @@ export default defineConfig({
 pnpm install
 \`\`\`
 
-预期生成根目录 \`pnpm-lock.yaml\`，workspace 包为 \`frontend\`。确认没有生成 \`backend/uv.lock\`、\`frontend/.venv\`、\`backend/.venv\` 或其他 Python 虚拟环境目录。若 pnpm 在 workspace 下产生不同的 lockfile 位置，停止并报告，不要同时保留根和 frontend 两份 lockfile。
+预期生成根目录 \`pnpm-lock.yaml\`，workspace 包为 \`frontend\`。确认没有生成 \`Python lockfile\`、\`frontend/.venv\`、\`backend/.venv\` 或其他 Python 虚拟环境目录。若 pnpm 在 workspace 下产生不同的 lockfile 位置，停止并报告，不要同时保留根和 frontend 两份 lockfile。
 
 - [x] **Step 4: 写首屏失败测试（RED）**
 
@@ -282,7 +282,7 @@ pnpm --dir frontend build
 
 - [x] **Step 12: 执行后端回归与文档边界检查**
 
-不使用 uv，运行当前环境可用的后端测试和仓库检查：
+使用当前 Python 环境运行后端测试和仓库检查（uv 可选，不是前置条件）：
 
 \`\`\`powershell
 python -m pytest backend/tests -q
@@ -290,7 +290,7 @@ pwsh -File scripts/verify_local_docs_ignored.ps1
 git diff --check
 \`\`\`
 
-如果后端依赖在当前环境不可用，记录确切错误，不为 Task 3 重新引入 uv.lock 或 .venv；前端测试和构建仍必须完成。
+如果后端依赖在当前环境不可用，记录确切错误，不为 Task 3 增加 Python lockfile 或 .venv；前端测试和构建仍必须完成。
 
 - [x] **Step 13: 手工验证同源 health 请求**
 
@@ -310,7 +310,7 @@ pnpm --dir frontend dev
 
 - [x] **Step 14: 实现 Agent 自审并交付 Review**
 
-运行 \`git status --short\`、\`git diff --check\`，确认只包含 Task 3 前端文件、pnpm workspace/lockfile 和必要控制面记录；没有 uv lockfile、虚拟环境、真实模型请求或 Task 4+ 代码。实现 Agent 在报告文件记录：
+运行 \`git status --short\`、\`git diff --check\`，确认只包含 Task 3 前端文件、pnpm workspace/lockfile 和必要控制面记录；没有 Python lockfile、虚拟环境、真实模型请求或 Task 4+ 代码。实现 Agent 在报告文件记录：
 
 - 修改文件；
 - RED 与 GREEN 命令及结果；
@@ -328,13 +328,13 @@ pnpm --dir frontend dev
 feat: add React application shell
 \`\`\`
 
-提交范围为 Task 3 的前端文件、pnpm workspace/lockfile、已验收的后端标准 ASGI 启动入口/开发依赖/回归测试，以及对应控制面记录；不提交后端缓存、uv 文件或临时报告。
+提交范围为 Task 3 的前端文件、pnpm workspace/lockfile、已验收的后端标准 ASGI 启动入口/开发依赖/回归测试，以及对应控制面记录；不提交后端缓存、Python lockfile 或临时报告。
 
 ## 计划自审
 
 - 规格覆盖：Task 1 的步骤 1–3 覆盖 workspace、依赖、Vite/TS/ESLint 和 lockfile；步骤 4–6 覆盖 TDD RED/GREEN 和正式文案；步骤 7–10 覆盖生成 schema、typed client、Providers 和启动 health probe；步骤 11–13 覆盖自动化与人工验收；步骤 14 覆盖 Review 交接。
 - 设计决策一致：App 不依赖网络，health probe 只在 main.tsx；apiClient 的 baseUrl 为空；generated schema 不手写；没有修改请求或 CSRF store。
 - 计划与正式实现计划的 lockfile 预期一致：通过 pnpm-workspace.yaml 让 frontend 成为根 workspace 包，生成根 pnpm-lock.yaml；不产生第二份 frontend lockfile。
-- 约束扫描：没有引入 uv、.venv、真实模型、领域页面或 Task 4+；没有预先 commit，遵守项目验收规则。
+- 约束扫描：未将 uv 作为必需工具，也没有引入 .venv、真实模型、领域页面或 Task 4+；没有预先 commit，遵守项目验收规则。
 - 类型一致：PRODUCT_COPY、apiClient、AppProviders 和 main.tsx 中的名称/签名与设计规格一致；generated paths 由 OpenAPI 命令提供。
 - 步骤均包含实际命令、断言或配置内容，没有 TBD、TODO 或泛化的“自行实现”占位。

@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Do not add or restore `uv.lock`, `.venv`, or Python virtual-environment configuration.
+- uv is not required for the startup path; do not commit a Python lockfile or virtual-environment configuration.
 - Keep Vite bound to `127.0.0.1:5173` and proxy `/api` to `127.0.0.1:8000`.
 - Preserve `create_app()` for tests and future injected configuration.
 - Do not change the health response contract or implement Task 4+ functionality.
@@ -122,12 +122,11 @@ git diff --check
 
 ```powershell
 git status --short
-Test-Path .\backend\uv.lock
 Test-Path .\backend\.venv
 Test-Path .\frontend\.venv
 ```
 
-Expected: no new `uv.lock` or virtual environment paths.
+Expected: no new `Python lockfile` or virtual environment paths.
 
 ## 实际执行结果
 
@@ -136,4 +135,4 @@ Expected: no new `uv.lock` or virtual environment paths.
 - [x] pnpm frontend test:run、lint、build：通过；文档忽略检查通过。
 - [x] 标准 Uvicorn 启动命令可用；后端直连和 Vite /api 代理 health 均返回 status=ok、app=PelicanTownSpecials、apiVersion=v1。
 - [x] 用户手动启动 Vite 与后端，确认首页显示和 Network health 200；Task 3 与启动闭环一并验收。
-- [x] 未新增 uv.lock、.venv 或 Python 虚拟环境配置。
+- [x] 未新增 Python lockfile、.venv 或 Python 虚拟环境配置。

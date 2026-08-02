@@ -5,4 +5,4 @@ Put your dish on Pelican Town's next menu.
 
 ## 当前状态
 
-当前已完成 MVP Task 2：FastAPI 后端最小骨架、健康检查接口和 OpenAPI 真源已提交。核心产品流程与前端仍未开始；下一步 MVP Task 3 需用户明确授权后，以新的修改型 Session 启动。
+当前已完成 MVP Task 3 与本地启动闭环：React/Vite 前端壳层、typed health probe、标准 Uvicorn 启动入口和相关启动兼容性修复已由 a311e72 提交并推送。MVP Task 4 领域模型、错误协议和状态机已实现、验证并创建 focused commit；后续 Task 等待用户授权。

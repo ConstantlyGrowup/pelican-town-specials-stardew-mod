@@ -15,19 +15,20 @@
 
 ## 当前工作模式
 
-当前项目处于“开发控制面已建立、MVP Task 2 已完成并提交、当前无活动产品 Session”阶段。除非用户明确授权启动新的修改型 Session，否则：
+当前项目处于“MVP Task 4 已验收并创建 focused commit，当前无活动产品 Session”阶段。Task 4 的书面设计与正式实施计划均已获用户确认；当前不启动新的产品 Task，等待用户授权下一步：
 
-- 不重复执行已完成的 MVP Task 1 或 Task 2；
-- 不启动 MVP Task 3 或后续 Task；
-- 不派发实现型 Subagent；
-- 不创建新的业务代码、依赖、前端或后端功能骨架；
+- 不重复执行已完成的 MVP Task 1、Task 2 或 Task 3；
+- 不启动 MVP Task 5 或后续 Task；
+- 不派发新的实现型 Subagent；等待用户授权下一个产品 Task；
+- 不创建新的领域业务代码或功能实现；
 - 不把开发工具整理或控制面维护误记为产品功能完成；
 - 不创建自动提交、自动推送或自动发布流程。
 
 ## 开发工具与产品范围
 
 - `backend/pyproject.toml` 仅负责 Python 依赖、构建和检查工具声明；它不是产品功能。
-- `uv`、依赖 lockfile 和本地 `.venv` 属于开发工具链，不属于应用运行时或产品主线；不得把环境创建、依赖解析或 lockfile 维护计入 MVP 功能进度。
+- Python 依赖、构建和检查工具以 backend/pyproject.toml 为声明源；标准开发命令使用当前 Python 环境的模块入口。
+- uv 只作为个人开发环境的可选加速工具，不是产品运行时、用户发布包或必须安装的开发前置；用户发布媒介是 PyInstaller onedir，普通用户不需要 uv、Python 或 Node.js。
 - 本地虚拟环境必须保持在 Git 之外；`.gitignore` 中的 `.venv/` 是通用保护规则，不代表仓库需要提交虚拟环境。
 - 若要重新引入某个依赖管理工具或 lockfile，必须作为单独的工具链维护任务明确授权，不得在产品 Task 中顺手加入。
 

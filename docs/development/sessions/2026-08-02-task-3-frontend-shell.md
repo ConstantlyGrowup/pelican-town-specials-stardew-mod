@@ -4,7 +4,7 @@
 |---|---|
 | session_id | 2026-08-02-task-3-frontend-shell |
 | session_type | mvp-task-implementation |
-| state | accepted |
+| state | committed |
 | date | 2026-08-02 |
 | task | MVP Task 3：建立 React 前端骨架与生成式 API Client |
 | owner | 当前主 Agent；Git 不记录 Agent 署名 |
@@ -52,7 +52,7 @@
 - 真实模型请求、API Key、认证会话或 CSRF store；
 - 后端路由、OpenAPI 契约、数据库/工作区实现、Mod 编译；本 Session 只补充标准 ASGI 入口、开发依赖兼容性和回归测试；
 - Task 4 及后续产品 Task；
-- 重新引入 uv.lock、.venv 或其他 Python 虚拟环境配置。
+- uv 不是 Task 3 的启动前置；不提交 Python lockfile 或其他 Python 虚拟环境配置。
 
 ## 设计闸门
 
@@ -66,12 +66,12 @@
 - `python -m pytest backend/tests -q` 通过（2 passed）；`pwsh -File scripts/verify_local_docs_ignored.ps1` 和 `git diff --check` 通过。
 - `python -m ruff check backend`、`python -m mypy backend/src`、后端直连 health 和 Vite 代理 health 均通过。
 - 用户手动启动 Vite 与后端，确认首页显示，Network 中 `/api/v1/health` 请求返回 200。
-- Task 3 未引入 `uv.lock`、`.venv` 或 Python 虚拟环境配置；后端启动闭环改动已纳入本 Session 的 amend 边界。
+- Task 3 使用当前 Python 环境验证后端启动；未把 uv 作为前置工具，也未提交 Python lockfile 或虚拟环境配置。
 ## 提交边界
 
 - Task 3 focused commit 边界：`feat: add React application shell`。
-- 用户已授权本次 amend 与推送；推送结果以 Git 和 origin 状态为准。
+- 用户已授权本次 amend 与推送；a311e72 feat: add React application shell 已创建并推送，本地分支与 origin/feat/mvp-implementation 已核验一致。
 
 ## 精确下一步
 
-Task 3 与后端启动闭环均已通过用户验收；按既定边界 amend 并推送，随后核验远端状态。
+Task 3 与后端启动闭环已通过用户验收，并已由 a311e72 feat: add React application shell 完成 focused commit、推送和远端状态核验；本 Session 已关闭。后续以 2026-08-02-task-4-domain-models 的 planned 设计阶段为准。

@@ -13,7 +13,7 @@
 - 后端 Task 2 已提供 FastAPI 应用和 GET /api/v1/health。
 - frontend/openapi.json 已包含健康检查路径及 HealthResponse，它是本 Task 的唯一 API 类型输入。
 - 技术设计规定 Web UI 使用 React + TypeScript + Vite，浏览器通过 same-origin HTTP 访问 FastAPI；开发服务器可将 /api 代理到后端。
-- STATUS.md 是当前状态真源；本 Task 不修改被 Git ignored 的产品设计源，也不把过时的 uv 记录重新变成当前配置。
+- STATUS.md 是当前状态真源；不把可选开发工具误写成产品运行或发布依赖。
 
 ## 3. 范围与非目标
 
@@ -36,7 +36,7 @@
 - 不发送真实模型请求，不读取或保存 API Key，不引入认证、Cookie 会话或 CSRF store。
 - 不修改 FastAPI 路由和 OpenAPI 契约；后端只补充标准 ASGI app 导出、开发依赖兼容性和回归测试；若契约不匹配，停止并报告，不在前端手写 DTO 掩盖问题。
 - 不创建数据库、工作区、Mod、图片处理或领域校验代码。
-- 不引入 uv.lock、.venv 或后端虚拟环境配置。
+- uv 不是 Task 3 的启动前置；不提交 Python lockfile 或后端虚拟环境配置。
 
 ## 4. 关键设计决策
 
@@ -112,7 +112,7 @@ providers.tsx 提供 QueryClientProvider，并集中配置一个适合本地壳�
 - 后端现有 health 测试、标准 Uvicorn 启动命令和 scripts/verify_local_docs_ignored.ps1 不回归。
 - 手工启动 Vite 与 FastAPI 后，首屏显示正式文案，Network 中 health 请求只访问本机 /api/v1/health。
 - 后端直连与 Vite 代理的 /api/v1/health 均返回 status=ok、app=PelicanTownSpecials、apiVersion=v1。
-- Task 3 范围内没有 uv lockfile、虚拟环境目录、真实模型调用或 Task 4+ 业务实现。
+- Task 3 范围内不提交 Python lockfile 或虚拟环境目录；真实模型调用和 Task 4+ 业务实现仍不在范围内。
 
 ## 9. 提交边界与后续
 
@@ -120,11 +120,11 @@ providers.tsx 提供 QueryClientProvider，并集中配置一个适合本地壳�
 
     feat: add React application shell
 
-该 focused commit 的 amend 边界包含 Task 3 前端文件、前端依赖锁文件、后端标准 ASGI 启动入口、开发依赖、回归测试，以及 Task 3/启动修复控制面记录；不包含 uv.lock、.venv 或其他虚拟环境。本次 amend 与推送已获用户授权。
+该 focused commit 的 amend 边界包含 Task 3 前端文件、前端依赖锁文件、后端标准 ASGI 启动入口、开发依赖、回归测试，以及 Task 3/启动修复控制面记录；不包含 Python lockfile、虚拟环境或其他本地工具状态。本次 amend 与推送已获用户授权。
 
 ## 10. 自审结论
 
 - 规格覆盖了用户已确认的 React/Vite/TypeScript 壳层、OpenAPI 生成类型、same-origin client、正式产品首屏和 health endpoint。
-- 规格明确排除了领域功能、真实模型调用、Task 4+ 和 uv 虚拟环境配置，符合当前 Session 与 AGENTS.md。
+- 规格明确排除了领域功能、真实模型调用、Task 4+ 和非产品 Python 工具链配置，符合当前 Session 与 AGENTS.md。
 - App 直渲染测试与启动健康检查的边界已显式解决，避免把网络依赖混入冻结首屏测试。
 - 规格不替代后续实施计划；用户审阅通过后仍需按 TDD、implementer/reviewer 和 verification 流程执行。
