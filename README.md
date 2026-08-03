@@ -5,4 +5,4 @@ Put your dish on Pelican Town's next menu.
 
 ## 当前状态
 
-当前已完成 MVP Task 3 与本地启动闭环、Task 4 领域模型和 Task 5 本地持久化，Task 5 focused commit 已推送。MVP Task 6 的用户级 Key 配置、Provider Settings 和统一错误响应已验收并创建 focused commit，当前等待下一 Task 授权。
+MVP Task 3–6 已完成并推送；MVP Task 7 的 Launcher、会话安全、同源静态托管、前端启动引导和空闲退出已验收并创建 focused commit，下一步开始 Task8。

@@ -33,4 +33,4 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-本项目已完成 MVP Task 3 与本地启动闭环、Task 4 领域模型和 Task 5 本地持久化，Task 5 focused commit 已推送。MVP Task 6 的用户级 Key 配置、Provider Settings 和统一错误响应已验收并创建 focused commit，当前等待下一 Task 授权；以 STATUS.md 中的当前 Session 和下一步为准。
+本项目已完成 MVP Task 3 与本地启动闭环、Task 4 领域模型、Task 5 本地持久化和 Task 6 用户级 Key 配置。Task 7 的 Launcher、会话安全、同源静态托管、前端 bootstrap、heartbeat 和空闲退出已验收并创建 focused commit，下一步按 STATUS.md 开始 Task8。

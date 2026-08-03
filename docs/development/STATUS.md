@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | committed |
-| project_phase | mvp-task-6-provider-settings |
+| project_phase | mvp-task-7-launcher-security |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | MVP Task 6：实现用户级环境变量 Secret Store、Provider Settings 与统一错误映射，已验收并创建 focused commit |
-| blocker | 无；Task6 已验收并提交，等待用户授权下一 Task |
-| next_action | 等待用户授权开始 MVP Task 7 |
+| current_task | MVP Task 7：实现 Launcher、会话安全、同源静态托管、前端 bootstrap 与空闲退出，已验收并创建 focused commit |
+| blocker | 无；Task7 已验收并创建 focused commit，下一步开始 MVP Task8 |
+| next_action | 推送 Task7 focused commit 后，建立并开始 MVP Task8 Session |
 
 ## 当前 Git 状态事实
 
@@ -24,10 +24,24 @@
 | 当前分支 | feat/mvp-implementation（正式实现功能分支，已推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | Task6 相关提交 |
-| 远端操作 | Task5 与 Task6 focused commit 均已推送到 origin/feat/mvp-implementation |
-| 当前工作树范围 | Task6 已纳入 focused commit；工作树应保持干净 |
+| 最新提交 | Task7 focused commit |
+| 远端操作 | Task5 与 Task6 focused commit 已推送；Task7 focused commit 将在当前流程推送 |
+| 当前工作树范围 | Task7 设计/控制面、Launcher、会话安全、同源静态托管、前端启动引导、测试和验收记录纳入 focused commit；提交后工作树应保持干净 |
 
+## 已关闭 Task 7 Session（committed）
+
+- `2026-08-03-task-7-launcher-security` 已完成实现、全量验证和独立只读复审，用户已明确验收通过并创建 focused commit；Task7 设计补充和实施计划已写入并通过用户确认。
+- 本 Session 只处理 Launcher 单实例启动、loopback 安全边界、一次性 launch token、HttpOnly 会话、Origin/CSRF 校验、同源静态托管、前端 bootstrap、心跳和 10 分钟空闲退出。
+- Task7 不处理真实模型调用、Provider Gateway、业务草稿/菜品 API、登录账户、数据库、机器级环境变量或发布流水线。
+- 设计说明：`docs/superpowers/specs/2026-08-03-task-7-launcher-security-design.md`；详细计划：`docs/superpowers/plans/2026-08-03-task-7-launcher-security.md`。
+- Task1 已完成：安全测试先红后绿；当前主工作区最终安全回归 21 passed，Ruff、mypy、git diff --check 和独立只读复审均通过。修复了 health Host 校验、错误 CSRF 不续期、过期 token 清理和当前端口精确匹配。
+- Task2 已完成：锁、运行记录、loopback URL、端口选择、浏览器打开和 health 探针已通过 15 项测试、Ruff、mypy、差异检查和独立只读复审；修复了总超时边界与端口 0。
+- Task3 已完成：同源静态托管、SPA fallback、缺失资源安全错误、heartbeat、主动 shutdown 和生命周期 idle monitor 已通过 30 passed/1 skipped 的回归、Ruff、mypy、差异检查和独立只读复审；symlink 测试因当前 Windows 权限跳过，路径边界逻辑已覆盖。
+- Task4 已完成：Launcher 主流程、CLI、动态端口、安全注入、单实例复用、health 等待、浏览器 fragment、no-browser/exit-after-health-check 和失败清理已通过 42 passed/2 skipped、Ruff、mypy、差异检查和独立只读复审；修复了站外 index symlink 预检旁路。
+- Task5 已完成：前端 launch bootstrap、`X-PTS-CSRF` 内存 middleware、成功后 fragment 清除、30 秒 heartbeat 与 pagehide 清理已通过 9 项前端测试、lint、TypeScript/Vite build、差异检查和独立只读复审；实现过程中前端现有文件使用受控编辑完成，未创建提交。
+- Task7 最终复验已完成：后端 201 passed, 2 skipped；前端 9 passed；Ruff、mypy、前端 lint/build、git diff --check 和本地文档忽略检查均通过；真实 no-browser Launcher smoke 在 127.0.0.1:43132 启动并完成 health 后正常退出，运行记录已清理。
+- 独立只读总审阅已通过：端口预留竞态、可读失败反馈、异常清理覆盖缺口和 SPA fallback 文档路径边界均已修复并通过回归；剩余 P2 复用边界已记录为验收限制。Windows 无 symlink 权限的 2 项路径边界测试保留为 skipped；真实浏览器视觉流程仍需用户在本机确认。
+- 当前下一步：Task7 focused commit 推送后，建立并开始 MVP Task8 Session。
 ## 已关闭 Task 3 Session（committed）
 
 - `2026-08-02-task-3-frontend-shell` 已完成 verification 并通过用户验收，范围严格限定为 MVP Task 3：React/Vite/TypeScript 前端骨架、OpenAPI 生成类型、same-origin typed client、正式产品首屏和启动健康检查。

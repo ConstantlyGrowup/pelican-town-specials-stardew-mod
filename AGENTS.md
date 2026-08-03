@@ -15,15 +15,15 @@
 
 ## 当前工作模式
 
-当前项目处于“MVP Task 6 已验收并创建 focused commit，当前无活动产品 Session”阶段。Task 6 已将 API Key 配置落为当前 Windows 用户环境变量，并沿用已批准的串行实施与验收流程：
+当前项目已完成 MVP Task 7 的实现、验收与 focused commit，当前无活动产品 Session；下一步为已获授权的 MVP Task 8。
+Task 7 的设计补充与实施计划已获用户确认；本阶段沿用串行实施、独立复审和用户验收门：
 
-- 不重复执行已完成的 MVP Task 1、Task 2 或 Task 3；
-- 不启动 MVP Task 7 或后续 Task；等待用户授权下一 Task；
-- 不派发产品实现型 Subagent；等待用户授权下一 Task；
-- 不创建新的业务代码、依赖、前端或后端功能骨架；
+- 不重复执行已完成的 MVP Task 1–6；
+- 不再重复执行或扩展已完成的 Task 7；Task 8 使用新的独立 Session 和实施计划；
+- 每个实施子任务使用新的 implementer Subagent，并在实现后使用独立的只读 Review Subagent；
+- 计划外的业务 API、真实模型调用、Provider Gateway、账户体系、数据库或发布流水线不纳入本 Session；
 - 不把开发工具整理或控制面维护误记为产品功能完成；
-- 不创建自动提交、自动推送或自动发布流程。
-
+- Task7 focused commit 已创建；不自动 amend、推送或发布，后续推送按用户授权执行。
 ## 开发工具与产品范围
 
 - `backend/pyproject.toml` 仅负责 Python 依赖、构建和检查工具声明；它不是产品功能。

@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from pelican_town_specials.api.app import create_app
+from pelican_town_specials.api.security import SecurityConfig, SecurityState
 from pelican_town_specials.persistence.secret_store import (
     API_KEY_ENVIRONMENT_VARIABLE,
     WindowsEnvironmentSecretStore,
@@ -56,12 +57,40 @@ def test_create_app_registers_settings_and_preserves_health(
     workspace = WorkspacePaths.create(tmp_path / "workspace")
     adapter = FakeEnvironmentAdapter()
     secret_store = WindowsEnvironmentSecretStore(adapter)
-    client = TestClient(
-        create_app(workspace_paths=workspace, secret_store=secret_store)
+    security = SecurityState(
+        config=SecurityConfig(
+            allowed_hosts=frozenset({"testserver"}),
+            expected_port=None,
+            allowed_origins=frozenset({"http://testserver"}),
+        )
     )
+    client = TestClient(
+        create_app(
+            workspace_paths=workspace,
+            secret_store=secret_store,
+            security_state=security,
+        )
+    )
+    launch_token = security.issue_launch_token()
+    bootstrap_response = client.post(
+        "/session/bootstrap",
+        json={"launchToken": launch_token},
+        headers={"Host": "testserver"},
+    )
+    csrf_token = bootstrap_response.headers["x-pts-csrf"]
+    session_headers = {"Host": "testserver"}
+    mutation_headers = {
+        **session_headers,
+        "Origin": "http://testserver",
+        "X-PTS-CSRF": csrf_token,
+    }
 
     assert client.get("/api/v1/health").status_code == 200
-    settings_response = client.get("/api/v1/settings/provider")
+    assert bootstrap_response.status_code == 204
+    settings_response = client.get(
+        "/api/v1/settings/provider",
+        headers=session_headers,
+    )
 
     assert settings_response.status_code == 200
     assert settings_response.json()["apiKeyConfigured"] is False
@@ -70,14 +99,22 @@ def test_create_app_registers_settings_and_preserves_health(
     put_key = client.put(
         "/api/v1/settings/provider/key",
         json={"apiKey": key},
+        headers=mutation_headers,
     )
     assert put_key.status_code == 200
     assert key not in put_key.text
     assert adapter.current_user[API_KEY_ENVIRONMENT_VARIABLE] == key
 
-    saved = client.put("/api/v1/settings/provider", json=_valid_settings())
+    saved = client.put(
+        "/api/v1/settings/provider",
+        json=_valid_settings(),
+        headers=mutation_headers,
+    )
     assert saved.status_code == 200
-    assert client.get("/api/v1/settings/provider").json() == {
+    assert client.get(
+        "/api/v1/settings/provider",
+        headers=session_headers,
+    ).json() == {
         **_valid_settings(),
         "apiKeyConfigured": True,
         "apiKeySource": "ENVIRONMENT",

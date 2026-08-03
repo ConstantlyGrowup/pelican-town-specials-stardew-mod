@@ -1,21 +1,60 @@
 import { createRoot } from "react-dom/client";
-import { apiClient } from "./api/client";
+import {
+  apiClient,
+  bootstrapSession,
+  clearLaunchFragment,
+  startHeartbeat,
+} from "./api/client";
 import { App } from "./app/App";
 import { AppProviders } from "./app/providers";
 
-void apiClient
-  .GET("/api/v1/health")
-  .then(({ error }) => {
-    if (error) {
-      console.warn("Pelican Town Specials health probe failed", error);
-    }
-  })
-  .catch((error: unknown) => {
-    console.warn("Pelican Town Specials health probe failed", error);
-  });
+function launchTokenFromLocation(location: Location): string | null {
+  if (!location.hash.startsWith("#launch=")) {
+    return null;
+  }
+  const encodedToken = location.hash.slice("#launch=".length);
+  if (!encodedToken) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(encodedToken);
+  } catch {
+    return encodedToken;
+  }
+}
 
-createRoot(document.getElementById("root")!).render(
-  <AppProviders>
-    <App />
-  </AppProviders>,
-);
+export async function bootstrapAndProbe(
+  location: Location = window.location,
+  history: History = window.history,
+): Promise<void> {
+  const launchToken = launchTokenFromLocation(location);
+  if (launchToken) {
+    try {
+      await bootstrapSession(launchToken);
+      clearLaunchFragment(location, history);
+    } catch {
+      console.warn("Pelican Town Specials session bootstrap failed");
+    }
+  }
+
+  try {
+    const { error } = await apiClient.GET("/api/v1/health");
+    if (error) {
+      console.warn("Pelican Town Specials health probe failed");
+    }
+  } catch {
+    console.warn("Pelican Town Specials health probe failed");
+  }
+}
+
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  void bootstrapAndProbe().then(() => {
+    startHeartbeat();
+  });
+  createRoot(rootElement).render(
+    <AppProviders>
+      <App />
+    </AppProviders>,
+  );
+}
