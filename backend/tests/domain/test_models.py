@@ -328,6 +328,18 @@ def test_field_authority_rejects_removed_legacy_value() -> None:
         FieldAuthority("COPIED_FROM_SIMPLE")
 
 
+@pytest.mark.parametrize("item_id", ["Book_AnimalCatalogue", "Book_AnimalCatalogue.WithVariant"])
+def test_game_ingredient_accepts_named_catalog_id(item_id: str) -> None:
+    ingredient = GameIngredient(
+        itemId=item_id,
+        displayName="Animal Catalogue",
+        quantity=1,
+        mappingReason="catalog match",
+        catalogVersion="stardew-1.6.15-v1",
+    )
+
+    assert ingredient.item_id == item_id
+
 def test_gameplay_requires_unique_one_to_eight_ingredients() -> None:
     ingredient = GameIngredient(
         itemId="24",

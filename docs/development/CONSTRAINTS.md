@@ -6,8 +6,8 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.1 | MVP 运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.4 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界，以及 Yibu 证据如何进入 Task 11 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.2 | MVP 运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.5 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界，以及 Yibu 证据如何进入 Task 11 |
 | `StarValleyCook_项目设计源索引与状态快照.md` | 设计源索引、产品命名、阶段状态和文档同步线索；保持 ignored |
 | `docs/development/STATUS.md` | 当前开发 Session、工作树事实、阻塞和下一步；是开发状态唯一真源 |
 | `docs/development/sessions/` | 每个 Session 的追加式历史证据 |

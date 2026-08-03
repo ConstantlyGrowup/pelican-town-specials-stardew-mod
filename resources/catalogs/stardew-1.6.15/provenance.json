@@ -1,0 +1,18 @@
+{
+  "gameVersion": "stardew-1.6.15",
+  "assetName": "Objects.json",
+  "extractedAt": "2026-08-03T06:44:50.581359Z",
+  "sourceMethod": "Stardew Data/Objects export with Objects.zh-CN Name_Name merge",
+  "sourceSha256": "6CBC66CAECFED0AAC884958E21834D572014DBF4E41E64A0AF1B190E8390FF90",
+  "sources": {
+    "english": {
+      "assetName": "Objects.json",
+      "sha256": "6CBC66CAECFED0AAC884958E21834D572014DBF4E41E64A0AF1B190E8390FF90"
+    },
+    "chinese": {
+      "assetName": "Objects.zh-CN.json",
+      "sha256": "E51B2EF545E519E268A793BDB9EC0905B9ED6A3F7E1BFD7EEA84D5EE79051F07"
+    }
+  },
+  "generatorVersion": "vanilla-catalog-builder-1"
+}

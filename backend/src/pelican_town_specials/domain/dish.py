@@ -39,7 +39,7 @@ class SemanticIngredient(StrictModel):
 
 
 class GameIngredient(_FrozenStrictModel):
-    item_id: str = Field(alias="itemId", min_length=1, max_length=16, pattern=r"^-?\d+$")
+    item_id: str = Field(alias="itemId", min_length=1, max_length=80)
     display_name: str = Field(alias="displayName", min_length=1, max_length=80)
     quantity: int = Field(ge=1, le=99)
     mapping_reason: str = Field(alias="mappingReason", min_length=1, max_length=200)

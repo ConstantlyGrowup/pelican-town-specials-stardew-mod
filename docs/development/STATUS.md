@@ -7,26 +7,33 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | committed |
-| project_phase | mvp-task-7-launcher-security |
+| project_phase | mvp-task-8-vanilla-catalog |
 | product_implementation_started | true |
-| active_session_id | none |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | MVP Task 7：实现 Launcher、会话安全、同源静态托管、前端 bootstrap 与空闲退出，已验收并创建 focused commit |
-| blocker | 无；Task7 已验收并创建 focused commit，下一步开始 MVP Task8 |
-| next_action | 推送 Task7 focused commit 后，建立并开始 MVP Task8 Session |
+| active_session_id | 2026-08-03-task-8-vanilla-catalog |
+| active_session_state | committed |
+| active_session_type | implementation |
+| current_task | MVP Task 8：已通过用户验收，focused commit 已创建并推送 |
+| blocker | 无；双语源已登记；edibility/sellPrice 使用原版观察范围，Buff duration 使用独立版本化 gameplay reference，均为 warning-only |
+| next_action | 等待下一个 Task 的用户授权；Task8 已完成并推送 |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（正式实现功能分支，已推送） |
+| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | Task7 focused commit |
-| 远端操作 | Task5 与 Task6 focused commit 已推送；Task7 focused commit 将在当前流程推送 |
-| 当前工作树范围 | Task7 设计/控制面、Launcher、会话安全、同源静态托管、前端启动引导、测试和验收记录纳入 focused commit；提交后工作树应保持干净 |
+| 最新提交 | Task8 focused commit |
+| 远端操作 | Task5、Task6、Task7 与 Task8 focused commit 已推送 |
+| 当前工作树范围 | Task8 双语源文件、目录构建、仓库、映射、Gameplay 校验及控制面文档已包含在 focused commit 并推送；工作树应保持干净 |
+## 当前 Task 8 Session（committed）
+
+- 2026-08-03-task-8-vanilla-catalog 已完成用户验收、focused commit 和推送。
+- Task8 目标是把真实 Stardew 1.6.15 Data/Objects 变成可审计、可重复构建的原版目录，并提供安全映射与 Gameplay 校验。
+- 计划文件为 docs/superpowers/plans/2026-08-03-task-8-vanilla-catalog.md；已保留用户提供的 Objects.json 与 Objects.zh-CN.json，并由构建脚本生成真实 vanilla-ingredients.json 与 provenance.json；不创建伪造的 objects-source.json。
+- 已收到 Objects.json（SHA-256 6CBC66CAECFED0AAC884958E21834D572014DBF4E41E64A0AF1B190E8390FF90）和 Objects.zh-CN.json（SHA-256 E51B2EF545E519E268A793BDB9EC0905B9ED6A3F7E1BFD7EEA84D5EE79051F07）；中文名称通过 Name_Name 本地化 Key 合并。
+- 最终验证已完成：真实重建与生产目录 identical；目录 808 条、85 个 named IDs，256 为 Tomato、-5 为 category；catalog 测试 51 passed，全后端 254 passed/2 skipped。两个 skipped 仅因 Windows 无 symlink 权限。
 
 ## 已关闭 Task 7 Session（committed）
 
@@ -41,7 +48,7 @@
 - Task5 已完成：前端 launch bootstrap、`X-PTS-CSRF` 内存 middleware、成功后 fragment 清除、30 秒 heartbeat 与 pagehide 清理已通过 9 项前端测试、lint、TypeScript/Vite build、差异检查和独立只读复审；实现过程中前端现有文件使用受控编辑完成，未创建提交。
 - Task7 最终复验已完成：后端 201 passed, 2 skipped；前端 9 passed；Ruff、mypy、前端 lint/build、git diff --check 和本地文档忽略检查均通过；真实 no-browser Launcher smoke 在 127.0.0.1:43132 启动并完成 health 后正常退出，运行记录已清理。
 - 独立只读总审阅已通过：端口预留竞态、可读失败反馈、异常清理覆盖缺口和 SPA fallback 文档路径边界均已修复并通过回归；剩余 P2 复用边界已记录为验收限制。Windows 无 symlink 权限的 2 项路径边界测试保留为 skipped；真实浏览器视觉流程仍需用户在本机确认。
-- 当前下一步：Task7 focused commit 推送后，建立并开始 MVP Task8 Session。
+- 当前下一步：完成最终验证证据、同步文档并进入用户验收准备。
 ## 已关闭 Task 3 Session（committed）
 
 - `2026-08-02-task-3-frontend-shell` 已完成 verification 并通过用户验收，范围严格限定为 MVP Task 3：React/Vite/TypeScript 前端骨架、OpenAPI 生成类型、same-origin typed client、正式产品首屏和启动健康检查。

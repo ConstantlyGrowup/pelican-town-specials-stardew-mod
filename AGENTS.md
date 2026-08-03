@@ -15,15 +15,15 @@
 
 ## 当前工作模式
 
-当前项目已完成 MVP Task 7 的实现、验收与 focused commit，当前无活动产品 Session；下一步为已获授权的 MVP Task 8。
-Task 7 的设计补充与实施计划已获用户确认；本阶段沿用串行实施、独立复审和用户验收门：
+当前项目已完成 MVP Task 7 与 MVP Task 8 的实现、验收、focused commit 与推送；当前等待下一个 Task 授权。
+Task 7 与 Task8 的设计和实施计划均已完成用户验收；Task8 双语 Objects 源、目录、映射和 Gameplay 校验已提交并推送；本阶段沿用串行实施、独立复审和用户验收门：
 
 - 不重复执行已完成的 MVP Task 1–6；
 - 不再重复执行或扩展已完成的 Task 7；Task 8 使用新的独立 Session 和实施计划；
 - 每个实施子任务使用新的 implementer Subagent，并在实现后使用独立的只读 Review Subagent；
 - 计划外的业务 API、真实模型调用、Provider Gateway、账户体系、数据库或发布流水线不纳入本 Session；
 - 不把开发工具整理或控制面维护误记为产品功能完成；
-- Task7 focused commit 已创建；不自动 amend、推送或发布，后续推送按用户授权执行。
+- Task7 与 Task8 focused commit 已创建并按用户授权推送；下一 Task 仍需新的 Session 和用户授权。
 ## 开发工具与产品范围
 
 - `backend/pyproject.toml` 仅负责 Python 依赖、构建和检查工具声明；它不是产品功能。
