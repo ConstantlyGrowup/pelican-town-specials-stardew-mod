@@ -12,9 +12,9 @@
 | active_session_id | 2026-08-04-task-15-generation-experience |
 | active_session_state | committed |
 | active_session_type | implementation |
-| current_task | Task 15 生成体验已 Review PASS 并本地提交；Milestone 3（Task 11–15）全部完成 |
-| blocker | 无（等待 Milestone 3 全量验收与 push 授权） |
-| next_action | Milestone 3 全量验证并向用户一次性验收、统一 push |
+| current_task | Milestone 3 验收修复（R1/R2）已提交；等待用户重测 Ask Gus 完整流程与 Blueprint 重试/删除 |
+| blocker | 无（等待用户重测反馈；通过后进入 Milestone 3 全量验收与统一 push） |
+| next_action | 用户重测 Ask Gus（GAMEPLAY_DESIGN 不再卡 recovery）、Blueprint 重试/删除、首页草稿区；通过后全量验收与 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 038635a（feat: add streamed generation experience） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11/12/13/14/15 已本地提交，未推送（Milestone 门） |
+| 最新提交 | 949b762（fix: provider model defaults, FAILED retry, draft discard, recovery schema, blueprint retry gating） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762）已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
@@ -49,6 +49,13 @@
 - 验证：vitest 52 passed；Playwright E2E 7 passed；build/lint 通过；后端 428 passed/2 skipped（无后端改动）。
 - 已知限制：后端 FAILED 重试未接线（`RETRY_FAILED_GENERATION` 已存在于状态机），FAILED ask-gus 草稿无操作入口；延后为单独后端 Task。
 - **Milestone 3（Task 11–15）全部完成**：本地 commits（10aa141/9555a55/145e164、5949516/aca590b、daeacfd/5df2352、038635a）均已本地提交、未 push。
+
+## 当前 Milestone 3 验收修复 Session（committed）
+
+- `2026-08-05-milestone3-acceptance-fixes` 两轮修复用户真实验证反馈：R1 `07652f6`（视觉降采样 ≤2048 + provider 错误脱敏摘要、Blueprint 生成入口覆盖 DRAFT/READY、首页草稿仪表盘）、R2 `949b762`（模型默认值 sample 配置 + 空模型守卫、FAILED 重试、草稿删除、recovery 派生字段 schema 剔除、Blueprint REVIEWABLE 重试门控）。
+- 验证：R2 全量 backend **450 passed/2 skipped**、frontend **64 passed**、E2E 7 passed、ruff/mypy/build/lint/diff-check clean；无 OpenAPI/契约变化。
+- 关键根因修复：`_model_schema` 剔除 `Field(frozen=True)` 派生字段解决 `recovery:value_error`（schema 曾强制模型返回只读派生字段）；`_resolve_kind` FAILED→INITIAL 解决 FAILED 重试 409。
+- 非阻塞：HomePage 删除后 `list_drafts` 仍含 DISCARDED（过滤终态待用户确认）；`_strip_frozen_fields` 用 title 匹配可后续加固。
 
 ## 当前 Task 9 Session（committed）
 
