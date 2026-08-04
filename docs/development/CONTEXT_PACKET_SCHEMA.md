@@ -1,6 +1,6 @@
 # Pelican Town Specials｜Context Packet Schema
 
-本文是 Main Agent、Implementer 和 Review Subagent 之间的 Context Packet 规范。它与 `docs/development/REVIEW_PROTOCOL.md` 配套使用；本文定义交接结构，Review Protocol 定义裁决和审阅边界。
+本文是包工（Claude Code 主会话）、实施子代理和 Codex Review 之间的 Context Packet 规范。它与 `docs/development/REVIEW_PROTOCOL.md` 配套使用；本文定义交接结构，Review Protocol 定义裁决和审阅边界。
 
 ## 1. Ready 条件
 
@@ -10,7 +10,7 @@
 planning_status: READY_FOR_IMPLEMENTATION
 ```
 
-不得同时返回完整 Packet 和 `BLOCKED_PENDING_DESIGN_DECISION`。后者不是允许的最终状态；不改变用户可见行为的技术冲突必须由 Main Agent 通过 `planning_rulings` 解决。
+不得同时返回完整 Packet 和 `BLOCKED_PENDING_DESIGN_DECISION`。后者不是允许的最终状态；不改变用户可见行为的技术冲突必须由包工通过 `planning_rulings` 解决。
 
 ## 2. 必需字段
 
@@ -62,11 +62,11 @@ The angle-bracket values above describe field types. A real Packet must replace 
 
 ## 3. Planning rulings
 
-`planning_rulings` records every technical contradiction that Main Agent resolved before implementation. Each ruling must cite the authoritative sources, state the minimal decision, and explicitly state whether user-visible behavior changes.
+`planning_rulings` records every technical contradiction that the foreman (Claude Code main session) resolved before implementation. Each ruling must cite the authoritative sources, state the minimal decision, and explicitly state whether user-visible behavior changes.
 
 If `user_visible_delta` is `none`, the ruling is autonomous. It may add formal documents, domain models, persistence ports, repositories, application services, API files, tests, or generated artifacts to the minimum dependency closure.
 
-If the ruling changes a user-visible API, UI behavior, persisted user semantics, or irreversible data operation, Main Agent must return evidence-based `BLOCKED` instead of silently choosing.
+If the ruling changes a user-visible API, UI behavior, persisted user semantics, or irreversible data operation, the foreman must return evidence-based `BLOCKED` instead of silently choosing.
 
 ## 4. Implementation scope delta
 
@@ -82,7 +82,7 @@ implementation_scope_delta:
       reason: <why this file is required>
 ```
 
-Main Agent verifies the delta during Review. A file being absent from the initial list is not itself a Review failure.
+The foreman verifies the delta during Review. A file being absent from the initial list is not itself a Review failure.
 
 ## 5. Task 9 planning-conflict fixture
 

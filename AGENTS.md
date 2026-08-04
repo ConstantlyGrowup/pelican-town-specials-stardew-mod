@@ -15,15 +15,17 @@
 
 ## 当前工作模式
 
-当前项目已完成 MVP Task 7 与 MVP Task 8 的实现、验收、focused commit 与推送；当前等待下一个 Task 授权。
-Task 7 与 Task8 的设计和实施计划均已完成用户验收；Task8 双语 Objects 源、目录、映射和 Gameplay 校验已提交并推送；本阶段沿用串行实施、独立复审和用户验收门：
+当前项目处于 Milestone 3（OpenAI-compatible generation）；Task 9/10/11/12/13 已本地提交（未 push，等待 Milestone 验收）；当前下一步为 Task 14（Blueprint 视觉更新与用户字段保护）。
 
-- 不重复执行已完成的 MVP Task 1–6；
-- 不再重复执行或扩展已完成的 Task 7；Task 8 使用新的独立 Session 和实施计划；
-- 每个实施子任务使用新的 implementer Subagent，并在实现后使用独立的只读 Review Subagent；
-- 计划外的业务 API、真实模型调用、Provider Gateway、账户体系、数据库或发布流水线不纳入本 Session；
-- 不把开发工具整理或控制面维护误记为产品功能完成；
-- Task7 与 Task8 focused commit 已创建并按用户授权推送；下一 Task 仍需新的 Session 和用户授权。
+自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
+
+- Claude Code 主会话作为常驻包工/协调者：持有状态真源（`STATUS.md`、Session、约束），为每个 Task 生成 Context Packet，组装前置文档包并分发；桥接 Codex 审阅，编排返工与本地提交，维持 Milestone 粒度下的长时间自动开发。
+- 每个 Task 使用新的实施子代理（干净上下文）；它只接收该 Task 的 Context Packet、关键项目规则、相关设计/计划章节和测试命令，实施完成后返回 `TASK_HANDOFF`，不提交。
+- 实施结果经主会话桥接给 Codex（经 codex-mcp，新建独立 thread 路由 `gpt-Luna`、`effort: max`）做独立只读审阅，返回 `PASS` / `REVISE` / `BLOCKED`。
+- 普通 Task 的 `PASS` 自动进入 `auto_accepted` 并创建本地 focused commit（不 push）；Milestone 全量验证后统一用户验收与 push。
+- 不打断用户，除非：`BLOCKED`、需要人工介入，或当前 Milestone 开发完成。
+
+不重复执行已完成的 MVP Task 1–13；不把开发工具整理或控制面维护误记为产品功能完成。
 ## 开发工具与产品范围
 
 - `backend/pyproject.toml` 仅负责 Python 依赖、构建和检查工具声明；它不是产品功能。
@@ -37,7 +39,7 @@ Task 7 与 Task8 的设计和实施计划均已完成用户验收；Task8 双语
 - 同一时间最多存在一个 `active`、`verification` 或 `awaiting_user_acceptance` 的修改型 Session。
 - 一个实施 Task 对应一个修改型 Session；一个 Session 只处理计划中一个 Task 的范围。
 - 每个 Task 使用新的 implementer Subagent；它只接收该 Task 的 Context Packet、相关约束和必要的当前状态。
-- implementer 完成后，使用独立的只读 Review Subagent 检查规格符合性和代码质量；主 Agent 负责复跑验收、集成和状态更新。
+- implementer 子代理完成后，由包工（Claude Code 主会话）桥接 Codex（新建独立 thread 路由 `gpt-Luna`/max）做独立只读审阅；包工负责复跑验收、集成和状态更新。
 - Session 记录是追加式历史；`STATUS.md` 是当前状态真源。历史记录不能覆盖当前状态。
 - 任何无法安全解释的状态冲突、脏工作树、重复活动 Session 或缺失下一步，都必须停下来报告。
 
@@ -52,6 +54,8 @@ Task 7 与 Task8 的设计和实施计划均已完成用户验收；Task8 双语
 - 建议的 focused commit 边界。
 
 只有用户明确接受当前验证结果，Session 才能进入 `accepted`，随后才能创建一个 focused commit。沉默、模糊回复或只要求补充信息都不视为接受。
+
+里程碑粒度下（2026-08-04 起生效）：普通 Task 的 `PASS` 经包工复核后自动进入 `auto_accepted` 并创建本地 focused commit（不 push），不逐 Task 打断用户；Milestone 全量验证后进入 `awaiting_milestone_acceptance`，用户一次性验收并授权统一 push。用户明确验收仍是进入 `accepted` 的默认前提，仅此自动路径和下述自动审批例外除外。
 
 唯一的自动审批例外是：Task 仅包含纯后台代码，未改变用户可见或功能行为，且自动测试、静态检查和必要的代码级检查能够完全覆盖该 Task 的目标。如果覆盖范围或“无功能变化”存在疑问，必须升级为用户 Review，并说明原因，请用户决定下一步。
 
@@ -72,13 +76,13 @@ Task 7 与 Task8 的设计和实施计划均已完成用户验收；Task8 双语
 
 本文后续规则补充并优先解释本文件早期的静态 Task 清单：
 
-- Main Agent 必须在交付 Context Packet 前完成字段、接口、文件、测试和依赖的可实施性闭包检查。
-- 不改变用户可见行为的技术冲突由 Main Agent 按权威顺序和最小改动原则裁决，并记录 `planning_rulings`。
+- 包工（Claude Code 主会话）必须在交付 Context Packet 前完成字段、接口、文件、测试和依赖的可实施性闭包检查。
+- 不改变用户可见行为的技术冲突由包工按权威顺序和最小改动原则裁决，并记录 `planning_rulings`。
 - domain、persistence、正式设计文档、测试和生成物可以进入当前 Task 的最小依赖闭包；扩大原始 `allowed_files` 不是单独的阻塞理由。
 - Implementer 可以记录 `implementation_scope_delta` 后继续，但必须满足 `user_visible_delta: none`、已有 criterion 直接要求且不超出 `architecture_budget`。
 - `BLOCKED` 仅用于用户可见行为分叉、不可逆数据操作、互相冲突的用户要求、缺失外部输入、重试后仍失败的必需环境操作或不可避免的用户可见范围扩张。
 - 法律、合规和内容安全不作为本项目的规划或 Review 阻塞条件；已冻结的技术安全、隐私和数据完整性要求仍有效。
 - 只有闭包检查完成的 Packet 可以标记 `READY_FOR_IMPLEMENTATION`，不得返回 `BLOCKED_PENDING_DESIGN_DECISION`。
-- Task 9 是自治提交范式实验门；实验成功后普通 Task 的 `PASS` 自动进入 `auto_accepted` 并创建本地 focused commit，Milestone 才进入用户验收和 push。
+- Task 9 自治提交范式实验已成功（2026-08-04 用户确认）；普通 Task 的 `PASS` 自动进入 `auto_accepted` 并创建本地 focused commit，Milestone 才进入用户验收和 push。
 
 开始任何工作前还必须读取 `docs/development/REVIEW_PROTOCOL.md` 和 `docs/development/CONTEXT_PACKET_SCHEMA.md`。

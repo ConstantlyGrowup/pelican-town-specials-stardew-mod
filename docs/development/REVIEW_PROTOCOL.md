@@ -1,6 +1,6 @@
 # Pelican Town Specials｜全局 Review Protocol
 
-本文是所有 Task、Session、Codex Main Agent、Review Subagent 和外部 Implementer 共同遵守的审阅协议。它只定义开发协作控制面，不增加产品功能。
+本文是所有 Task、Session、包工（Claude Code 主会话）、Codex Review 和外部实施子代理共同遵守的审阅协议。它只定义开发协作控制面，不增加产品功能。
 
 ## 1. 核心原则：验收合同冻结
 
@@ -13,7 +13,7 @@
 - 明确的 `architecture_budget` 和禁止的架构扩展；
 - 当前 Task 的全局 `revise_round`。
 
-Task 开始后，Acceptance Ledger 不得由 Main Agent、Review Subagent 或 Implementer 单方面增加、删除或提高标准。上一轮 `REVISE`、Review Subagent 的建议、代码中的新发现和额外探针结果都不是新的需求来源。
+Task 开始后，Acceptance Ledger 不得由包工、Codex Review 或实施子代理单方面增加、删除或提高标准。上一轮 `REVISE`、Review 的建议、代码中的新发现和额外探针结果都不是新的需求来源。
 
 如果确实需要改变验收合同，必须停止当前 Task，返回 `BLOCKED`，由用户决定是否更新设计、建立新 Task 或把建议记录为后续加固项。
 
@@ -48,14 +48,14 @@ Task 开始后，Acceptance Ledger 不得由 Main Agent、Review Subagent 或 Im
 
 - 每个 Task 最多允许 **两轮 `REVISE`**。
 - 轮次按 Task/Session 全局计数，不按 Agent、模型、Reviewer、工作树或问题数量计数。
-- 更换 Implementer、启动新的 Review Subagent、重新生成 Context Packet 或把同一问题换一种表述，都不能重置计数。
+- 更换实施子代理、启动新的 Review、重新生成 Context Packet 或把同一问题换一种表述，都不能重置计数。
 - 第一轮 Review 可以一次列出多个已存在的 MUST_FIX 项；Implementer 应在同一轮内集中修复。
 - 第二轮 Review 只能检查第一轮修复项和由修复直接造成的回归。
 - 第二轮后仍不能 PASS，必须返回 `BLOCKED` 或进入用户 Review；不得开始第三轮 `REVISE`。
 
 ## 4. REVISE 的封闭范围
 
-Review Subagent 在收到修复结果后不得重新进行开放式全仓库架构审查。它只能：
+Review 在收到修复结果后不得重新进行开放式全仓库架构审查。它只能：
 
 1. 验证上一轮列出的 `criterion_id`；
 2. 验证修复没有破坏原有验收项；
@@ -84,11 +84,11 @@ scope_delta: none | requested
 reason_for_blocked: <仅 BLOCKED 时填写>
 ```
 
-缺少 `criterion_id`、权威来源或可复现证据的 `REVISE` 不得转交 Implementer 执行；Main Agent 必须将其改为非阻塞观察或 `BLOCKED`。
+缺少 `criterion_id`、权威来源或可复现证据的 `REVISE` 不得转交实施子代理执行；包工（Claude Code 主会话）必须将其改为非阻塞观察或 `BLOCKED`。
 
 ## 6. 模型和路由校验
 
-- Main Agent 和 Review Subagent 必须在交接中报告实际使用的模型与 reasoning effort。
+- 包工、Codex Review 和实施子代理必须在交接中报告实际使用的模型与 reasoning effort。
 - 指定模型不可用时不得静默 fallback；应返回 `BLOCKED`，除非用户已明确授权替代模型。
 - 多模态路由只改变执行 Agent，不改变 Acceptance Ledger、轮次上限和 Task 范围。
 
@@ -100,8 +100,8 @@ reason_for_blocked: <仅 BLOCKED 时填写>
 
 本节是对前述 Review 规则的全局补充，并优先解释早期固定文件清单和旧的冲突处理表述。
 
-- Main Agent 在生成最终 Context Packet 前必须完成字段、接口、文件、测试和依赖的可实施性闭包检查。
-- 不改变用户可见行为的技术冲突由 Main Agent 按权威顺序和最小改动原则裁决，并记录在 `planning_rulings`。
+- 包工（Claude Code 主会话）在生成最终 Context Packet 前必须完成字段、接口、文件、测试和依赖的可实施性闭包检查。
+- 不改变用户可见行为的技术冲突由包工按权威顺序和最小改动原则裁决，并记录在 `planning_rulings`。
 - 正式设计、domain、persistence、application、API、测试和生成物均可进入当前 Task 的最小依赖闭包。
 - 扩大原始 `allowed_files` 本身不是 `BLOCKED`；每个新增文件必须关联已有 criterion 并说明原因。
 - 只有通过闭包检查的 Packet 才能标记 `READY_FOR_IMPLEMENTATION`。
@@ -132,7 +132,7 @@ reason_for_blocked: <仅 BLOCKED 时填写>
 - 完成任务必然超出冻结的用户可见产品范围；
 - 指定模型不可用且没有用户预授权的替代模型。
 
-`BLOCKED` 必须给出用户可见分叉、不可逆操作、外部输入或环境失败的具体证据。缺少这些证据时，Main Agent 必须继续裁决并生成 Packet。不得把 `BLOCKED_PENDING_DESIGN_DECISION` 作为内部技术冲突的常规结果。
+`BLOCKED` 必须给出用户可见分叉、不可逆操作、外部输入或环境失败的具体证据。缺少这些证据时，包工（Claude Code 主会话）必须继续裁决并生成 Packet。不得把 `BLOCKED_PENDING_DESIGN_DECISION` 作为内部技术冲突的常规结果。
 
 ## 10. 实施期最小范围扩展
 
@@ -148,7 +148,7 @@ implementation_scope_delta:
       reason: <why required>
 ```
 
-Main Agent 在 Review 时验证该扩展。满足 `user_visible_delta: none`、已有 criterion 直接要求且不超出 `architecture_budget` 时，Review 必须接受；文件不在原始清单中不能单独构成 `REVISE`。
+包工在 Review 时验证该扩展。满足 `user_visible_delta: none`、已有 criterion 直接要求且不超出 `architecture_budget` 时，Review 必须接受；文件不在原始清单中不能单独构成 `REVISE`。
 
 ## 11. Review 封闭边界补充
 
@@ -161,14 +161,14 @@ Main Agent 在 Review 时验证该扩展。满足 `user_visible_delta: none`、�
 
 ## 12. Task 完成与 Milestone 提交门
 
-- Task 9 是双 Agent 协作范式实验门；实验成功前仍需要用户确认是否启用自治提交范式。
+- Task 9 双 Agent 协作范式实验已成功（2026-08-04 用户确认）；自治提交范式已启用。
 - 实验成功后，普通 Task 的 `PASS` 自动进入 `auto_accepted`，自动更新 Session/`STATUS.md` 并创建本地 focused commit。
 - 单个 Task 不自动 push；下一项已有正式计划且依赖满足时可以自动启动。
 - Milestone 全量验证后进入 `awaiting_milestone_acceptance`，用户一次性验收并授权统一 push。
 
 ## 13. 强制模型与交接字段
 
-Main Agent、Review Subagent 和 Implementer 必须报告实际模型与 effort。模型路由仍为 Main `gpt-sol/high`、Review `gpt-Luna/max`，多模态 Implementer `gpt-Luna/max`。路由变化不得重置 Acceptance Ledger 或 Review 轮次。
+包工、Codex Review 和实施子代理必须报告实际模型与 effort。模型路由：规划与协调由包工（Claude Code 主会话）承担；Review 由 Codex `gpt-Luna`/max（经 codex-mcp 新建独立 thread）承担；Implementer 为每个 Task 新的实施子代理，多模态实施 `gpt-Luna`/max。路由变化不得重置 Acceptance Ledger 或 Review 轮次。
 
 Review 输出除第 5 节字段外，必须包含：
 

@@ -15,6 +15,7 @@
 | current_task | Task 13 Ask Gus 生成 Orchestrator 已 Review PASS 并本地提交；按里程碑粒度继续 Task 14 |
 | blocker | 无 |
 | next_action | 运行 Task 14 规划（Blueprint 视觉更新与用户字段保护） |
+| collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
 
@@ -24,7 +25,7 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 5949516（feat: orchestrate Ask Gus generation） |
+| 最新提交 | c8d329a（docs: adopt foreman-subagent-reviewer collaboration model） |
 | 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11/12/13 已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
