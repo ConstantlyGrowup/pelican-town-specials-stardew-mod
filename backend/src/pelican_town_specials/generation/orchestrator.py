@@ -475,6 +475,8 @@ class GenerationOrchestrator:
                 staged = transition(ready, DraftAction.START_INITIAL_GENERATION)
             elif draft.status is DraftStatus.READY:
                 staged = transition(draft, DraftAction.START_INITIAL_GENERATION)
+            elif draft.status is DraftStatus.FAILED:
+                staged = transition(draft, DraftAction.RETRY_FAILED_GENERATION)
             else:
                 raise _illegal_state_error()
         elif command.kind is GenerationAttemptKind.FULL_REGENERATE:

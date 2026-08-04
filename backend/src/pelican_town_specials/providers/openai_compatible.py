@@ -8,7 +8,7 @@ import hashlib
 import json
 from collections.abc import Callable
 from time import monotonic
-from typing import Any, TypeVar, cast
+from typing import Annotated, Any, TypeVar, cast, get_args, get_origin
 from uuid import UUID, uuid4
 
 import httpx
@@ -91,6 +91,7 @@ class OpenAICompatibleGateway:
         *,
         json_only: bool = False,
     ) -> DishAnalysis:
+        self._require_model(self._settings.vision_model, "vision_model")
         image_data_url = self._data_url(request.image.data, request.image.media_type)
         content = await self._chat_structured(
             model=self._settings.vision_model,
@@ -110,6 +111,7 @@ class OpenAICompatibleGateway:
         *,
         json_only: bool = False,
     ) -> GeneratedDishCore:
+        self._require_model(self._settings.text_model, "text_model")
         prompt = f"{ASK_GUS_PROMPT_V1}\n\n菜品分析：\n{request.analysis.model_dump_json(by_alias=True)}"
         content = await self._chat_structured(
             model=self._settings.text_model,
@@ -125,6 +127,7 @@ class OpenAICompatibleGateway:
 
     async def generate_image(self, request: ImageGenerationRequest) -> GeneratedImage:
         model = self._settings.image_model
+        self._require_model(model, "image_model")
         timeout = self._settings.image_timeout_seconds
         if request.operation is ImageOperation.EDIT:
             return await self._generate_edit(request, model=model, timeout=timeout)
@@ -301,6 +304,18 @@ class OpenAICompatibleGateway:
             }
         return body
 
+    @staticmethod
+    def _require_model(model: str, field: str) -> None:
+        """Fail locally when a required model is empty instead of a cryptic relay error."""
+        if not model or not model.strip():
+            raise AppError(
+                code="PTS_PROVIDER_NOT_CONFIGURED",
+                message="Provider 模型未配置，请先在设置页填写模型 ID。",
+                http_status=422,
+                details={"emptyFields": [field]},
+                retryable=False,
+            )
+
     def _data_url(self, data: bytes, media_type: ImageMediaType) -> str:
         return f"data:{media_type.value};base64,{base64.b64encode(data).decode('ascii')}"
 
@@ -419,8 +434,89 @@ def _model_schema[TModel: BaseModel](
     name: str, model: type[TModel]
 ) -> dict[str, object]:
     schema = cast(Any, model).model_json_schema(by_alias=True)
+    _strip_frozen_fields(schema, _frozen_fields_by_model(model))
     _strictify_schema(schema)
     return {"name": name, "strict": True, "schema": schema}
+
+
+def _frozen_fields_by_model(model: type[BaseModel]) -> dict[str, set[str]]:
+    """Map model class names to their read-only (derived) field aliases.
+
+    Derived fields are computed by domain ``model_validator``s, so the provider
+    schema must not require the model to produce them (``_strictify_schema``
+    would otherwise mark them ``required`` and the domain ``before`` validator
+    would reject the echoed values). A model-level ``ConfigDict(frozen=True)``
+    does not propagate to ``FieldInfo.frozen``, so only fields explicitly
+    declared ``Field(..., frozen=True)`` are collected here.
+    """
+    collected: dict[str, type[BaseModel]] = {}
+    _collect_models(model, collected)
+    return {
+        name: {
+            field.alias or field_name
+            for field_name, field in cls.model_fields.items()
+            if field.frozen
+        }
+        for name, cls in collected.items()
+    }
+
+
+def _collect_models(
+    model: type[BaseModel], collected: dict[str, type[BaseModel]]
+) -> None:
+    if model.__name__ in collected:
+        return
+    collected[model.__name__] = model
+    for field in model.model_fields.values():
+        _collect_annotation(field.annotation, collected)
+
+
+def _collect_annotation(
+    annotation: object, collected: dict[str, type[BaseModel]]
+) -> None:
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        args = get_args(annotation)
+        if args:
+            _collect_annotation(args[0], collected)
+        return
+    if origin is not None:
+        for arg in get_args(annotation):
+            _collect_annotation(arg, collected)
+        return
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        _collect_models(annotation, collected)
+
+
+def _strip_frozen_fields(
+    node: object, frozen_by_model: dict[str, set[str]]
+) -> None:
+    """Recursively remove ``Field(frozen=True)`` properties from a JSON schema.
+
+    Walks every object schema (top level and ``$defs``) and, when the node's
+    ``title`` matches a collected model name, drops that model's read-only
+    properties. ``required`` is pruned in the same pass; ``_strictify_schema``
+    later rebuilds it from the surviving properties.
+    """
+    if isinstance(node, dict):
+        title = node.get("title")
+        if isinstance(title, str):
+            frozen = frozen_by_model.get(title)
+            if frozen:
+                properties = node.get("properties")
+                if isinstance(properties, dict):
+                    for alias in frozen:
+                        properties.pop(alias, None)
+                required = node.get("required")
+                if isinstance(required, list):
+                    node["required"] = [
+                        item for item in required if item not in frozen
+                    ]
+        for value in node.values():
+            _strip_frozen_fields(value, frozen_by_model)
+    elif isinstance(node, list):
+        for item in node:
+            _strip_frozen_fields(item, frozen_by_model)
 
 
 def _strictify_schema(node: object) -> None:

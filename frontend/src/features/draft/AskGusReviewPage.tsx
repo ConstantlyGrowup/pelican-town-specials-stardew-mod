@@ -120,10 +120,14 @@ export function AskGusReviewPage() {
 
   const draft = query.data;
   const streaming = generation.phase === "streaming";
-  // Initial generation is only reachable from DRAFT/READY. FAILED is excluded:
-  // the backend resolve_kind rejects generate from FAILED with a 409.
+  // Initial generation is reachable from DRAFT/READY; a FAILED draft retries
+  // through the same full INITIAL re-run path (the backend maps FAILED →
+  // INITIAL). A terminal ARCHIVED/DISCARDED draft offers no generation entry.
   const canGenerate =
-    draft.status === "DRAFT" || draft.status === "READY";
+    draft.status === "DRAFT" ||
+    draft.status === "READY" ||
+    draft.status === "FAILED";
+  const canRetry = canGenerate || draft.status === "REVIEWABLE";
   const running =
     draft.status === "GENERATING" || draft.status === "REGENERATING";
   const terminal = draft.status === "ARCHIVED" || draft.status === "DISCARDED";
@@ -148,7 +152,7 @@ export function AskGusReviewPage() {
       {generation.phase === "error" && generation.error && (
         <GenerationError
           error={generation.error}
-          onRetry={draft.status === "REVIEWABLE" ? generation.begin : undefined}
+          onRetry={canRetry ? generation.begin : undefined}
         />
       )}
       {generation.phase === "cancelled" && (

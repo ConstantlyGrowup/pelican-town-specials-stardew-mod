@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useForm, useFormState } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiClient } from "../../api/client";
+import { apiClient, getCsrfToken } from "../../api/client";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import {
@@ -233,6 +233,26 @@ export function BlueprintEditorPage() {
     navigate(`/cookbook/${data.dishId}`);
   }
 
+  async function onDiscard() {
+    setBusy(true);
+    setActionError(null);
+    const headers: Record<string, string> = {};
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers["X-PTS-CSRF"] = csrfToken;
+    }
+    const response = await fetch(
+      `/api/v1/drafts/${encodeURIComponent(draftId ?? "")}/discard`,
+      { method: "POST", credentials: "same-origin", headers },
+    );
+    setBusy(false);
+    if (!response.ok) {
+      setActionError(copy.discardDraftFailed);
+      return;
+    }
+    navigate("/");
+  }
+
   if (query.isLoading) {
     return (
       <main>
@@ -262,8 +282,18 @@ export function BlueprintEditorPage() {
 
   const previewStale = stale || draft.status === "STALE_PREVIEW";
   const canGenerate =
-    previewStale || draft.status === "DRAFT" || draft.status === "READY";
-  const generationLabel = previewStale ? copy.updatePreview : copy.generatePreview;
+    previewStale ||
+    draft.status === "DRAFT" ||
+    draft.status === "READY" ||
+    draft.status === "FAILED";
+  // A REVIEWABLE blueprint has no supported generation action (it must be
+  // edited into STALE_PREVIEW first), so it must never expose a retry entry.
+  const canRetry = canGenerate;
+  const generationLabel = previewStale
+    ? copy.updatePreview
+    : draft.status === "FAILED"
+      ? copy.retryGeneration
+      : copy.generatePreview;
   const generationStreamingLabel = previewStale
     ? copy.updatingPreview
     : copy.generatingPreview;
@@ -302,7 +332,10 @@ export function BlueprintEditorPage() {
         />
       )}
       {generation.phase === "error" && generation.error && (
-        <GenerationError error={generation.error} onRetry={generation.begin} />
+        <GenerationError
+          error={generation.error}
+          onRetry={canRetry ? generation.begin : undefined}
+        />
       )}
       {generation.phase === "cancelled" && (
         <p className="status-banner status-warning">{copy.generationCancelled}</p>
@@ -455,6 +488,16 @@ export function BlueprintEditorPage() {
           disabled={busy || generation.phase === "streaming"}
         >
           {copy.archiveDish}
+        </button>
+      )}
+      {draft.status !== "ARCHIVED" && draft.status !== "DISCARDED" && (
+        <button
+          className="btn"
+          type="button"
+          onClick={onDiscard}
+          disabled={busy || generation.phase === "streaming"}
+        >
+          {copy.discardDraft}
         </button>
       )}
 

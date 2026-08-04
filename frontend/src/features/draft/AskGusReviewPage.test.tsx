@@ -216,7 +216,7 @@ describe("ask gus review", () => {
     expect(getSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("does not offer a retry or start entry for a FAILED draft", async () => {
+  it("offers a retry entry for a FAILED draft", async () => {
     server.use(
       http.get("/api/v1/drafts/:draft_id", () =>
         HttpResponse.json(
@@ -235,12 +235,48 @@ describe("ask gus review", () => {
     );
     renderPage();
 
-    await screen.findByText(copy.askGusReviewTitle);
+    await screen.findByRole("button", { name: copy.retryGeneration });
     expect(screen.queryByRole("button", { name: copy.startGeneration })).toBeNull();
-    expect(screen.queryByRole("button", { name: copy.retryGeneration })).toBeNull();
   });
 
-  it("shows the error without a retry entry when initial generation fails", async () => {
+  it("retries a FAILED draft to a successful reviewable result", async () => {
+    const getSpy = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json(
+          askGusDraft({
+            status: "FAILED",
+            lastError: {
+              code: "PTS_GEN_VALIDATION_FAILED",
+              message: "生成结果未通过校验。",
+              retryable: false,
+              requestId: "req-1",
+              occurredAt: "2026-08-04T00:00:00Z",
+            },
+          }),
+        ),
+      )
+      .mockReturnValueOnce(HttpResponse.json(askGusDraft({ status: "REVIEWABLE", revision: 3 })));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", getSpy),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":3,"draft":{}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.retryGeneration }));
+
+    expect(
+      await screen.findByRole("button", { name: copy.fullRegenerate }),
+    ).toBeVisible();
+    expect(getSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the error with a retry entry when initial generation fails", async () => {
     server.use(
       http.get("/api/v1/drafts/:draft_id", () =>
         HttpResponse.json(
@@ -269,6 +305,6 @@ describe("ask gus review", () => {
     fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
 
     expect(await screen.findByText("生成结果未通过校验。")).toBeVisible();
-    expect(screen.queryByRole("button", { name: copy.retryGeneration })).toBeNull();
+    expect(screen.getByRole("button", { name: copy.retryGeneration })).toBeVisible();
   });
 });

@@ -10,9 +10,12 @@ import httpx
 import pytest
 import respx
 
+from pelican_town_specials.application.settings import ProviderSettings
 from pelican_town_specials.domain.common import Language
+from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.providers import (
+    AskGusDesignRequest,
     DishAnalysisRequest,
     ImageGenerationRequest,
     ImageMediaType,
@@ -45,6 +48,89 @@ def test_json_schema_required_includes_all_properties() -> None:
     ingredient = schema["schema"]["$defs"]["SemanticIngredient"]
 
     assert "quantityHint" in ingredient["required"]
+
+
+def test_generated_dish_schema_excludes_derived_recovery_fields() -> None:
+    from pelican_town_specials.providers.contracts import GeneratedDishCore
+    from pelican_town_specials.providers.openai_compatible import _model_schema
+
+    schema = _model_schema("generateddishcore", GeneratedDishCore)
+    recovery = schema["schema"]["$defs"]["RecoverySpec"]
+
+    assert set(recovery["properties"]) == {"edibility"}
+    assert recovery["required"] == ["edibility"]
+    assert "energyRestore" not in recovery["properties"]
+    assert "healthRestore" not in recovery["properties"]
+    assert "calculationVersion" not in recovery["properties"]
+
+
+def test_generated_dish_core_accepts_recovery_with_only_edibility() -> None:
+    from pelican_town_specials.providers.contracts import GeneratedDishCore
+    from pelican_town_specials.providers.structured_output import (
+        validate_structured,
+    )
+
+    payload = json.dumps(
+        {
+            "presentation": {
+                "displayName": "春日面碗",
+                "internalName": "SpringNoodleBowl",
+                "categoryLabel": "主菜",
+                "description": "一碗带着春天气息的热汤面。",
+                "tags": ["spring", "noodles"],
+            },
+            "ingredients": [
+                {"name": "Egg", "normalizedName": "egg"},
+                {"name": "Spring Onion", "normalizedName": "spring onion"},
+            ],
+            "recovery": {"edibility": 80},
+            "sellPrice": 220,
+            "isDrink": False,
+            "visualBrief": "Warm ceramic bowl on a rustic tavern table.",
+        }
+    )
+
+    core = validate_structured(GeneratedDishCore, payload)
+
+    assert core.recovery.edibility == 80
+    assert core.recovery.energy_restore == 200
+    assert core.recovery.calculation_version == "stardew-1.6"
+
+
+def test_generated_dish_core_rejects_echoed_derived_recovery_fields() -> None:
+    from pelican_town_specials.providers.contracts import GeneratedDishCore
+    from pelican_town_specials.providers.structured_output import (
+        StructuredOutputValidationFailed,
+        validate_structured,
+    )
+
+    payload = json.dumps(
+        {
+            "presentation": {
+                "displayName": "春日面碗",
+                "internalName": "SpringNoodleBowl",
+                "categoryLabel": "主菜",
+                "description": "一碗带着春天气息的热汤面。",
+                "tags": ["spring", "noodles"],
+            },
+            "ingredients": [
+                {"name": "Egg", "normalizedName": "egg"},
+                {"name": "Spring Onion", "normalizedName": "spring onion"},
+            ],
+            "recovery": {
+                "edibility": 80,
+                "energyRestore": 200,
+                "healthRestore": 90,
+                "calculationVersion": "stardew-1.6",
+            },
+            "sellPrice": 220,
+            "isDrink": False,
+            "visualBrief": "Warm ceramic bowl on a rustic tavern table.",
+        }
+    )
+
+    with pytest.raises(StructuredOutputValidationFailed):
+        validate_structured(GeneratedDishCore, payload)
 
 
 def _analysis_request() -> DishAnalysisRequest:
@@ -388,3 +474,80 @@ async def test_sleep_sequence_is_recorded(settings: object) -> None:
     assert route.call_count == 3
     assert len(delays) == 2
     assert all(delay >= 0 for delay in delays)
+
+
+def _ask_gus_design_request() -> AskGusDesignRequest:
+    return AskGusDesignRequest(
+        analysis=DishAnalysis.model_validate(_ANALYSIS_JSON),
+        context_text=None,
+        language=Language.ZH_CN,
+        requestId=uuid4(),
+    )
+
+
+def _image_generation_request() -> ImageGenerationRequest:
+    return ImageGenerationRequest(
+        operation=ImageOperation.GENERATION,
+        prompt="a red square",
+        size="256x256",
+        requestId=uuid4(),
+    )
+
+
+def _gateway_with_empty_model(field: str) -> OpenAICompatibleGateway:
+    settings = ProviderSettings(
+        baseUrl="https://yibuapi.com/v1",
+        visionModel="" if field == "vision_model" else "vision-model",
+        textModel="" if field == "text_model" else "text-model",
+        imageModel="" if field == "image_model" else "image-model",
+        chatTimeoutSeconds=60,
+        imageTimeoutSeconds=90,
+        maxAutomaticRetries=0,
+    )
+    return OpenAICompatibleGateway(settings=settings, secret_store=FakeSecretStore())
+
+
+@pytest.mark.parametrize(
+    ("empty_field", "call"),
+    [
+        ("vision_model", "analyze"),
+        ("text_model", "design"),
+        ("image_model", "image"),
+    ],
+)
+@respx.mock
+async def test_empty_required_model_fails_before_relay(
+    empty_field: str, call: str
+) -> None:
+    chat_route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON))
+    )
+    image_route = respx.post("https://yibuapi.com/v1/images/generations").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "data": [
+                    {
+                        "b64_json": base64.b64encode(
+                            b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+                        ).decode()
+                    }
+                ]
+            },
+        )
+    )
+    gateway = _gateway_with_empty_model(empty_field)
+
+    with pytest.raises(AppError) as excinfo:
+        if call == "analyze":
+            await gateway.analyze_dish(_analysis_request())
+        elif call == "design":
+            await gateway.design_ask_gus(_ask_gus_design_request())
+        else:
+            await gateway.generate_image(_image_generation_request())
+
+    assert excinfo.value.code == "PTS_PROVIDER_NOT_CONFIGURED"
+    assert excinfo.value.http_status == 422
+    assert excinfo.value.details["emptyFields"] == [empty_field]
+    assert chat_route.call_count == 0
+    assert image_route.call_count == 0

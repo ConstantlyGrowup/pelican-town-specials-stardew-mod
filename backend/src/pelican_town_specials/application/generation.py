@@ -59,12 +59,20 @@ class GenerationService:
     def _resolve_kind(self, draft_id: UUID) -> GenerationAttemptKind:
         draft = self._get_draft(draft_id)
         if draft.mode is DraftMode.BLUEPRINT:
-            if draft.status in (DraftStatus.DRAFT, DraftStatus.READY):
+            if draft.status in (
+                DraftStatus.DRAFT,
+                DraftStatus.READY,
+                DraftStatus.FAILED,
+            ):
                 return GenerationAttemptKind.INITIAL
             if draft.status is DraftStatus.STALE_PREVIEW:
                 return GenerationAttemptKind.BLUEPRINT_PREVIEW
             raise _illegal_state_error(draft)
-        if draft.status in (DraftStatus.DRAFT, DraftStatus.READY):
+        if draft.status in (
+            DraftStatus.DRAFT,
+            DraftStatus.READY,
+            DraftStatus.FAILED,
+        ):
             return GenerationAttemptKind.INITIAL
         if draft.status is DraftStatus.REVIEWABLE:
             return GenerationAttemptKind.FULL_REGENERATE

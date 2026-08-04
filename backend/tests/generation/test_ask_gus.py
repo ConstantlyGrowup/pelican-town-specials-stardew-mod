@@ -77,6 +77,57 @@ async def test_initial_generation_rejects_reviewable_draft(
     assert excinfo.value.code == "PTS_STATE_ILLEGAL_TRANSITION"
 
 
+async def test_failed_draft_retry_reaches_reviewable(
+    harness: GenerationHarness, orchestrator: GenerationOrchestrator
+) -> None:
+    ref = put_original_image(harness)
+    failed = make_domain_draft(
+        mode=DraftMode.ASK_GUS, status=DraftStatus.FAILED, revision=1
+    )
+    failed = failed.model_copy(
+        update={
+            "source": failed.source.model_copy(
+                update={"original_image_asset_id": ref.asset_id}
+            )
+        }
+    )
+    saved = orchestrator.drafts.save(failed, expected_revision=None)
+
+    events = [
+        event async for event in orchestrator.run(initial_command(saved))
+    ]
+
+    assert events[-1].type == "attempt.succeeded"
+    reloaded = orchestrator.drafts.get(saved.draft_id)
+    assert reloaded.status is DraftStatus.REVIEWABLE
+
+
+async def test_failed_draft_retry_returns_to_failed_on_second_failure(
+    harness: GenerationHarness, orchestrator: GenerationOrchestrator
+) -> None:
+    harness.gateway.fail_stage = GenerationStage.GAMEPLAY_DESIGN
+    ref = put_original_image(harness)
+    failed = make_domain_draft(
+        mode=DraftMode.ASK_GUS, status=DraftStatus.FAILED, revision=1
+    )
+    failed = failed.model_copy(
+        update={
+            "source": failed.source.model_copy(
+                update={"original_image_asset_id": ref.asset_id}
+            )
+        }
+    )
+    saved = orchestrator.drafts.save(failed, expected_revision=None)
+
+    events = [
+        event async for event in orchestrator.run(initial_command(saved))
+    ]
+
+    assert events[-1].type == "attempt.failed"
+    reloaded = orchestrator.drafts.get(saved.draft_id)
+    assert reloaded.status is DraftStatus.FAILED
+
+
 async def test_dish_analysis_receives_downscaled_jpeg(
     harness: GenerationHarness,
 ) -> None:

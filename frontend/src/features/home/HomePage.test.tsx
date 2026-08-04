@@ -1,10 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router-dom";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import { HomePage } from "./HomePage";
 
@@ -104,5 +104,70 @@ describe("home page draft dashboard", () => {
     renderPage();
 
     expect(await screen.findByText(copy.draftsLoadFailed)).toBeVisible();
+  });
+
+  it("deletes a draft and refreshes the list", async () => {
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    const getSpy = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json({
+          items: [
+            {
+              draftId: "draft-1",
+              mode: "BLUEPRINT",
+              status: "DRAFT",
+              revision: 1,
+              updatedAt: "2026-08-04T00:00:00Z",
+              displayName: "南瓜汤",
+              originalImageAssetId: "asset-1",
+            },
+            {
+              draftId: "draft-2",
+              mode: "ASK_GUS",
+              status: "REVIEWABLE",
+              revision: 3,
+              updatedAt: "2026-08-03T00:00:00Z",
+              displayName: "",
+              originalImageAssetId: "asset-2",
+            },
+          ],
+          nextCursor: null,
+          total: 2,
+        }),
+      )
+      .mockReturnValueOnce(
+        HttpResponse.json({
+          items: [
+            {
+              draftId: "draft-2",
+              mode: "ASK_GUS",
+              status: "REVIEWABLE",
+              revision: 3,
+              updatedAt: "2026-08-03T00:00:00Z",
+              displayName: "",
+              originalImageAssetId: "asset-2",
+            },
+          ],
+          nextCursor: null,
+          total: 1,
+        }),
+      );
+    server.use(
+      http.get("/api/v1/drafts", getSpy),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    await screen.findByRole("heading", { name: "南瓜汤" });
+    const deleteButtons = screen.getAllByRole("button", {
+      name: copy.discardDraft,
+    });
+    fireEvent.click(deleteButtons[0]);
+
+    await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(copy.unnamedDraft)).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "南瓜汤" })).toBeNull();
+    expect(getSpy).toHaveBeenCalledTimes(2);
   });
 });

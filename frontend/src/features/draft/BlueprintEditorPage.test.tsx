@@ -5,15 +5,49 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { GenerationErrorEnvelope, GenerationStage } from "../../api/ndjson";
 import { PRODUCT_COPY } from "../../i18n/copy";
+import type { GenerationPhase } from "../generation/useGeneration";
 import { BlueprintEditorPage } from "./BlueprintEditorPage";
+
+type UseGenerationOverride = {
+  phase: GenerationPhase;
+  currentStage: GenerationStage | null;
+  succeededStages: GenerationStage[];
+  totalStages: number | null;
+  error: GenerationErrorEnvelope | null;
+  begin: () => void;
+  cancel: () => void;
+};
+
+const useGenerationOverride = vi.hoisted(() => ({
+  current: null as UseGenerationOverride | null,
+}));
+
+vi.mock("../generation/useGeneration", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../generation/useGeneration")>();
+  return {
+    ...actual,
+    useGeneration: (options: Parameters<typeof actual.useGeneration>[0]) => {
+      const override = useGenerationOverride.current;
+      if (override) {
+        return override;
+      }
+      return actual.useGeneration(options);
+    },
+  };
+});
 
 const copy = PRODUCT_COPY.zh;
 
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  useGenerationOverride.current = null;
+  server.resetHandlers();
+});
 afterAll(() => server.close());
 
 const provenance = {
@@ -85,6 +119,7 @@ function renderPage() {
         <Routes>
           <Route path="/drafts/:draftId" element={<BlueprintEditorPage />} />
           <Route path="/cookbook/:dishId" element={<div>cookbook page</div>} />
+          <Route path="/" element={<div>home page</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -404,5 +439,91 @@ describe("blueprint editor", () => {
     expect(await screen.findByText(copy.generationCancelled)).toBeVisible();
     expect(cancelSpy).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: copy.updatePreview })).toBeVisible();
+  });
+
+  it("offers a retry generation entry for a FAILED draft", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "FAILED", revision: 1 })),
+      ),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    expect(screen.getByRole("button", { name: copy.retryGeneration })).toBeVisible();
+  });
+
+  it("retries a FAILED draft back to REVIEWABLE", async () => {
+    const getSpy = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json(blueprintDraft({ status: "FAILED", revision: 1 })),
+      )
+      .mockReturnValueOnce(
+        HttpResponse.json(blueprintDraft({ status: "REVIEWABLE", revision: 2 })),
+      );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", getSpy),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n{"type":"stage.started","stage":"INPUT_VALIDATION","ordinal":1,"total":6}\n{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":2,"draft":{}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    fireEvent.click(screen.getByRole("button", { name: copy.retryGeneration }));
+
+    expect(await screen.findByRole("button", { name: copy.archiveDish })).toBeVisible();
+    expect(getSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("discards the draft and navigates home", async () => {
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "DRAFT", revision: 1 })),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.discardDraft }));
+
+    await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("home page")).toBeVisible();
+  });
+
+  it("does not expose a retry entry for a REVIEWABLE blueprint on generation error", async () => {
+    // The backend has no generation action for a REVIEWABLE blueprint (it must
+    // first be edited into STALE_PREVIEW), so a GenerationError must not offer
+    // a retry button that would 409.
+    useGenerationOverride.current = {
+      phase: "error",
+      currentStage: null,
+      succeededStages: [],
+      totalStages: null,
+      error: {
+        code: "PTS_GEN_VALIDATION_FAILED",
+        message: "生成结果未通过校验。",
+        retryable: false,
+        requestId: "req-1",
+        recommendedAction: "",
+      },
+      begin: vi.fn(),
+      cancel: vi.fn(),
+    };
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "REVIEWABLE", revision: 2 })),
+      ),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    expect(screen.getByText("生成结果未通过校验。")).toBeVisible();
+    expect(screen.queryByRole("button", { name: copy.retryGeneration })).toBeNull();
   });
 });
