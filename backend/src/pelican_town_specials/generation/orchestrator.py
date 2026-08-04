@@ -15,7 +15,12 @@ from pelican_town_specials.catalog.mapping import map_ingredient
 from pelican_town_specials.catalog.models import CatalogCandidate
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
-from pelican_town_specials.domain.common import GenerationStage, StrictModel, utc_now
+from pelican_town_specials.domain.common import (
+    DraftMode,
+    GenerationStage,
+    StrictModel,
+    utc_now,
+)
 from pelican_town_specials.domain.dish import (
     DishAnalysis,
     FieldAuthority,
@@ -59,6 +64,12 @@ from pelican_town_specials.providers.contracts import (
 )
 
 from .attempt_registry import AttemptRegistry
+from .blueprint import (
+    BLUEPRINT_STAGE_ORDER,
+    blueprint_icon_prompt,
+    blueprint_preview_prompt,
+    build_blueprint_visual_brief,
+)
 from .events import (
     GenerationEvent,
     attempt_failed,
@@ -472,6 +483,10 @@ class GenerationOrchestrator:
             if draft.status is not DraftStatus.REVIEWABLE:
                 raise _illegal_state_error()
             staged = transition(draft, DraftAction.START_FULL_REGENERATION)
+        elif command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
+            if draft.status is not DraftStatus.STALE_PREVIEW:
+                raise _illegal_state_error()
+            staged = draft
         else:
             raise _illegal_state_error()
 
@@ -491,11 +506,16 @@ class GenerationOrchestrator:
             attempt=attempt,
             staged=staged,
         )
-        for ordinal, stage in enumerate(STAGE_ORDER, start=1):
+        stage_order = (
+            BLUEPRINT_STAGE_ORDER
+            if draft.mode is DraftMode.BLUEPRINT
+            else STAGE_ORDER
+        )
+        for ordinal, stage in enumerate(stage_order, start=1):
             if self._registry.is_cancelled(attempt_id):
                 yield await self._finish_cancelled(state, staged)
                 return
-            yield stage_started(attempt_id, stage, ordinal, len(STAGE_ORDER))
+            yield stage_started(attempt_id, stage, ordinal, len(stage_order))
             try:
                 await self._execute_stage(state, stage)
             except AppError as exc:
@@ -510,7 +530,7 @@ class GenerationOrchestrator:
                 )
                 return
             self._attempts.save(self._advance_stage(state, stage))
-            yield stage_succeeded(attempt_id, stage, ordinal, len(STAGE_ORDER))
+            yield stage_succeeded(attempt_id, stage, ordinal, len(stage_order))
 
         try:
             promoted = self._drafts.promote(
@@ -566,14 +586,26 @@ class GenerationOrchestrator:
             state.gameplay = _map_gameplay(state.core, self._catalog)
             self._update_candidate(state, gameplay=state.gameplay)
         elif stage is GenerationStage.VISUAL_BRIEF:
-            assert state.core is not None
-            state.visual_brief = state.core.visual_brief
+            if draft.mode is DraftMode.BLUEPRINT:
+                assert draft.presentation is not None
+                assert draft.gameplay is not None
+                state.visual_brief = build_blueprint_visual_brief(
+                    draft.presentation, draft.gameplay
+                )
+            else:
+                assert state.core is not None
+                state.visual_brief = state.core.visual_brief
         elif stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION:
-            assert state.core is not None
+            if draft.mode is DraftMode.BLUEPRINT:
+                assert draft.presentation is not None
+                icon_prompt = blueprint_icon_prompt(draft.presentation)
+            else:
+                assert state.core is not None
+                icon_prompt = _icon_prompt(state.core)
             state.icon_source = await gateway.generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.GENERATION,
-                    prompt=_icon_prompt(state.core),
+                    prompt=icon_prompt,
                     size=_ICON_SIZE,
                     request_id=state.command.request_id,
                 )
@@ -604,13 +636,26 @@ class GenerationOrchestrator:
                 ),
             )
         elif stage is GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION:
-            assert state.core is not None
-            assert state.presentation is not None
-            assert state.gameplay is not None
+            if draft.mode is DraftMode.BLUEPRINT:
+                assert draft.presentation is not None
+                assert draft.gameplay is not None
+                assert state.visual_brief is not None
+                preview_prompt = blueprint_preview_prompt(
+                    draft.presentation, state.visual_brief
+                )
+                snapshot_presentation = draft.presentation
+                snapshot_gameplay = draft.gameplay
+            else:
+                assert state.core is not None
+                assert state.presentation is not None
+                assert state.gameplay is not None
+                preview_prompt = _preview_prompt(state.core)
+                snapshot_presentation = state.presentation
+                snapshot_gameplay = state.gameplay
             state.preview_art = await gateway.generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.GENERATION,
-                    prompt=_preview_prompt(state.core),
+                    prompt=preview_prompt,
                     size=_ICON_SIZE,
                     request_id=state.command.request_id,
                 )
@@ -632,8 +677,8 @@ class GenerationOrchestrator:
             preview_bytes = compose_preview(
                 PreviewSnapshot(
                     generated_art=state.preview_art.data,
-                    presentation=state.presentation,
-                    gameplay=state.gameplay,
+                    presentation=snapshot_presentation,
+                    gameplay=snapshot_gameplay,
                 )
             )
             state.preview = self._assets.put(
@@ -717,13 +762,21 @@ class GenerationOrchestrator:
     def _finalize_candidate(self, state: _RunState) -> DraftRecord:
         if state.command.kind is GenerationAttemptKind.INITIAL:
             action = DraftAction.GENERATION_SUCCEEDED
+        elif state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
+            action = DraftAction.PREVIEW_UPDATED
         else:
             action = DraftAction.REGENERATION_SUCCEEDED
         target_status = transition(state.staged, action).status
+        if state.draft.mode is DraftMode.BLUEPRINT:
+            # Blueprint generation never rewrites user provenance to AGENT_ASSIGNED
+            # and never enables cache eligibility.
+            provenance = state.draft.provenance
+        else:
+            provenance = _generated_provenance(state.draft)
         return state.candidate.model_copy(
             update={
                 "status": target_status,
-                "provenance": _generated_provenance(state.draft),
+                "provenance": provenance,
                 "active_attempt_id": None,
                 "last_attempt_id": state.attempt_id,
                 "last_error": None,
@@ -749,19 +802,31 @@ class GenerationOrchestrator:
         error: AppError,
         attempt_id: UUID,
     ) -> GenerationEvent:
-        if state.command.kind is GenerationAttemptKind.INITIAL:
-            action = DraftAction.GENERATION_FAILED
+        if state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
+            # A failed preview keeps the draft in STALE_PREVIEW: user fields and
+            # the old visual assets remain, only the attempt state is cleared.
+            rolled = staged.model_copy(
+                update={
+                    "last_attempt_id": attempt_id,
+                    "last_error": _to_summary(error),
+                    "active_attempt_id": None,
+                    "updated_at": utc_now(),
+                }
+            )
         else:
-            action = DraftAction.REGENERATION_FAILED
-        rolled = transition(staged, action)
-        rolled = rolled.model_copy(
-            update={
-                "last_attempt_id": attempt_id,
-                "last_error": _to_summary(error),
-                "active_attempt_id": None,
-                "updated_at": utc_now(),
-            }
-        )
+            if state.command.kind is GenerationAttemptKind.INITIAL:
+                action = DraftAction.GENERATION_FAILED
+            else:
+                action = DraftAction.REGENERATION_FAILED
+            rolled = transition(staged, action)
+            rolled = rolled.model_copy(
+                update={
+                    "last_attempt_id": attempt_id,
+                    "last_error": _to_summary(error),
+                    "active_attempt_id": None,
+                    "updated_at": utc_now(),
+                }
+            )
         try:
             self._drafts.control_write(
                 rolled,
@@ -788,18 +853,29 @@ class GenerationOrchestrator:
         state: _RunState,
         staged: DraftRecord,
     ) -> GenerationEvent:
-        if state.command.kind is GenerationAttemptKind.INITIAL:
-            action = DraftAction.GENERATION_CANCELLED
+        if state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
+            # A cancelled preview keeps the draft in STALE_PREVIEW.
+            rolled = staged.model_copy(
+                update={
+                    "last_attempt_id": state.attempt_id,
+                    "last_error": _to_summary(_cancelled_error()),
+                    "active_attempt_id": None,
+                    "updated_at": utc_now(),
+                }
+            )
         else:
-            action = DraftAction.REGENERATION_CANCELLED
-        rolled = transition(staged, action)
-        rolled = rolled.model_copy(
-            update={
-                "last_attempt_id": state.attempt_id,
-                "active_attempt_id": None,
-                "updated_at": utc_now(),
-            }
-        )
+            if state.command.kind is GenerationAttemptKind.INITIAL:
+                action = DraftAction.GENERATION_CANCELLED
+            else:
+                action = DraftAction.REGENERATION_CANCELLED
+            rolled = transition(staged, action)
+            rolled = rolled.model_copy(
+                update={
+                    "last_attempt_id": state.attempt_id,
+                    "active_attempt_id": None,
+                    "updated_at": utc_now(),
+                }
+            )
         try:
             self._drafts.control_write(
                 rolled,

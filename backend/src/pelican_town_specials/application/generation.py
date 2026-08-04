@@ -5,12 +5,14 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
+from pelican_town_specials.domain.common import DraftMode
 from pelican_town_specials.domain.draft import (
     DraftRecord,
     DraftStatus,
     GenerationAttemptKind,
 )
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.generation.blueprint import run_blueprint_preview
 from pelican_town_specials.generation.events import GenerationEvent
 from pelican_town_specials.generation.orchestrator import (
     GenerationCommand,
@@ -40,7 +42,10 @@ class GenerationService:
         command = GenerationCommand(
             draftId=draft_id, kind=kind, requestId=uuid4()
         )
-        events = self._orchestrator.run(command)
+        if kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
+            events = run_blueprint_preview(self._orchestrator, command)
+        else:
+            events = self._orchestrator.run(command)
         return _ndjson_lines(events)
 
     def cancel(self, draft_id: UUID) -> bool:
@@ -53,6 +58,12 @@ class GenerationService:
 
     def _resolve_kind(self, draft_id: UUID) -> GenerationAttemptKind:
         draft = self._get_draft(draft_id)
+        if draft.mode is DraftMode.BLUEPRINT:
+            if draft.status in (DraftStatus.DRAFT, DraftStatus.READY):
+                return GenerationAttemptKind.INITIAL
+            if draft.status is DraftStatus.STALE_PREVIEW:
+                return GenerationAttemptKind.BLUEPRINT_PREVIEW
+            raise _illegal_state_error(draft)
         if draft.status in (DraftStatus.DRAFT, DraftStatus.READY):
             return GenerationAttemptKind.INITIAL
         if draft.status is DraftStatus.REVIEWABLE:

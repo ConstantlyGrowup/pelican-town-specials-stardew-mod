@@ -106,6 +106,9 @@ def validate_draft(draft: DraftRecord) -> ValidationReport:
             "presentation": draft.presentation,
             "gameplay": draft.gameplay,
         }
+        if draft.mode is DraftMode.BLUEPRINT:
+            # Blueprint drafts never run dish analysis; it stays None by design.
+            required_fields.pop("analysis", None)
         for field_name, value in required_fields.items():
             if value is None:
                 issues.append(

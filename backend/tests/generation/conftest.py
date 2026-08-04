@@ -19,7 +19,10 @@ from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
 from pelican_town_specials.domain.common import DraftMode, GenerationStage
 from pelican_town_specials.domain.dish import (
     DishAnalysis,
+    FieldAuthority,
+    GenerationSource,
     PresentationSpec,
+    Provenance,
     RecoverySpec,
     SemanticIngredient,
 )
@@ -294,6 +297,63 @@ def full_regen_command(draft: DraftRecord) -> GenerationCommand:
     return GenerationCommand(
         draftId=draft.draft_id,
         kind=GenerationAttemptKind.FULL_REGENERATE,
+        requestId=uuid4(),
+    )
+
+
+_BLUEPRINT_USER_ASSIGNED_FIELDS = frozenset(
+    {
+        "presentation.display_name",
+        "presentation.internal_name",
+        "presentation.category_label",
+        "presentation.description",
+        "presentation.tags",
+        "gameplay.ingredients",
+        "gameplay.recovery",
+        "gameplay.sell_price",
+        "gameplay.is_drink",
+        "gameplay.buff",
+        "gameplay.recipe_unlock",
+    }
+)
+
+
+def _blueprint_provenance_fixture() -> Provenance:
+    return Provenance(
+        mode=DraftMode.BLUEPRINT,
+        authorityByField={
+            field: FieldAuthority.USER_ASSIGNED
+            for field in _BLUEPRINT_USER_ASSIGNED_FIELDS
+        },
+        promptVersions={},
+        generationSource=GenerationSource.USER_AUTHORED,
+        cacheEligibility=False,
+    )
+
+
+@pytest.fixture
+def blueprint_stale(
+    harness: GenerationHarness, orchestrator: GenerationOrchestrator
+) -> DraftRecord:
+    """BLUEPRINT draft in STALE_PREVIEW with user fields and stale visuals."""
+    ref = put_original_image(harness)
+    draft = _draft_with_source(
+        make_domain_draft(
+            mode=DraftMode.BLUEPRINT,
+            status=DraftStatus.STALE_PREVIEW,
+            revision=2,
+            visual_source_revision=1,
+        ),
+        ref.asset_id,
+    )
+    draft = draft.model_copy(update={"provenance": _blueprint_provenance_fixture()})
+    return orchestrator.drafts.save(draft, expected_revision=None)
+
+
+def blueprint_preview_command(draft: DraftRecord) -> GenerationCommand:
+    return GenerationCommand(
+        draftId=draft.draft_id,
+        kind=GenerationAttemptKind.BLUEPRINT_PREVIEW,
         requestId=uuid4(),
     )
 
