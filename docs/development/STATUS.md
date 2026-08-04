@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-04-task-13-generation-orchestrator |
+| active_session_id | 2026-08-04-task-14-blueprint-preview |
 | active_session_state | committed |
 | active_session_type | implementation |
-| current_task | Task 13 Ask Gus 生成 Orchestrator 已 Review PASS 并本地提交；按里程碑粒度继续 Task 14 |
+| current_task | Task 14 Blueprint 视觉更新已 Review PASS 并本地提交；按里程碑粒度继续 Task 15 |
 | blocker | 无 |
-| next_action | 运行 Task 14 规划（Blueprint 视觉更新与用户字段保护） |
+| next_action | 运行 Task 15 规划（生成进度、Ask Gus 审核与 Blueprint 编辑体验） |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,15 +25,22 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | c8d329a（docs: adopt foreman-subagent-reviewer collaboration model） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11/12/13 已本地提交，未推送（Milestone 门） |
+| 最新提交 | daeacfd（feat: add Blueprint visual preview generation） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11/12/13/14 已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
 - `2026-08-04-task-13-generation-orchestrator` 已从上下文溢出后的部分工作树恢复，完成 Ask Gus 生成 Orchestrator、NDJSON 流式事件与完整重生成，独立只读 Review Subagent 首轮 `PASS`（无 MUST_FIX），auto_accepted 后创建本地 focused commit `5949516`（不 push）。
 - 实现：`generation/orchestrator.py`（阶段循环、候选构建、原子 promote、取消/失败回滚、`_SlotGuardedAsyncIterator` 槽位释放）、`application/generation.py`、`api/routes/generation.py`、app.py 装配与 lifespan 启动恢复；依赖闭包含 repositories `control_write`/`promote`/attempt 仓库、domain errors/state_machine、providers ModelGateway Protocol、catalog mapping Protocol、error_handlers 共享 ErrorEnvelope。
 - 验证：生成测试 10 passed；全量后端 420 passed/2 skipped；Ruff、mypy（68 源文件）、前端 contract:generate/build/lint/test（36 passed）、`git diff --check` 全部通过。
-- 已消费 Task 11 建立的 `ModelGateway` 协议；测试全部使用 FakeGateway，不产生模型费用。Task 14（Blueprint 视觉更新）尚未开始。
+- 已消费 Task 11 建立的 `ModelGateway` 协议；测试全部使用 FakeGateway，不产生模型费用。
+
+## 当前 Task 14 Session（committed）
+
+- `2026-08-04-task-14-blueprint-preview` 采用「包工-子代理-Codex 审阅」新模式首次完整跑通：包工生成 Context Packet（`mvp-task-14-28db7a8-20260804-final-v1`），实施子代理 TDD 实现，包工桥接 Codex 独立审阅（round 1 REVISE 1 项 MUST_FIX → 修复 → round 2 PASS），本地 focused commit `daeacfd`（不 push）。
+- 实现：`generation/blueprint.py`（6 阶段序列、确定性 brief、`run_blueprint_preview`）、orchestrator 的 BLUEPRINT_PREVIEW 分支（用户字段保护、provenance 保留、失败/取消保持 STALE_PREVIEW）、`application/generation.py` kind 解析、`domain/validation.py` scope delta（BLUEPRINT analysis 可选）。
+- 验证：蓝图测试 8 passed；全量后端 428 passed/2 skipped；Ruff、mypy（69 源文件）clean；OpenAPI/前端契约无变化；`git diff --check` 通过。
+- Task 14 不包含前端（Task 15）、真实模型调用；测试全部使用 FakeGateway。
 
 ## 当前 Task 9 Session（committed）
 
