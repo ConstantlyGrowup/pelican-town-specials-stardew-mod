@@ -225,6 +225,73 @@ async def test_501_is_retried_then_unavailable(gateway: OpenAICompatibleGateway)
     assert route.call_count == 3
 
 
+def test_provider_error_extracts_redacted_message(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    response = httpx.Response(
+        400,
+        json={
+            "error": {
+                "message": "  image   too  large \n please reduce the file size  "
+            }
+        },
+    )
+
+    error = gateway._provider_error(response)
+
+    assert error.code == "PTS_PROVIDER_REQUEST_FAILED"
+    assert error.details["providerHttpStatus"] == 400
+    assert (
+        error.details["providerError"]
+        == "image too large please reduce the file size"
+    )
+
+
+def test_provider_error_truncates_long_message(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    response = httpx.Response(400, json={"error": {"message": "m" * 500}})
+
+    error = gateway._provider_error(response)
+
+    value = error.details["providerError"]
+    assert isinstance(value, str)
+    assert len(value) == 200
+    assert value.endswith("…")
+    assert value == "m" * 199 + "…"
+
+
+def test_provider_error_omits_message_when_body_malformed(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    response = httpx.Response(502, content=b"<html>bad gateway</html>")
+
+    error = gateway._provider_error(response)
+
+    assert "providerError" not in error.details
+    assert error.details["providerHttpStatus"] == 502
+
+
+def test_provider_error_omits_message_when_not_a_string(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    response = httpx.Response(400, json={"error": {"message": 123}})
+
+    error = gateway._provider_error(response)
+
+    assert "providerError" not in error.details
+
+
+def test_provider_error_omits_message_when_no_error_object(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    response = httpx.Response(400, json={"message": "plain top-level text"})
+
+    error = gateway._provider_error(response)
+
+    assert "providerError" not in error.details
+
+
 @respx.mock
 async def test_403_is_not_retried(gateway: OpenAICompatibleGateway) -> None:
     route = respx.post("https://yibuapi.com/v1/chat/completions").mock(

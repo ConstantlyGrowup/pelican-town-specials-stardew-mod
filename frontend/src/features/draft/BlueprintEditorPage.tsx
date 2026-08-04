@@ -261,6 +261,15 @@ export function BlueprintEditorPage() {
   }
 
   const previewStale = stale || draft.status === "STALE_PREVIEW";
+  const canGenerate =
+    previewStale || draft.status === "DRAFT" || draft.status === "READY";
+  const generationLabel = previewStale ? copy.updatePreview : copy.generatePreview;
+  const generationStreamingLabel = previewStale
+    ? copy.updatingPreview
+    : copy.generatingPreview;
+  const generationHint = previewStale
+    ? copy.updatePreviewHint
+    : copy.generatePreviewHint;
 
   return (
     <main>
@@ -298,16 +307,18 @@ export function BlueprintEditorPage() {
       {generation.phase === "cancelled" && (
         <p className="status-banner status-warning">{copy.generationCancelled}</p>
       )}
-      {previewStale && (
+      {canGenerate && (
         <div className="card">
-          <p>{copy.updatePreviewHint}</p>
+          <p>{generationHint}</p>
           <button
             className="btn btn-primary"
             type="button"
             onClick={generation.begin}
             disabled={generation.phase === "streaming" || busy}
           >
-            {generation.phase === "streaming" ? copy.updatingPreview : copy.updatePreview}
+            {generation.phase === "streaming"
+              ? generationStreamingLabel
+              : generationLabel}
           </button>
         </div>
       )}

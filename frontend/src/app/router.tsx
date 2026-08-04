@@ -7,6 +7,7 @@ import { CookbookDetailPage } from "../features/cookbook/CookbookDetailPage";
 import { CookbookPage } from "../features/cookbook/CookbookPage";
 import { AskGusReviewPage } from "../features/draft/AskGusReviewPage";
 import { BlueprintEditorPage } from "../features/draft/BlueprintEditorPage";
+import { HomePage } from "../features/home/HomePage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { PRODUCT_COPY } from "../i18n/copy";
 import { AppShell } from "./layout/AppShell";
@@ -61,16 +62,7 @@ export function AppRouter() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route
-          index
-          element={
-            <main aria-labelledby="app-title">
-              <p lang="en">Pelican Town Specials</p>
-              <h1 id="app-title">{copy.productName}</h1>
-              <p>{copy.tagline}</p>
-            </main>
-          }
-        />
+        <Route index element={<HomePage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="create" element={<CreateDishPage />} />
         <Route path="drafts/:draftId" element={<DraftRoute />} />

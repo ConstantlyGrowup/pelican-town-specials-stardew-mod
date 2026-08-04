@@ -354,11 +354,15 @@ class OpenAICompatibleGateway:
             return response
 
     def _provider_error(self, response: httpx.Response) -> AppError:
+        details: dict[str, object] = {"providerHttpStatus": response.status_code}
+        provider_message = _extract_provider_message(response)
+        if provider_message is not None:
+            details["providerError"] = provider_message
         return AppError(
             code="PTS_PROVIDER_REQUEST_FAILED",
             message="Provider 返回了无法处理的响应。",
             http_status=502,
-            details={"providerHttpStatus": response.status_code},
+            details=details,
             retryable=True,
         )
 
@@ -437,6 +441,34 @@ def _strictify_schema(node: object) -> None:
         elif isinstance(value, list):
             for item in value:
                 _strictify_schema(item)
+
+
+def _extract_provider_message(response: httpx.Response) -> str | None:
+    """Extract a redacted provider error message for diagnostics.
+
+    Reads ``error.message`` from a JSON response body, collapses whitespace,
+    and truncates to 200 characters. Returns ``None`` when the body cannot be
+    parsed as JSON, has no dict ``error``, or the message is not a non-empty
+    string. The request body, images, and credentials are never echoed.
+    """
+    try:
+        payload = response.json()
+    except (ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return None
+    message = error.get("message")
+    if not isinstance(message, str):
+        return None
+    collapsed = " ".join(message.split())
+    if not collapsed:
+        return None
+    if len(collapsed) > 200:
+        collapsed = collapsed[:199] + "…"
+    return collapsed
 
 
 def _extract_chat_text(response: httpx.Response) -> str:

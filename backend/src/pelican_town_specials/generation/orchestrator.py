@@ -43,7 +43,12 @@ from pelican_town_specials.domain.draft import (
 from pelican_town_specials.domain.errors import AppError, ErrorPayload, ErrorSummary
 from pelican_town_specials.domain.state_machine import DraftAction, transition
 from pelican_town_specials.domain.validation import ValidationSeverity, validate_draft
-from pelican_town_specials.images import PreviewSnapshot, build_icon_16, compose_preview
+from pelican_town_specials.images import (
+    PreviewSnapshot,
+    build_icon_16,
+    compose_preview,
+    downscale_for_vision,
+)
 from pelican_town_specials.persistence.asset_store import AssetMetadata, FileAssetStore
 from pelican_town_specials.persistence.repositories import (
     AttemptMismatchError,
@@ -198,13 +203,6 @@ def _read_source_image(asset_store: FileAssetStore, draft: DraftRecord) -> bytes
     ref = asset_store.stat(draft.source.original_image_asset_id)
     with asset_store.open(ref) as handle:
         return handle.read()
-
-
-def _source_media_type(
-    asset_store: FileAssetStore, draft: DraftRecord
-) -> ImageMediaType:
-    ref = asset_store.stat(draft.source.original_image_asset_id)
-    return ImageMediaType(ref.media_type.value)
 
 
 def _domain_media_type(value: ImageMediaType) -> MediaType:
@@ -555,11 +553,14 @@ class GenerationOrchestrator:
         if stage is GenerationStage.INPUT_VALIDATION:
             self._assets.stat(draft.source.original_image_asset_id)
         elif stage is GenerationStage.DISH_ANALYSIS:
+            vision_data, vision_media = downscale_for_vision(
+                _read_source_image(self._assets, draft)
+            )
             state.analysis = await gateway.analyze_dish(
                 DishAnalysisRequest(
                     image=ProviderImageInput(
-                        data=_read_source_image(self._assets, draft),
-                        media_type=_source_media_type(self._assets, draft),
+                        data=vision_data,
+                        media_type=vision_media,
                     ),
                     context_text=draft.source.context_text,
                     language=draft.source.language,

@@ -281,6 +281,46 @@ describe("blueprint editor", () => {
     expect(screen.queryByRole("button", { name: copy.archiveDish })).toBeNull();
   });
 
+  it("shows a generate preview action for DRAFT and completes first generation", async () => {
+    const getSpy = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json(blueprintDraft({ status: "DRAFT", revision: 1 })),
+      )
+      .mockReturnValueOnce(
+        HttpResponse.json(blueprintDraft({ status: "REVIEWABLE", revision: 2 })),
+      );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", getSpy),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n{"type":"stage.started","stage":"INPUT_VALIDATION","ordinal":1,"total":6}\n{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":2,"draft":{}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    expect(screen.getByRole("button", { name: copy.generatePreview })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: copy.generatePreview }));
+
+    expect(await screen.findByRole("button", { name: copy.archiveDish })).toBeVisible();
+    expect(getSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a generate preview action for READY drafts", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "READY", revision: 1 })),
+      ),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    expect(screen.getByRole("button", { name: copy.generatePreview })).toBeVisible();
+  });
+
   it("updates preview from STALE_PREVIEW and returns to REVIEWABLE", async () => {
     const getSpy = vi
       .fn()

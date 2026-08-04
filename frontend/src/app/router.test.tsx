@@ -28,6 +28,32 @@ const server = setupServer(
   http.get("/api/v1/cookbook", () =>
     HttpResponse.json({ items: [], nextCursor: null, total: 0 }),
   ),
+  http.get("/api/v1/drafts", () =>
+    HttpResponse.json({
+      items: [
+        {
+          draftId: "draft-1",
+          mode: "BLUEPRINT",
+          status: "DRAFT",
+          revision: 1,
+          updatedAt: "2026-08-04T00:00:00Z",
+          displayName: "南瓜汤",
+          originalImageAssetId: "asset-1",
+        },
+        {
+          draftId: "draft-2",
+          mode: "ASK_GUS",
+          status: "REVIEWABLE",
+          revision: 3,
+          updatedAt: "2026-08-03T00:00:00Z",
+          displayName: "",
+          originalImageAssetId: "asset-2",
+        },
+      ],
+      nextCursor: null,
+      total: 2,
+    }),
+  ),
   http.get("/api/v1/drafts/:draft_id", () =>
     HttpResponse.json({
       draftId: "draft-1",
@@ -74,10 +100,32 @@ function renderAt(path: string) {
 }
 
 describe("router", () => {
-  it("resolves the home page with frozen product copy", () => {
+  it("resolves the home page with frozen product copy and a draft list", async () => {
     renderAt("/");
     expect(screen.getByRole("heading", { name: copy.productName })).toBeVisible();
     expect(screen.getByText(copy.tagline)).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "南瓜汤" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "南瓜汤" })).toHaveAttribute(
+      "href",
+      "/drafts/draft-1",
+    );
+    expect(screen.getByText(copy.unnamedDraft)).toBeVisible();
+    expect(screen.getByText(copy.draftStatusLabels.REVIEWABLE)).toBeVisible();
+  });
+
+  it("resolves the home page empty state when there are no drafts", async () => {
+    server.use(
+      http.get("/api/v1/drafts", () =>
+        HttpResponse.json({ items: [], nextCursor: null, total: 0 }),
+      ),
+    );
+    renderAt("/");
+    expect(screen.getByRole("heading", { name: copy.productName })).toBeVisible();
+    expect(await screen.findByText(copy.draftsEmpty)).toBeVisible();
+    expect(screen.getByRole("link", { name: copy.createFirstDraft })).toHaveAttribute(
+      "href",
+      "/create",
+    );
   });
 
   it("resolves /settings", () => {
