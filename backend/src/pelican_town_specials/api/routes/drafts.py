@@ -1,4 +1,4 @@
-"""Task 9 Draft lifecycle endpoints (no generate/cancel; Task 13 owns them)."""
+"""Draft lifecycle endpoints; generate/cancel streaming lives in generation.py."""
 
 from __future__ import annotations
 

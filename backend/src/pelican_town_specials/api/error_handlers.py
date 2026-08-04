@@ -3,13 +3,18 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from typing import Any, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.domain.errors import (
+    AppError,
+    ErrorEnvelope,
+    ErrorPayload,
+    recommended_action,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,28 +22,8 @@ _INPUT_VALIDATION_CODE = "PTS_INPUT_VALIDATION_FAILED"
 _SYSTEM_UNEXPECTED_CODE = "PTS_SYSTEM_UNEXPECTED"
 
 
-def _recommended_action(code: str) -> str:
-    if code == "PTS_WORKSPACE_SECRET_STORE_UNAVAILABLE":
-        return "CHECK_LOCAL_CONFIGURATION"
-    if code.startswith("PTS_SYSTEM_"):
-        return "RETRY_OR_CONTACT_SUPPORT"
-    if code.startswith(("PTS_INPUT_", "PTS_VALIDATION_")):
-        return "REVIEW_INPUT"
-    if code.startswith(("PTS_PROVIDER_", "PTS_GEN_")):
-        return "RETRY_STAGE"
-    if code.startswith("PTS_WORKSPACE_"):
-        return "CHECK_LOCAL_CONFIGURATION"
-    if code.startswith("PTS_STATE_"):
-        return "REFRESH_ENTITY"
-    if code.startswith("PTS_AUTH_"):
-        return "REOPEN_APPLICATION"
-    if code.startswith("PTS_EXPORT_"):
-        return "REVIEW_INPUT"
-    return "RETRY_OR_CONTACT_SUPPORT"
-
-
-def _request_id() -> str:
-    return str(uuid4())
+def _request_id() -> UUID:
+    return uuid4()
 
 
 def _envelope(
@@ -46,19 +31,18 @@ def _envelope(
     code: str,
     message: str,
     retryable: bool,
-    request_id: str,
+    request_id: UUID,
     details: dict[str, Any],
 ) -> dict[str, Any]:
-    return {
-        "error": {
-            "code": code,
-            "message": message,
-            "retryable": retryable,
-            "requestId": request_id,
-            "details": details,
-            "recommendedAction": _recommended_action(code),
-        }
-    }
+    payload = ErrorPayload(
+        code=code,
+        message=message,
+        retryable=retryable,
+        requestId=request_id,
+        details=details,
+        recommendedAction=recommended_action(code),
+    )
+    return ErrorEnvelope(error=payload).model_dump(by_alias=True, mode="json")
 
 
 def _field_path(location: Iterable[object]) -> str:
@@ -69,15 +53,12 @@ async def handle_app_error(request: Request, exc: Exception) -> JSONResponse:
     del request
     app_error = cast(AppError, exc)
     request_id = _request_id()
+    envelope = ErrorEnvelope(
+        error=ErrorPayload.from_app_error(app_error, request_id=request_id)
+    )
     return JSONResponse(
         status_code=app_error.http_status,
-        content=_envelope(
-            code=app_error.code,
-            message=app_error.message,
-            retryable=app_error.retryable,
-            request_id=request_id,
-            details=dict(app_error.details),
-        ),
+        content=envelope.model_dump(by_alias=True, mode="json"),
     )
 
 

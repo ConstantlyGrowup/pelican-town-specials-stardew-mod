@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Protocol
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -14,6 +15,20 @@ from pelican_town_specials.domain.dish import (
     PresentationSpec,
     RecoverySpec,
 )
+
+
+class ModelGateway(Protocol):
+    """Structured provider gateway used by the generation orchestrator."""
+
+    async def analyze_dish(
+        self, request: DishAnalysisRequest, *, json_only: bool = False
+    ) -> DishAnalysis: ...
+
+    async def design_ask_gus(
+        self, request: AskGusDesignRequest, *, json_only: bool = False
+    ) -> GeneratedDishCore: ...
+
+    async def generate_image(self, request: ImageGenerationRequest) -> GeneratedImage: ...
 
 
 class ImageOperation(str, Enum):

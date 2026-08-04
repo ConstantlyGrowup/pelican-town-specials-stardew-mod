@@ -21,6 +21,7 @@ def test_draft_action_has_exact_public_actions() -> None:
         "START_INITIAL_GENERATION",
         "GENERATION_SUCCEEDED",
         "GENERATION_FAILED",
+        "GENERATION_CANCELLED",
         "RETRY_FAILED_GENERATION",
         "START_FULL_REGENERATION",
         "REGENERATION_SUCCEEDED",
@@ -86,13 +87,15 @@ def test_cancelled_full_regeneration_returns_to_reviewable_without_revision_chan
     assert restored.revision == 3
 
 
-def test_successful_full_regeneration_increments_revision_once() -> None:
+def test_full_regeneration_transition_preserves_revision_for_atomic_promotion() -> None:
     draft = make_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.REVIEWABLE, revision=3)
     regenerating = transition(draft, DraftAction.START_FULL_REGENERATION)
     result = transition(regenerating, DraftAction.REGENERATION_SUCCEEDED, now=UTC_NOW)
 
     assert result.status is DraftStatus.REVIEWABLE
-    assert result.revision == 4
+    # The transition keeps the content revision; the repository's atomic
+    # promotion advances it exactly once when the candidate is promoted.
+    assert result.revision == 3
     assert result.updated_at == UTC_NOW
 
 

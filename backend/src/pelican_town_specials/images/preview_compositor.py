@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -45,11 +46,11 @@ def compose_preview(snapshot: PreviewSnapshot) -> PNGBytes:
     return output.getvalue()
 
 
-def _canvas(layout: dict) -> Image.Image:
+def _canvas(layout: dict[str, Any]) -> Image.Image:
     return Image.new("RGBA", (layout["canvas"]["width"], layout["canvas"]["height"]), (0, 0, 0, 0))
 
 
-def _paste_art(canvas: Image.Image, art_bytes: bytes, region: dict) -> None:
+def _paste_art(canvas: Image.Image, art_bytes: bytes, region: dict[str, Any]) -> None:
     with Image.open(io.BytesIO(art_bytes)) as source:
         rgba = source.convert("RGBA")
         cropped = _cover_crop(rgba, region["width"], region["height"]).resize(
@@ -58,14 +59,23 @@ def _paste_art(canvas: Image.Image, art_bytes: bytes, region: dict) -> None:
         canvas.paste(cropped, (region["x"], region["y"]))
 
 
-def _paste_layer(canvas: Image.Image, layout: dict, name: str, region: dict) -> None:
+def _paste_layer(
+    canvas: Image.Image,
+    layout: dict[str, Any],
+    name: str,
+    region: dict[str, Any],
+) -> None:
     path = _TEMPLATE_DIR / layout["layers"][name]
     with Image.open(path) as layer:
         rgba = layer.convert("RGBA")
         canvas.paste(rgba, (region["x"], region["y"]), rgba)
 
 
-def _draw_text(canvas: Image.Image, snapshot: PreviewSnapshot, text: dict) -> None:
+def _draw_text(
+    canvas: Image.Image,
+    snapshot: PreviewSnapshot,
+    text: dict[str, Any],
+) -> None:
     draw = ImageDraw.Draw(canvas)
     display_region = text["displayName"]
     lines, font_size = _wrap_lines(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -19,6 +19,7 @@ from pelican_town_specials.api.routes import (
     catalog,
     cookbook,
     drafts,
+    generation,
     health,
     meta,
     session,
@@ -36,18 +37,28 @@ from pelican_town_specials.application.assets import AssetService
 from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
+from pelican_town_specials.application.generation import GenerationService
 from pelican_town_specials.application.meta import MetaService
-from pelican_town_specials.application.settings import ProviderSettingsService
+from pelican_town_specials.application.settings import (
+    ProviderSettings,
+    ProviderSettingsService,
+    SecretStore,
+)
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.config import AppConfig
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.generation.attempt_registry import AttemptRegistry
+from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+    GenerationAttemptRepository,
 )
 from pelican_town_specials.persistence.secret_store import WindowsEnvironmentSecretStore
 from pelican_town_specials.persistence.workspace import WorkspacePaths
+from pelican_town_specials.providers.contracts import ModelGateway
+from pelican_town_specials.providers.openai_compatible import OpenAICompatibleGateway
 
 _CATALOG_RELATIVE_PATH = (
     Path("resources")
@@ -74,6 +85,8 @@ def create_app(
     asset_service: AssetService | None = None,
     draft_service: DraftService | None = None,
     cookbook_service: CookbookService | None = None,
+    attempt_repository: GenerationAttemptRepository | None = None,
+    generation_service: GenerationService | None = None,
 ) -> FastAPI:
     app_config = config if config is not None else AppConfig()
     resolved_workspace = workspace_paths or WorkspacePaths.create(
@@ -99,11 +112,38 @@ def create_app(
     )
     resolved_catalog_service = CatalogService(resolved_catalog)
     resolved_meta_service = MetaService()
+    resolved_provider_settings_service = ProviderSettingsService(
+        resolved_workspace,
+        resolved_secret_store,
+    )
 
     resolved_activity_tracker = activity_tracker or ActivityTracker()
 
+    resolved_attempt_repository = attempt_repository or GenerationAttemptRepository(
+        resolved_workspace
+    )
+    attempt_registry = AttemptRegistry()
+    resolved_generation_service = generation_service or GenerationService(
+        orchestrator=GenerationOrchestrator(
+            draft_repository=resolved_draft_repository,
+            attempt_repository=resolved_attempt_repository,
+            asset_store=resolved_asset_store,
+            catalog=resolved_catalog,
+            gateway_factory=_gateway_factory(
+                settings_service=resolved_provider_settings_service,
+                secret_store=resolved_secret_store,
+            ),
+            registry=attempt_registry,
+            min_confidence=app_config.ask_gus_min_confidence,
+        ),
+        draft_repository=resolved_draft_repository,
+    )
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # Recover attempts interrupted by a previous process crash; never
+        # resume provider calls automatically after a restart.
+        resolved_attempt_repository.interrupt_running()
         monitor_task: asyncio.Task[None] | None = None
         if resolved_activity_tracker.has_shutdown_callback:
             monitor_task = asyncio.create_task(
@@ -134,10 +174,7 @@ def create_app(
     app.state.static_dir = static_dir
     app.state.activity_tracker = resolved_activity_tracker
     app.state.enforce_local_host = enforce_local_host
-    app.state.provider_settings_service = ProviderSettingsService(
-        resolved_workspace,
-        resolved_secret_store,
-    )
+    app.state.provider_settings_service = resolved_provider_settings_service
     app.state.asset_store = resolved_asset_store
     app.state.draft_repository = resolved_draft_repository
     app.state.archive_repository = resolved_archive_repository
@@ -147,6 +184,9 @@ def create_app(
     app.state.cookbook_service = resolved_cookbook_service
     app.state.catalog_service = resolved_catalog_service
     app.state.meta_service = resolved_meta_service
+    app.state.attempt_repository = resolved_attempt_repository
+    app.state.generation_service = resolved_generation_service
+    app.state.attempt_registry = attempt_registry
     register_error_handlers(app)
     app.include_router(session.router)
     app.include_router(app_control.router)
@@ -154,6 +194,7 @@ def create_app(
     app.include_router(settings.router, prefix="/api/v1")
     app.include_router(assets.router, prefix="/api/v1")
     app.include_router(drafts.router, prefix="/api/v1")
+    app.include_router(generation.router, prefix="/api/v1")
     app.include_router(cookbook.router, prefix="/api/v1")
     app.include_router(catalog.router, prefix="/api/v1")
     app.include_router(meta.router, prefix="/api/v1")
@@ -219,6 +260,26 @@ def create_app(
 def _load_default_catalog() -> VanillaCatalog:
     repo_root = Path(__file__).resolve().parents[4]
     return VanillaCatalog.from_json(repo_root / _CATALOG_RELATIVE_PATH)
+
+
+def _gateway_factory(
+    *,
+    settings_service: ProviderSettingsService,
+    secret_store: SecretStore,
+) -> Callable[[], ModelGateway]:
+    """Build a fresh provider gateway from the latest settings on each attempt."""
+
+    def _build() -> ModelGateway:
+        view = settings_service.get()
+        settings = ProviderSettings.model_validate(
+            view.model_dump(exclude={"api_key_configured", "api_key_source"})
+        )
+        return OpenAICompatibleGateway(
+            settings=settings,
+            secret_store=secret_store,
+        )
+
+    return _build
 
 
 def _is_reserved_static_path(static_path: str) -> bool:

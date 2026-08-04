@@ -546,6 +546,84 @@
         }
       }
     },
+    "/api/v1/drafts/{draft_id}/generate": {
+      "post": {
+        "summary": "Generate Draft",
+        "description": "Start Ask Gus generation and stream NDJSON GenerationEvent lines.",
+        "operationId": "generate_draft_api_v1_drafts__draft_id__generate_post",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/drafts/{draft_id}/cancel": {
+      "post": {
+        "summary": "Cancel Generation",
+        "description": "Cancel the draft's active generation attempt, if any.",
+        "operationId": "cancel_generation_api_v1_drafts__draft_id__cancel_post",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cookbook": {
       "get": {
         "summary": "List Cookbook",

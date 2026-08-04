@@ -4,16 +4,23 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from math import isfinite
+from typing import Protocol
 
-from pelican_town_specials.domain.dish import GameIngredient, SemanticIngredient
+from pelican_town_specials.domain.dish import GameIngredient
 from pelican_town_specials.domain.errors import AppError
 
 from .models import CatalogCandidate, CatalogItem
 from .repository import VanillaCatalog
 
 
+class _SemanticIngredientLike(Protocol):
+    name: str
+    normalized_name: str
+    quantity_hint: str | None = None
+
+
 def map_ingredient(
-    semantic: SemanticIngredient,
+    semantic: _SemanticIngredientLike,
     candidates: Sequence[CatalogCandidate],
     catalog: VanillaCatalog,
 ) -> GameIngredient:

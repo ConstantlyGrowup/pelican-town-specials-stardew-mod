@@ -14,6 +14,7 @@ class DraftAction(str, Enum):
     START_INITIAL_GENERATION = "START_INITIAL_GENERATION"
     GENERATION_SUCCEEDED = "GENERATION_SUCCEEDED"
     GENERATION_FAILED = "GENERATION_FAILED"
+    GENERATION_CANCELLED = "GENERATION_CANCELLED"
     RETRY_FAILED_GENERATION = "RETRY_FAILED_GENERATION"
     START_FULL_REGENERATION = "START_FULL_REGENERATION"
     REGENERATION_SUCCEEDED = "REGENERATION_SUCCEEDED"
@@ -30,6 +31,7 @@ ALLOWED_TRANSITIONS: Final[dict[tuple[DraftStatus, DraftAction], DraftStatus]] =
     (DraftStatus.READY, DraftAction.START_INITIAL_GENERATION): DraftStatus.GENERATING,
     (DraftStatus.GENERATING, DraftAction.GENERATION_SUCCEEDED): DraftStatus.REVIEWABLE,
     (DraftStatus.GENERATING, DraftAction.GENERATION_FAILED): DraftStatus.FAILED,
+    (DraftStatus.GENERATING, DraftAction.GENERATION_CANCELLED): DraftStatus.READY,
     (DraftStatus.FAILED, DraftAction.RETRY_FAILED_GENERATION): DraftStatus.GENERATING,
     (DraftStatus.REVIEWABLE, DraftAction.START_FULL_REGENERATION): DraftStatus.REGENERATING,
     (DraftStatus.REGENERATING, DraftAction.REGENERATION_SUCCEEDED): DraftStatus.REVIEWABLE,
@@ -93,11 +95,11 @@ def transition(
         raise _illegal_transition(draft, action)
 
     updated_at = ensure_utc(now if now is not None else utc_now())
-    revision = draft.revision + 1 if action is DraftAction.REGENERATION_SUCCEEDED else draft.revision
+    # Revision is owned by persistence: generation control writes keep the
+    # content revision and the atomic promotion advances it exactly once.
     return draft.model_copy(
         update={
             "status": target,
-            "revision": revision,
             "updated_at": updated_at,
         }
     )

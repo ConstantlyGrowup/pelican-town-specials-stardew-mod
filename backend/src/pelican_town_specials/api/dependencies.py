@@ -10,12 +10,14 @@ from pelican_town_specials.application.assets import AssetService
 from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
+from pelican_town_specials.application.generation import GenerationService
 from pelican_town_specials.application.meta import MetaService
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+    GenerationAttemptRepository,
 )
 
 
@@ -53,3 +55,13 @@ def draft_service(request: Request) -> DraftService:
 
 def cookbook_service(request: Request) -> CookbookService:
     return cast(CookbookService, request.app.state.cookbook_service)
+
+
+def generation_service(request: Request) -> GenerationService:
+    return cast(GenerationService, request.app.state.generation_service)
+
+
+def attempt_repository(request: Request) -> GenerationAttemptRepository:
+    return cast(
+        GenerationAttemptRepository, request.app.state.attempt_repository
+    )

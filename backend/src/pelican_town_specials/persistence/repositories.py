@@ -11,12 +11,20 @@ from pydantic import Field
 from pelican_town_specials.domain.archive import ArchivedDish
 from pelican_town_specials.domain.common import (
     DraftMode,
+    GenerationStage,
     Language,
     StrictModel,
     utc_now,
 )
 from pelican_town_specials.domain.dish import FieldAuthority, GenerationSource
-from pelican_town_specials.domain.draft import DraftRecord, DraftStatus
+from pelican_town_specials.domain.draft import (
+    AttemptStatus,
+    DraftRecord,
+    DraftStatus,
+    GenerationAttempt,
+    GenerationAttemptKind,
+    StageStatus,
+)
 
 from .atomic import atomic_write_json, read_json_with_backup
 from .trash import CookbookTombstone, move_directory_to_trash
@@ -195,6 +203,169 @@ class DraftRepository:
             self._index_path, index.model_dump(by_alias=True, mode="json")
         )
         return index
+
+    def _write_record(self, record: DraftRecord) -> DraftRecord:
+        record_dir = self._workspace.drafts_dir / str(record.draft_id)
+        record_dir.mkdir(parents=True, exist_ok=True)
+        record_path = record_dir / "record.json"
+        atomic_write_json(
+            record_path, record.model_dump(by_alias=True, mode="json")
+        )
+        self._write_index()
+        return record
+
+    def control_write(
+        self,
+        record: DraftRecord,
+        *,
+        expected_revision: int,
+        expected_attempt_id: UUID | None,
+    ) -> DraftRecord:
+        """Persist a generation status change without advancing the revision.
+
+        ``expected_attempt_id=None`` means the caller expects no attempt to be
+        active yet (used when starting a fresh attempt); otherwise the persisted
+        active attempt must match exactly so stale attempts can never overwrite.
+        """
+        current = self.get(record.draft_id)
+        if expected_revision != current.revision:
+            raise RevisionConflictError("expected revision does not match current record")
+        active = current.active_attempt_id
+        if expected_attempt_id is None:
+            if active is not None:
+                raise AttemptMismatchError("active attempt does not match expected attempt")
+        elif active != expected_attempt_id:
+            raise AttemptMismatchError("active attempt does not match expected attempt")
+        return self._write_record(record)
+
+    def promote(
+        self,
+        record: DraftRecord,
+        *,
+        expected_revision: int,
+        expected_attempt_id: UUID,
+    ) -> DraftRecord:
+        """Atomically promote a fully generated candidate, advancing revision once."""
+        current = self.get(record.draft_id)
+        if expected_revision != current.revision:
+            raise RevisionConflictError("source revision does not match current record")
+        if current.active_attempt_id != expected_attempt_id:
+            raise AttemptMismatchError("active attempt does not match expected attempt")
+        promoted = record.model_copy(
+            update={"revision": current.revision + 1}
+        )
+        return self._write_record(promoted)
+
+
+class AttemptMismatchError(Exception):
+    pass
+
+
+def _normalize_attempt_payload(payload: object, *, in_stage: bool = False) -> object:
+    if isinstance(payload, list):
+        return [_normalize_attempt_payload(item) for item in payload]
+    if not isinstance(payload, dict):
+        return payload
+
+    normalized: dict[object, object] = {}
+    for key, value in payload.items():
+        if key in _UUID_FIELD_NAMES and isinstance(value, str):
+            normalized[key] = UUID(value)
+            continue
+        if key in _DATETIME_FIELD_NAMES and isinstance(value, str):
+            normalized[key] = datetime.fromisoformat(value)
+            continue
+        if key == "kind" and isinstance(value, str):
+            normalized[key] = GenerationAttemptKind(value)
+            continue
+        if key in ("currentStage", "stage") and isinstance(value, str):
+            normalized[key] = GenerationStage(value)
+            continue
+        if key == "status" and isinstance(value, str):
+            normalized[key] = StageStatus(value) if in_stage else AttemptStatus(value)
+            continue
+        if key == "stages" and isinstance(value, list):
+            normalized[key] = [
+                _normalize_attempt_payload(item, in_stage=True) for item in value
+            ]
+            continue
+        if key == "error" and isinstance(value, dict):
+            normalized[key] = _normalize_attempt_payload(value)
+            continue
+        normalized[key] = _normalize_attempt_payload(value)
+    return normalized
+
+
+def _validate_attempt(payload: object) -> GenerationAttempt:
+    return GenerationAttempt.model_validate(_normalize_attempt_payload(payload))
+
+
+class GenerationAttemptRepository:
+    """Atomic attempt and candidate persistence under workspace staging."""
+
+    def __init__(self, workspace: WorkspacePaths) -> None:
+        self._staging_root = workspace.staging_dir
+
+    def _attempt_dir(self, attempt_id: UUID) -> Path:
+        return self._staging_root / f"attempt-{attempt_id}"
+
+    def save(self, attempt: GenerationAttempt) -> GenerationAttempt:
+        attempt_dir = self._attempt_dir(attempt.attempt_id)
+        attempt_dir.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(
+            attempt_dir / "attempt.json",
+            attempt.model_dump(by_alias=True, mode="json"),
+        )
+        return attempt
+
+    def get(self, attempt_id: UUID) -> GenerationAttempt:
+        return read_json_with_backup(
+            self._attempt_dir(attempt_id) / "attempt.json",
+            _validate_attempt,
+        )
+
+    def save_candidate(
+        self,
+        attempt_id: UUID,
+        candidate: DraftRecord,
+    ) -> DraftRecord:
+        attempt_dir = self._attempt_dir(attempt_id)
+        attempt_dir.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(
+            attempt_dir / "candidate.json",
+            candidate.model_dump(by_alias=True, mode="json"),
+        )
+        return candidate
+
+    def get_candidate(self, attempt_id: UUID) -> DraftRecord | None:
+        path = self._attempt_dir(attempt_id) / "candidate.json"
+        if not path.exists():
+            return None
+        return read_json_with_backup(path, _validate_model_payload(DraftRecord))
+
+    def list_running(self) -> list[GenerationAttempt]:
+        running: list[GenerationAttempt] = []
+        for path in self._staging_root.glob("attempt-*/attempt.json"):
+            attempt = read_json_with_backup(path, _validate_attempt)
+            if attempt.status is AttemptStatus.RUNNING:
+                running.append(attempt)
+        return running
+
+    def interrupt_running(
+        self,
+        now: datetime | None = None,
+    ) -> list[GenerationAttempt]:
+        interrupted: list[GenerationAttempt] = []
+        for attempt in self.list_running():
+            updated = attempt.model_copy(
+                update={
+                    "status": AttemptStatus.INTERRUPTED,
+                    "finished_at": now or utc_now(),
+                }
+            )
+            self.save(updated)
+            interrupted.append(updated)
+        return interrupted
 
 
 class ArchiveRepository:
