@@ -97,6 +97,10 @@ const sameOriginBaseUrl =
 
 export const apiClient = createClient<paths>({
   baseUrl: sameOriginBaseUrl,
+  // Resolve fetch at request time so test MSW interception is honored; the
+  // browser global is stable, so production behavior is unchanged.
+  fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+    globalThis.fetch(input, init),
 });
 
 apiClient.use(csrfMiddleware);

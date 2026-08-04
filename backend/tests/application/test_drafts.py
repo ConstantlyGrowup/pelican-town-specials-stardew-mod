@@ -12,6 +12,10 @@ from backend.tests.domain.factories import (
 from pydantic import ValidationError
 
 from pelican_town_specials.application.drafts import (
+    BlueprintGameplayInput,
+    BlueprintIngredientInput,
+    BlueprintPresentationInput,
+    BlueprintRecoveryInput,
     DraftCreateRequest,
     DraftCreateSource,
     DraftPatchRequest,
@@ -19,14 +23,7 @@ from pelican_town_specials.application.drafts import (
 )
 from pelican_town_specials.domain.assets import AssetKind
 from pelican_town_specials.domain.common import DraftMode, Language
-from pelican_town_specials.domain.dish import (
-    FieldAuthority,
-    GameIngredient,
-    GameplaySpec,
-    GenerationSource,
-    PresentationSpec,
-    RecoverySpec,
-)
+from pelican_town_specials.domain.dish import FieldAuthority, GenerationSource
 from pelican_town_specials.domain.draft import DraftStatus
 from pelican_town_specials.domain.errors import AppError
 
@@ -42,8 +39,8 @@ def _service(services: AppServices) -> DraftService:
     )
 
 
-def _presentation() -> PresentationSpec:
-    return PresentationSpec(
+def _presentation() -> BlueprintPresentationInput:
+    return BlueprintPresentationInput(
         displayName="南瓜汤",
         internalName="PumpkinSoup",
         categoryLabel="汤类",
@@ -52,10 +49,10 @@ def _presentation() -> PresentationSpec:
     )
 
 
-def _gameplay() -> GameplaySpec:
-    return GameplaySpec(
+def _gameplay() -> BlueprintGameplayInput:
+    return BlueprintGameplayInput(
         ingredients=[
-            GameIngredient(
+            BlueprintIngredientInput(
                 itemId="24",
                 displayName="Parsnip",
                 quantity=1,
@@ -63,7 +60,7 @@ def _gameplay() -> GameplaySpec:
                 catalogVersion="stardew-1.6.15-v1",
             )
         ],
-        recovery=RecoverySpec(edibility=20),
+        recovery=BlueprintRecoveryInput(edibility=20),
         sellPrice=35,
         isDrink=False,
     )

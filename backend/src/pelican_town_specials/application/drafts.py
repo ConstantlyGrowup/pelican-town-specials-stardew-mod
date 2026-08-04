@@ -23,12 +23,17 @@ from pelican_town_specials.domain.common import (
     utc_now,
 )
 from pelican_town_specials.domain.dish import (
+    BuffAttributes,
+    BuffSpec,
     DishAnalysis,
     FieldAuthority,
+    GameIngredient,
     GameplaySpec,
     GenerationSource,
     PresentationSpec,
     Provenance,
+    RecipeUnlock,
+    RecoverySpec,
     VisualSpec,
 )
 from pelican_town_specials.domain.draft import DraftRecord, DraftStatus
@@ -130,10 +135,97 @@ class DraftCreateRequest(StrictModel):
             raise ValueError("language must be zh-CN or en-US") from exc
 
 
+class BlueprintIngredientInput(StrictModel):
+    item_id: str = Field(alias="itemId", min_length=1, max_length=80)
+    display_name: str = Field(alias="displayName", min_length=1, max_length=80)
+    quantity: int = Field(ge=1, le=99)
+    mapping_reason: str = Field(alias="mappingReason", min_length=1, max_length=200)
+    catalog_version: str = Field(alias="catalogVersion", min_length=1, max_length=80)
+
+    def to_domain(self) -> GameIngredient:
+        return GameIngredient.model_validate(self.model_dump())
+
+
+class BlueprintRecoveryInput(StrictModel):
+    edibility: int = Field(ge=0, le=500)
+
+    def to_domain(self) -> RecoverySpec:
+        return RecoverySpec(edibility=self.edibility)
+
+
+class BlueprintBuffAttributesInput(StrictModel):
+    farming_level: int = Field(default=0, alias="farmingLevel", ge=0, le=10)
+    fishing_level: int = Field(default=0, alias="fishingLevel", ge=0, le=10)
+    mining_level: int = Field(default=0, alias="miningLevel", ge=0, le=10)
+    foraging_level: int = Field(default=0, alias="foragingLevel", ge=0, le=10)
+    combat_level: int = Field(default=0, alias="combatLevel", ge=0, le=10)
+    luck_level: int = Field(default=0, alias="luckLevel", ge=0, le=10)
+    attack: int = Field(default=0, ge=0, le=10)
+    defense: int = Field(default=0, ge=0, le=10)
+    immunity: int = Field(default=0, ge=0, le=10)
+    magnetic_radius: int = Field(default=0, alias="magneticRadius", ge=0, le=10)
+    max_stamina: int = Field(default=0, alias="maxStamina", ge=0, le=10)
+    speed: int = Field(default=0, ge=0, le=10)
+
+    def to_domain(self) -> BuffAttributes:
+        return BuffAttributes.model_validate(self.model_dump())
+
+
+class BlueprintBuffInput(StrictModel):
+    id: str = Field(min_length=1, max_length=80)
+    duration_minutes: int = Field(alias="durationMinutes", ge=10, le=1440)
+    is_debuff: bool = Field(default=False, alias="isDebuff")
+    attributes: BlueprintBuffAttributesInput
+
+    def to_domain(self) -> BuffSpec:
+        return BuffSpec.model_validate(self.model_dump())
+
+
+class BlueprintGameplayInput(StrictModel):
+    ingredients: list[BlueprintIngredientInput] = Field(min_length=1, max_length=8)
+    recovery: BlueprintRecoveryInput
+    sell_price: int = Field(alias="sellPrice", ge=0, le=50000)
+    is_drink: bool = Field(alias="isDrink")
+    recipe_unlock: RecipeUnlock = Field(
+        default=RecipeUnlock.DEFAULT, alias="recipeUnlock"
+    )
+    buff: BlueprintBuffInput | None = None
+
+    def to_domain(self) -> GameplaySpec:
+        return GameplaySpec.model_validate(
+            {
+                "ingredients": [
+                    ingredient.to_domain() for ingredient in self.ingredients
+                ],
+                "recovery": self.recovery.to_domain(),
+                "sellPrice": self.sell_price,
+                "isDrink": self.is_drink,
+                "recipeUnlock": self.recipe_unlock,
+                "buff": self.buff.to_domain() if self.buff is not None else None,
+            }
+        )
+
+
+class BlueprintPresentationInput(StrictModel):
+    display_name: str = Field(alias="displayName", min_length=1, max_length=60)
+    internal_name: str = Field(
+        alias="internalName",
+        min_length=3,
+        max_length=48,
+        pattern=r"^[A-Za-z][A-Za-z0-9_]{2,47}$",
+    )
+    category_label: str = Field(alias="categoryLabel", min_length=1, max_length=40)
+    description: str = Field(min_length=1, max_length=400)
+    tags: list[str] = Field(default_factory=list, max_length=12)
+
+    def to_domain(self) -> PresentationSpec:
+        return PresentationSpec.model_validate(self.model_dump())
+
+
 class DraftPatchRequest(StrictModel):
     expected_revision: int = Field(alias="expectedRevision", ge=1)
-    presentation: PresentationSpec | None = None
-    gameplay: GameplaySpec | None = None
+    presentation: BlueprintPresentationInput | None = None
+    gameplay: BlueprintGameplayInput | None = None
 
     @model_validator(mode="after")
     def _require_one_field(self) -> DraftPatchRequest:
@@ -267,8 +359,8 @@ def _ask_gus_provenance() -> Provenance:
 
 def _patched_authority(
     *,
-    presentation: PresentationSpec | None,
-    gameplay: GameplaySpec | None,
+    presentation: BlueprintPresentationInput | None,
+    gameplay: BlueprintGameplayInput | None,
 ) -> dict[str, FieldAuthority]:
     authority: dict[str, FieldAuthority] = {}
     if presentation is not None:
@@ -372,10 +464,13 @@ class DraftService:
             raise self._revision_conflict_error()
 
         update: dict[str, Any] = {"updated_at": utc_now()}
-        if request.presentation is not None:
-            update["presentation"] = request.presentation
-        if request.gameplay is not None:
-            update["gameplay"] = request.gameplay
+        try:
+            if request.presentation is not None:
+                update["presentation"] = request.presentation.to_domain()
+            if request.gameplay is not None:
+                update["gameplay"] = request.gameplay.to_domain()
+        except (TypeError, ValueError) as exc:
+            raise self._patch_input_error() from exc
         if draft.status is DraftStatus.REVIEWABLE:
             staged = transition(draft, DraftAction.MODIFY_FIELDS)
             update["status"] = staged.status
@@ -604,6 +699,16 @@ class DraftService:
             message="草稿当前状态不允许该操作。",
             http_status=409,
             details={"currentState": draft.status.value},
+            retryable=False,
+        )
+
+    @staticmethod
+    def _patch_input_error() -> AppError:
+        return AppError(
+            code="PTS_DRAFT_PATCH_INVALID",
+            message="Blueprint 字段不满足玩法约束，请检查后重试。",
+            http_status=422,
+            details={},
             retryable=False,
         )
 

@@ -6,27 +6,27 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | committed |
-| project_phase | mvp-task-9-draft-cookbook-api |
+| overall_state | awaiting_milestone_acceptance |
+| project_phase | milestone-2-verification |
 | product_implementation_started | true |
-| active_session_id | 2026-08-04-task-9-draft-cookbook-api |
+| active_session_id | 2026-08-04-task-10-frontend-pages |
 | active_session_state | committed |
 | active_session_type | implementation |
-| current_task | MVP Task 9 已完成用户确认、focused commit 创建（未推送）；双 Agent 协作实验成功，里程碑粒度验收已启用 |
-| blocker | 无；工作树核验干净 |
-| next_action | 里程碑粒度协作：继续 Milestone 2 中依赖满足的下一 Task（Task 10 前端页面），Milestone 全量验证后进入 awaiting_milestone_acceptance |
+| current_task | MVP Task 10 已完成 Review PASS 并本地提交；Milestone 2（Task 9+10）全量验证完成，等待用户验收与统一 push 授权 |
+| blocker | 无；Task 9 与 Task 10 本地 focused commit 均已创建，未推送 |
+| next_action | 用户一次性验收 Milestone 2 并授权统一 push（Task 9 + Task 10 + 自治规则控制面） |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送） |
+| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | Task 9 focused commit（feat: add draft and cookbook lifecycle APIs） |
 | 远端操作 | Task5、Task6、Task7 与 Task8 focused commit 已推送；Task 9 与自治规则控制面等待 Milestone 统一 push |
-| 当前工作树范围 | 已创建 Task 9 focused commit，工作树核验干净；Task 9 旧实现、旧 Context Packet 及其 Session 产物未保留 |
+| 当前工作树范围 | Task 10 前端/后端实现与生成契约（未提交）+ Task 9/自治规则已提交；Task 9 旧实现、旧 Context Packet 及其 Session 产物未保留 |
 ## 当前 Task 9 Session（committed）
 
 - `2026-08-04-task-9-draft-cookbook-api` 已按最终 Context Packet（`mvp-task-9-rerun-15405d0-20260804-final-v1`）完成实现、自动验证与两轮 Review（第一轮 REVISE 4 项 MUST_FIX 已修复，第二轮 PASS），用户确认实验成功后创建本地 focused commit；工作树核验干净。

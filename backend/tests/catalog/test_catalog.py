@@ -497,3 +497,20 @@ def test_repository_loads_real_catalog_named_ids() -> None:
     assert len(catalog.items) == 808
     assert len(named_ids) == 85
     assert catalog.require("Broccoli").usable_as_ingredient is True
+
+
+def test_search_ingredients_only_returns_usable_items() -> None:
+    path = ROOT / "resources/catalogs/stardew-1.6.15/vanilla-ingredients.json"
+    catalog = VanillaCatalog.from_json(path)
+
+    results = catalog.search_ingredients("tomat", limit=10)
+
+    assert results
+    assert all(item.usable_as_ingredient for item in results)
+    assert all(item.item_id != "-5" for item in results)
+
+    exact = catalog.search_ingredients("24", limit=10)
+    assert exact and exact[0].item_id == "24"
+
+    non_usable = catalog.search_ingredients("349", limit=10)
+    assert non_usable == []

@@ -16,6 +16,7 @@ from pelican_town_specials.api.error_handlers import (
 from pelican_town_specials.api.routes import (
     app_control,
     assets,
+    catalog,
     cookbook,
     drafts,
     health,
@@ -31,6 +32,7 @@ from pelican_town_specials.api.security import (
     require_session,
 )
 from pelican_town_specials.application.assets import AssetService
+from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
 from pelican_town_specials.application.settings import ProviderSettingsService
@@ -93,6 +95,7 @@ def create_app(
     resolved_cookbook_service = cookbook_service or CookbookService(
         resolved_archive_repository
     )
+    resolved_catalog_service = CatalogService(resolved_catalog)
 
     resolved_activity_tracker = activity_tracker or ActivityTracker()
 
@@ -139,6 +142,7 @@ def create_app(
     app.state.asset_service = resolved_asset_service
     app.state.draft_service = resolved_draft_service
     app.state.cookbook_service = resolved_cookbook_service
+    app.state.catalog_service = resolved_catalog_service
     register_error_handlers(app)
     app.include_router(session.router)
     app.include_router(app_control.router)
@@ -147,6 +151,7 @@ def create_app(
     app.include_router(assets.router, prefix="/api/v1")
     app.include_router(drafts.router, prefix="/api/v1")
     app.include_router(cookbook.router, prefix="/api/v1")
+    app.include_router(catalog.router, prefix="/api/v1")
 
     @app.middleware("http")
     async def enforce_local_session(

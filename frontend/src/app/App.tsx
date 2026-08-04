@@ -1,15 +1,10 @@
-import { PRODUCT_COPY } from "../i18n/copy";
+import { BrowserRouter } from "react-router-dom";
+import { AppRouter } from "./router";
 
 export function App() {
-  const copy = PRODUCT_COPY.zh;
-
   return (
-    <main>
-      <section aria-labelledby="app-title">
-        <p lang="en">Pelican Town Specials</p>
-        <h1 id="app-title">{copy.productName}</h1>
-        <p>{copy.tagline}</p>
-      </section>
-    </main>
+    <BrowserRouter>
+      <AppRouter />
+    </BrowserRouter>
   );
 }

@@ -264,6 +264,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/ingredients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Ingredients */
+        get: operations["search_ingredients_api_v1_catalog_ingredients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -304,6 +321,126 @@ export interface components {
             sourceRevision?: number | null;
             /** Attemptid */
             attemptId?: string | null;
+        };
+        /** BlueprintBuffAttributesInput */
+        BlueprintBuffAttributesInput: {
+            /**
+             * Farminglevel
+             * @default 0
+             */
+            farmingLevel: number;
+            /**
+             * Fishinglevel
+             * @default 0
+             */
+            fishingLevel: number;
+            /**
+             * Mininglevel
+             * @default 0
+             */
+            miningLevel: number;
+            /**
+             * Foraginglevel
+             * @default 0
+             */
+            foragingLevel: number;
+            /**
+             * Combatlevel
+             * @default 0
+             */
+            combatLevel: number;
+            /**
+             * Lucklevel
+             * @default 0
+             */
+            luckLevel: number;
+            /**
+             * Attack
+             * @default 0
+             */
+            attack: number;
+            /**
+             * Defense
+             * @default 0
+             */
+            defense: number;
+            /**
+             * Immunity
+             * @default 0
+             */
+            immunity: number;
+            /**
+             * Magneticradius
+             * @default 0
+             */
+            magneticRadius: number;
+            /**
+             * Maxstamina
+             * @default 0
+             */
+            maxStamina: number;
+            /**
+             * Speed
+             * @default 0
+             */
+            speed: number;
+        };
+        /** BlueprintBuffInput */
+        BlueprintBuffInput: {
+            /** Id */
+            id: string;
+            /** Durationminutes */
+            durationMinutes: number;
+            /**
+             * Isdebuff
+             * @default false
+             */
+            isDebuff: boolean;
+            attributes: components["schemas"]["BlueprintBuffAttributesInput"];
+        };
+        /** BlueprintGameplayInput */
+        BlueprintGameplayInput: {
+            /** Ingredients */
+            ingredients: components["schemas"]["BlueprintIngredientInput"][];
+            recovery: components["schemas"]["BlueprintRecoveryInput"];
+            /** Sellprice */
+            sellPrice: number;
+            /** Isdrink */
+            isDrink: boolean;
+            /** @default DEFAULT */
+            recipeUnlock: components["schemas"]["RecipeUnlock"];
+            buff?: components["schemas"]["BlueprintBuffInput"] | null;
+        };
+        /** BlueprintIngredientInput */
+        BlueprintIngredientInput: {
+            /** Itemid */
+            itemId: string;
+            /** Displayname */
+            displayName: string;
+            /** Quantity */
+            quantity: number;
+            /** Mappingreason */
+            mappingReason: string;
+            /** Catalogversion */
+            catalogVersion: string;
+        };
+        /** BlueprintPresentationInput */
+        BlueprintPresentationInput: {
+            /** Displayname */
+            displayName: string;
+            /** Internalname */
+            internalName: string;
+            /** Categorylabel */
+            categoryLabel: string;
+            /** Description */
+            description: string;
+            /** Tags */
+            tags?: string[];
+        };
+        /** BlueprintRecoveryInput */
+        BlueprintRecoveryInput: {
+            /** Edibility */
+            edibility: number;
         };
         /** Body_upload_image_api_v1_assets_images_post */
         Body_upload_image_api_v1_assets_images_post: {
@@ -488,8 +625,8 @@ export interface components {
         DraftPatchRequest: {
             /** Expectedrevision */
             expectedRevision: number;
-            presentation?: components["schemas"]["PresentationSpec"] | null;
-            gameplay?: components["schemas"]["GameplaySpec"] | null;
+            presentation?: components["schemas"]["BlueprintPresentationInput"] | null;
+            gameplay?: components["schemas"]["BlueprintGameplayInput"] | null;
         };
         /**
          * DraftStatus
@@ -639,6 +776,22 @@ export interface components {
              * @constant
              */
             apiVersion: "v1";
+        };
+        /** IngredientCatalogItemView */
+        IngredientCatalogItemView: {
+            /** Itemid */
+            itemId: string;
+            /** Displaynameen */
+            displayNameEn: string;
+            /** Displaynamezh */
+            displayNameZh: string;
+        };
+        /** IngredientCatalogSearchResult */
+        IngredientCatalogSearchResult: {
+            /** Catalogversion */
+            catalogVersion: string;
+            /** Items */
+            items: components["schemas"]["IngredientCatalogItemView"][];
         };
         /**
          * Language
@@ -1432,6 +1585,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_ingredients_api_v1_catalog_ingredients_get: {
+        parameters: {
+            query: {
+                query: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientCatalogSearchResult"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -617,6 +617,59 @@
           }
         }
       }
+    },
+    "/api/v1/catalog/ingredients": {
+      "get": {
+        "summary": "Search Ingredients",
+        "operationId": "search_ingredients_api_v1_catalog_ingredients_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientCatalogSearchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -732,6 +785,284 @@
           "createdAt"
         ],
         "title": "AssetView"
+      },
+      "BlueprintBuffAttributesInput": {
+        "properties": {
+          "farmingLevel": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Farminglevel",
+            "default": 0
+          },
+          "fishingLevel": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Fishinglevel",
+            "default": 0
+          },
+          "miningLevel": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Mininglevel",
+            "default": 0
+          },
+          "foragingLevel": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Foraginglevel",
+            "default": 0
+          },
+          "combatLevel": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Combatlevel",
+            "default": 0
+          },
+          "luckLevel": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Lucklevel",
+            "default": 0
+          },
+          "attack": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Attack",
+            "default": 0
+          },
+          "defense": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Defense",
+            "default": 0
+          },
+          "immunity": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Immunity",
+            "default": 0
+          },
+          "magneticRadius": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Magneticradius",
+            "default": 0
+          },
+          "maxStamina": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Maxstamina",
+            "default": 0
+          },
+          "speed": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Speed",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BlueprintBuffAttributesInput"
+      },
+      "BlueprintBuffInput": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "maximum": 1440.0,
+            "minimum": 10.0,
+            "title": "Durationminutes"
+          },
+          "isDebuff": {
+            "type": "boolean",
+            "title": "Isdebuff",
+            "default": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/BlueprintBuffAttributesInput"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "durationMinutes",
+          "attributes"
+        ],
+        "title": "BlueprintBuffInput"
+      },
+      "BlueprintGameplayInput": {
+        "properties": {
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/BlueprintIngredientInput"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Ingredients"
+          },
+          "recovery": {
+            "$ref": "#/components/schemas/BlueprintRecoveryInput"
+          },
+          "sellPrice": {
+            "type": "integer",
+            "maximum": 50000.0,
+            "minimum": 0.0,
+            "title": "Sellprice"
+          },
+          "isDrink": {
+            "type": "boolean",
+            "title": "Isdrink"
+          },
+          "recipeUnlock": {
+            "$ref": "#/components/schemas/RecipeUnlock",
+            "default": "DEFAULT"
+          },
+          "buff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlueprintBuffInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ingredients",
+          "recovery",
+          "sellPrice",
+          "isDrink"
+        ],
+        "title": "BlueprintGameplayInput"
+      },
+      "BlueprintIngredientInput": {
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Itemid"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          },
+          "mappingReason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Mappingreason"
+          },
+          "catalogVersion": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Catalogversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "itemId",
+          "displayName",
+          "quantity",
+          "mappingReason",
+          "catalogVersion"
+        ],
+        "title": "BlueprintIngredientInput"
+      },
+      "BlueprintPresentationInput": {
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "internalName": {
+            "type": "string",
+            "maxLength": 48,
+            "minLength": 3,
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{2,47}$",
+            "title": "Internalname"
+          },
+          "categoryLabel": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Categorylabel"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Tags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "displayName",
+          "internalName",
+          "categoryLabel",
+          "description"
+        ],
+        "title": "BlueprintPresentationInput"
+      },
+      "BlueprintRecoveryInput": {
+        "properties": {
+          "edibility": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Edibility"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edibility"
+        ],
+        "title": "BlueprintRecoveryInput"
       },
       "Body_upload_image_api_v1_assets_images_post": {
         "properties": {
@@ -1170,7 +1501,7 @@
           "presentation": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/PresentationSpec"
+                "$ref": "#/components/schemas/BlueprintPresentationInput"
               },
               {
                 "type": "null"
@@ -1180,7 +1511,7 @@
           "gameplay": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GameplaySpec"
+                "$ref": "#/components/schemas/BlueprintGameplayInput"
               },
               {
                 "type": "null"
@@ -1591,6 +1922,59 @@
         },
         "type": "object",
         "title": "HealthResponse"
+      },
+      "IngredientCatalogItemView": {
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Itemid"
+          },
+          "displayNameEn": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Displaynameen"
+          },
+          "displayNameZh": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Displaynamezh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "itemId",
+          "displayNameEn",
+          "displayNameZh"
+        ],
+        "title": "IngredientCatalogItemView"
+      },
+      "IngredientCatalogSearchResult": {
+        "properties": {
+          "catalogVersion": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Catalogversion"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientCatalogItemView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "catalogVersion",
+          "items"
+        ],
+        "title": "IngredientCatalogSearchResult"
       },
       "Language": {
         "type": "string",

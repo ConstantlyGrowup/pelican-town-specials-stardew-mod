@@ -112,7 +112,13 @@ class VanillaCatalog:
             raise _unknown_item_error()
         return item
 
-    def search(self, query: str, limit: int = 20) -> list[CatalogItem]:
+    def search(
+        self,
+        query: str,
+        limit: int = 20,
+        *,
+        usable_only: bool = False,
+    ) -> list[CatalogItem]:
         if (
             not isinstance(query, str)
             or not isinstance(limit, int)
@@ -130,6 +136,8 @@ class VanillaCatalog:
         ranked: list[tuple[int, float, str, CatalogItem]] = []
 
         for item in self._items.values():
+            if usable_only and not item.usable_as_ingredient:
+                continue
             if normalized_query == item.item_id.casefold():
                 ranked.append((0, 1.0, item.item_id, item))
                 continue
@@ -160,6 +168,10 @@ class VanillaCatalog:
 
         ranked.sort(key=lambda match: (match[0], -match[1], _item_sort_key(match[2])))
         return [match[3] for match in ranked[:bounded_limit]]
+
+    def search_ingredients(self, query: str, limit: int = 20) -> list[CatalogItem]:
+        """Ingredient-only search that reuses the catalog ranking rules."""
+        return self.search(query, limit=limit, usable_only=True)
 
 
 def _parse_item(raw_item: object, index: int) -> CatalogItem:

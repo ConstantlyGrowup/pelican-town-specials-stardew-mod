@@ -7,6 +7,7 @@ from typing import cast
 from fastapi import Request
 
 from pelican_town_specials.application.assets import AssetService
+from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
 from pelican_town_specials.catalog.repository import VanillaCatalog
@@ -35,6 +36,10 @@ def vanilla_catalog(request: Request) -> VanillaCatalog:
 
 def asset_service(request: Request) -> AssetService:
     return cast(AssetService, request.app.state.asset_service)
+
+
+def catalog_service(request: Request) -> CatalogService:
+    return cast(CatalogService, request.app.state.catalog_service)
 
 
 def draft_service(request: Request) -> DraftService:
