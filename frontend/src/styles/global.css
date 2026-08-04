@@ -119,6 +119,20 @@ button {
   color: var(--pts-color-danger);
 }
 
+.hint {
+  color: var(--pts-color-muted);
+  font-size: 0.85em;
+}
+
+.picker-value {
+  display: inline-block;
+  min-height: 1.4em;
+  padding: 4px 8px;
+  border: 1px solid var(--pts-color-border);
+  border-radius: 6px;
+  background: var(--pts-color-surface);
+}
+
 .picker-backdrop {
   position: fixed;
   inset: 0;

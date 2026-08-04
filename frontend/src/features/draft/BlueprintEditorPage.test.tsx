@@ -159,6 +159,31 @@ describe("blueprint editor", () => {
     expect(body.gameplay.buff.id).toBe("spicy");
   });
 
+  it("shows internal name and description validation without PATCH", async () => {
+    const patchSpy = vi.fn((info: { request: Request }) => {
+      void info;
+      return HttpResponse.json(blueprintDraft({ revision: 2 }));
+    });
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(blueprintDraft())),
+      http.patch("/api/v1/drafts/:draft_id", patchSpy),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    fireEvent.change(screen.getByLabelText(copy.internalNameLabel), {
+      target: { value: "bad-name" },
+    });
+    fireEvent.change(screen.getByLabelText(copy.descriptionLabel), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: copy.saveDraft }));
+
+    expect(await screen.findByText(copy.internalNameFormatError)).toBeVisible();
+    expect(screen.getByText(copy.descriptionRequiredError)).toBeVisible();
+    expect(patchSpy).not.toHaveBeenCalled();
+  });
+
   it("shows a stale preview banner when PATCH returns STALE_PREVIEW", async () => {
     server.use(
       http.get("/api/v1/drafts/:draft_id", () =>

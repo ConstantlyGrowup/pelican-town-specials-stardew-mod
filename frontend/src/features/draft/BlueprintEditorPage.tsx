@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFormState } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/generated/schema";
@@ -47,6 +47,8 @@ export function BlueprintEditorPage() {
       isDrink: false,
     },
   });
+  const { setError, clearErrors } = form;
+  const formState = useFormState({ control: form.control });
 
   const query = useQuery({
     queryKey: ["draft", draftId],
@@ -126,11 +128,42 @@ export function BlueprintEditorPage() {
     .map((tag) => tag.trim())
     .filter(Boolean);
 
+  function validateBlueprint(values: BlueprintFormValues): boolean {
+    clearErrors();
+    let valid = true;
+    if (!values.displayName.trim()) {
+      setError("displayName", { type: "manual", message: copy.requiredField });
+      valid = false;
+    }
+    if (!/^[A-Za-z][A-Za-z0-9_]{2,47}$/.test(values.internalName)) {
+      setError("internalName", {
+        type: "manual",
+        message: copy.internalNameFormatError,
+      });
+      valid = false;
+    }
+    if (!values.categoryLabel.trim()) {
+      setError("categoryLabel", { type: "manual", message: copy.requiredField });
+      valid = false;
+    }
+    if (!values.description.trim()) {
+      setError("description", {
+        type: "manual",
+        message: copy.descriptionRequiredError,
+      });
+      valid = false;
+    }
+    return valid;
+  }
+
   async function onSave() {
     if (!query.data) {
       return;
     }
     const values = form.getValues();
+    if (!validateBlueprint(values)) {
+      return;
+    }
     const input = toPatchInput({ ...values, ingredients });
     setBusy(true);
     setActionError(null);
@@ -299,10 +332,21 @@ export function BlueprintEditorPage() {
         <div className="field">
           <label htmlFor="displayName">{copy.displayNameLabel}</label>
           <input id="displayName" {...form.register("displayName")} />
+          {formState.errors.displayName && (
+            <span className="error" role="alert">
+              {formState.errors.displayName.message}
+            </span>
+          )}
         </div>
         <div className="field">
           <label htmlFor="internalName">{copy.internalNameLabel}</label>
           <input id="internalName" {...form.register("internalName")} />
+          <span className="hint">{copy.internalNameHint}</span>
+          {formState.errors.internalName && (
+            <span className="error" role="alert">
+              {formState.errors.internalName.message}
+            </span>
+          )}
         </div>
         <div className="field">
           <label htmlFor="categoryLabel">{copy.categoryLabel}</label>
@@ -318,10 +362,21 @@ export function BlueprintEditorPage() {
               {copy.pickCategory}
             </button>
           </div>
+          {formState.errors.categoryLabel && (
+            <span className="error" role="alert">
+              {formState.errors.categoryLabel.message}
+            </span>
+          )}
         </div>
         <div className="field">
           <label htmlFor="description">{copy.descriptionLabel}</label>
           <textarea id="description" {...form.register("description")} />
+          <span className="hint">{copy.descriptionHint}</span>
+          {formState.errors.description && (
+            <span className="error" role="alert">
+              {formState.errors.description.message}
+            </span>
+          )}
         </div>
         <div className="field">
           <label htmlFor="tags">{copy.tagsLabel}</label>

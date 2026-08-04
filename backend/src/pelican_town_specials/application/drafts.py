@@ -191,6 +191,16 @@ class BlueprintGameplayInput(StrictModel):
     )
     buff: BlueprintBuffInput | None = None
 
+    @field_validator("recipe_unlock", mode="before")
+    @classmethod
+    def _coerce_recipe_unlock(cls, value: object) -> object:
+        if isinstance(value, RecipeUnlock):
+            return value
+        try:
+            return RecipeUnlock(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("recipeUnlock must be a valid RecipeUnlock") from exc
+
     def to_domain(self) -> GameplaySpec:
         return GameplaySpec.model_validate(
             {

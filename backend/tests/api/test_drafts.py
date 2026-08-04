@@ -182,6 +182,39 @@ def test_convert_to_blueprint_rejects_blueprint_source(
     assert response.json()["error"]["code"] == "PTS_STATE_ILLEGAL_TRANSITION"
 
 
+def test_patch_blueprint_accepts_gameplay_recipe_unlock_string(
+    auth_client: ApiClient,
+) -> None:
+    uploaded = _upload(auth_client)
+    created = _create_blueprint(auth_client, uploaded["assetId"])
+
+    response = auth_client.client.patch(
+        f"/api/v1/drafts/{created['draftId']}",
+        headers=auth_client.mutation_headers,
+        json={
+            "expectedRevision": created["revision"],
+            "gameplay": {
+                "ingredients": [
+                    {
+                        "itemId": "24",
+                        "displayName": "Parsnip",
+                        "quantity": 1,
+                        "mappingReason": "catalog match",
+                        "catalogVersion": "stardew-1.6.15-v1",
+                    }
+                ],
+                "recovery": {"edibility": 20},
+                "sellPrice": 35,
+                "isDrink": False,
+                "recipeUnlock": "DEFAULT",
+            },
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["gameplay"]["recipeUnlock"] == "DEFAULT"
+
+
 def test_patch_blueprint_updates_fields_and_bumps_revision(
     auth_client: ApiClient,
 ) -> None:
