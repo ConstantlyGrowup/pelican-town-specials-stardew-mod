@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-04-task-14-blueprint-preview |
+| active_session_id | 2026-08-04-task-15-generation-experience |
 | active_session_state | committed |
 | active_session_type | implementation |
-| current_task | Task 14 Blueprint 视觉更新已 Review PASS 并本地提交；按里程碑粒度继续 Task 15 |
-| blocker | 无 |
-| next_action | 运行 Task 15 规划（生成进度、Ask Gus 审核与 Blueprint 编辑体验） |
+| current_task | Task 15 生成体验已 Review PASS 并本地提交；Milestone 3（Task 11–15）全部完成 |
+| blocker | 无（等待 Milestone 3 全量验收与 push 授权） |
+| next_action | Milestone 3 全量验证并向用户一次性验收、统一 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | daeacfd（feat: add Blueprint visual preview generation） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11/12/13/14 已本地提交，未推送（Milestone 门） |
+| 最新提交 | 038635a（feat: add streamed generation experience） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11/12/13/14/15 已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
@@ -41,6 +41,14 @@
 - 实现：`generation/blueprint.py`（6 阶段序列、确定性 brief、`run_blueprint_preview`）、orchestrator 的 BLUEPRINT_PREVIEW 分支（用户字段保护、provenance 保留、失败/取消保持 STALE_PREVIEW）、`application/generation.py` kind 解析、`domain/validation.py` scope delta（BLUEPRINT analysis 可选）。
 - 验证：蓝图测试 8 passed；全量后端 428 passed/2 skipped；Ruff、mypy（69 源文件）clean；OpenAPI/前端契约无变化；`git diff --check` 通过。
 - Task 14 不包含前端（Task 15）、真实模型调用；测试全部使用 FakeGateway。
+
+## 当前 Task 15 Session（committed）
+
+- `2026-08-04-task-15-generation-experience` 采用「包工-子代理-Codex 审阅」模式完成 Milestone 3 收尾：包工生成 Context Packet（`mvp-task-15-5df2352-20260804-final-v1`），实施子代理实现前端生成体验，Codex 独立审阅（round 1 REVISE 1 项 MUST_FIX → 修复 → round 2 PASS），本地 focused commit `038635a`（不 push）。
+- 实现：`api/ndjson.ts`（NDJSON 流式解析 + streamGeneration）、`features/generation/`（useGeneration/GenerationProgress/GenerationError）、`AskGusReviewPage.tsx`（四操作）、`BlueprintEditorPage.tsx`（更新预览 + STALE_PREVIEW 阻止接受）、router 模式分发、`playwright.config.ts` + E2E fake flow。
+- 验证：vitest 52 passed；Playwright E2E 7 passed；build/lint 通过；后端 428 passed/2 skipped（无后端改动）。
+- 已知限制：后端 FAILED 重试未接线（`RETRY_FAILED_GENERATION` 已存在于状态机），FAILED ask-gus 草稿无操作入口；延后为单独后端 Task。
+- **Milestone 3（Task 11–15）全部完成**：本地 commits（10aa141/9555a55/145e164、5949516/aca590b、daeacfd/5df2352、038635a）均已本地提交、未 push。
 
 ## 当前 Task 9 Session（committed）
 
