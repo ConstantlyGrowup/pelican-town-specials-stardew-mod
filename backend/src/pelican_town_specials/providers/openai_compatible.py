@@ -415,7 +415,28 @@ def _model_schema[TModel: BaseModel](
     name: str, model: type[TModel]
 ) -> dict[str, object]:
     schema = cast(Any, model).model_json_schema(by_alias=True)
+    _strictify_schema(schema)
     return {"name": name, "strict": True, "schema": schema}
+
+
+def _strictify_schema(node: object) -> None:
+    """Make every object schema's `required` include all properties.
+
+    The provider's strict response_format requires `required` to cover every
+    key in `properties` (optional fields included). This transforms the
+    standard pydantic schema accordingly, in place.
+    """
+    if not isinstance(node, dict):
+        return
+    properties = node.get("properties")
+    if isinstance(properties, dict):
+        node["required"] = sorted(properties)
+    for value in node.values():
+        if isinstance(value, dict):
+            _strictify_schema(value)
+        elif isinstance(value, list):
+            for item in value:
+                _strictify_schema(item)
 
 
 def _extract_chat_text(response: httpx.Response) -> str:

@@ -52,9 +52,15 @@ def _env(name: str) -> str:
     return os.environ.get(name, "").strip()
 
 
-def _tiny_png() -> ProviderImageInput:
+def _sample_image() -> ProviderImageInput:
+    """Use the user-provided test photo, falling back to a valid-size image."""
+    sample_path = _REPO_ROOT / "samples" / "牛肉0.jpg"
+    if sample_path.exists():
+        return ProviderImageInput(
+            data=sample_path.read_bytes(), media_type=ImageMediaType.JPEG
+        )
     output = io.BytesIO()
-    Image.new("RGB", (1, 1), "red").save(output, format="PNG")
+    Image.new("RGB", (1024, 1024), "red").save(output, format="PNG")
     return ProviderImageInput(data=output.getvalue(), media_type=ImageMediaType.PNG)
 
 
@@ -87,7 +93,7 @@ def _run_probe() -> ProviderCapabilities:
         settings=settings,
         secret_store=_EnvSecretStore(api_key),
     )
-    image = _tiny_png()
+    image = _sample_image()
 
     async def probe_all() -> ProviderCapabilities:
         chat_multimodal = _failed("not attempted")
@@ -142,7 +148,7 @@ def _run_probe() -> ProviderCapabilities:
                     operation=ImageOperation.EDIT,
                     prompt="a tiny red square",
                     source_images=[image],
-                    size="256x256",
+                    size="1024x1024",
                     request_id=uuid4(),
                 )
             )
@@ -158,7 +164,7 @@ def _run_probe() -> ProviderCapabilities:
                 ImageGenerationRequest(
                     operation=ImageOperation.GENERATION,
                     prompt="a tiny red square",
-                    size="256x256",
+                    size="1024x1024",
                     request_id=uuid4(),
                 )
             )

@@ -37,6 +37,16 @@ def _chat_response(content: str) -> httpx.Response:
     return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
 
 
+def test_json_schema_required_includes_all_properties() -> None:
+    from pelican_town_specials.domain.dish import DishAnalysis
+    from pelican_town_specials.providers.openai_compatible import _model_schema
+
+    schema = _model_schema("dishanalysis", DishAnalysis)
+    ingredient = schema["schema"]["$defs"]["SemanticIngredient"]
+
+    assert "quantityHint" in ingredient["required"]
+
+
 def _analysis_request() -> DishAnalysisRequest:
     return DishAnalysisRequest(
         image=ProviderImageInput(data=b"png-bytes", media_type=ImageMediaType.PNG),
