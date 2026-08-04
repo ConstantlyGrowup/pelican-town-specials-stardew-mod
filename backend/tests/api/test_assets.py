@@ -55,6 +55,20 @@ def test_upload_image_returns_asset_view_without_path(auth_client: ApiClient) ->
     assert "relativePath" not in body
 
 
+def test_upload_accepts_jpg_mime(auth_client: ApiClient) -> None:
+    output = io.BytesIO()
+    Image.new("RGB", (8, 8), "red").save(output, format="JPEG")
+
+    response = auth_client.client.post(
+        "/api/v1/assets/images",
+        headers=auth_client.mutation_headers,
+        files={"file": ("photo.jpg", output.getvalue(), "image/jpg")},
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["mediaType"] == "image/jpeg"
+
+
 def test_get_image_streams_registered_asset(auth_client: ApiClient) -> None:
     uploaded = _upload(auth_client)
 

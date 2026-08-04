@@ -35,7 +35,7 @@ export const PRODUCT_COPY = {
 
     createTitle: "创建一道菜",
     uploadLabel: "上传菜品照片",
-    uploadHint: "支持 JPEG、PNG、WebP，大小不超过 20 MiB。",
+    uploadHint: "支持 JPG/JPEG、PNG、WebP，大小不超过 20 MiB。",
     selectImage: "选择图片",
     uploading: "正在上传…",
     createAskGus: "问问 Gus",

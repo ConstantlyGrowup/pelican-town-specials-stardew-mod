@@ -24,15 +24,19 @@ MAX_ASSET_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_SIDE = 8192
 MAX_IMAGE_PIXELS = 40_000_000
 
-_ALLOWED_CONTENT_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"})
+_ALLOWED_CONTENT_TYPES = frozenset(
+    {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+)
 _FORMAT_BY_CONTENT_TYPE = {
     "image/png": "PNG",
     "image/jpeg": "JPEG",
+    "image/jpg": "JPEG",
     "image/webp": "WEBP",
 }
 _MEDIA_BY_CONTENT_TYPE = {
     "image/png": MediaType.PNG,
     "image/jpeg": MediaType.JPEG,
+    "image/jpg": MediaType.JPEG,
     "image/webp": MediaType.WEBP,
 }
 _PIL_DECOMPRESSION_ERRORS = (Image.DecompressionBombError, Image.DecompressionBombWarning)

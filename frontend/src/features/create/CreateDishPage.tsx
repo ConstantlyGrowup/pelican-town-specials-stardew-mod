@@ -67,7 +67,7 @@ export function CreateDishPage() {
           <input
             id="dishPhoto"
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg,image/jpg,image/webp,.png,.jpg,.jpeg,.webp"
             onChange={onFileChange}
           />
           <p className="error">{copy.uploadHint}</p>

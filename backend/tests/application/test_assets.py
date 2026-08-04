@@ -125,6 +125,16 @@ def test_upload_rejects_content_type_mismatch(services: AppServices) -> None:
     assert excinfo.value.code == "PTS_INPUT_IMAGE_INVALID"
 
 
+def test_upload_accepts_jpg_mime_alias(services: AppServices) -> None:
+    view = _service(services).upload_image(
+        content_type="image/jpg",
+        data=_jpeg_bytes(),
+    )
+
+    assert view.media_type is MediaType.JPEG
+    assert len(view.sha256) == 64
+
+
 def test_upload_webp_is_stored_as_png(services: AppServices) -> None:
     output = io.BytesIO()
     Image.new("RGB", (80, 40), "orange").save(output, format="WEBP")
