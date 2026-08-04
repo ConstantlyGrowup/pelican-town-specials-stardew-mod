@@ -68,3 +68,17 @@ Task 7 与 Task8 的设计和实施计划均已完成用户验收；Task8 双语
 - `AGENTS.md`、`docs/development/STATUS.md`、`docs/development/sessions/` 和 `docs/development/CONSTRAINTS.md` 是可提交的开发控制面。
 - `docs/architecture/`、`docs/plans/`、`design docs/`、`最初设计功能清点/` 和项目设计源索引按用户约定保持 Git ignored；它们仍然是本地设计与计划真源。
 - 不自动创建通用个人 Skill 包；当前规则只服务于本项目的开发接力。
+## 全局自治协议
+
+本文后续规则补充并优先解释本文件早期的静态 Task 清单：
+
+- Main Agent 必须在交付 Context Packet 前完成字段、接口、文件、测试和依赖的可实施性闭包检查。
+- 不改变用户可见行为的技术冲突由 Main Agent 按权威顺序和最小改动原则裁决，并记录 `planning_rulings`。
+- domain、persistence、正式设计文档、测试和生成物可以进入当前 Task 的最小依赖闭包；扩大原始 `allowed_files` 不是单独的阻塞理由。
+- Implementer 可以记录 `implementation_scope_delta` 后继续，但必须满足 `user_visible_delta: none`、已有 criterion 直接要求且不超出 `architecture_budget`。
+- `BLOCKED` 仅用于用户可见行为分叉、不可逆数据操作、互相冲突的用户要求、缺失外部输入、重试后仍失败的必需环境操作或不可避免的用户可见范围扩张。
+- 法律、合规和内容安全不作为本项目的规划或 Review 阻塞条件；已冻结的技术安全、隐私和数据完整性要求仍有效。
+- 只有闭包检查完成的 Packet 可以标记 `READY_FOR_IMPLEMENTATION`，不得返回 `BLOCKED_PENDING_DESIGN_DECISION`。
+- Task 9 是自治提交范式实验门；实验成功后普通 Task 的 `PASS` 自动进入 `auto_accepted` 并创建本地 focused commit，Milestone 才进入用户验收和 push。
+
+开始任何工作前还必须读取 `docs/development/REVIEW_PROTOCOL.md` 和 `docs/development/CONTEXT_PACKET_SCHEMA.md`。

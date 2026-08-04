@@ -7,27 +7,33 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | committed |
-| project_phase | mvp-task-8-vanilla-catalog |
+| project_phase | dual-agent-autonomy-control-plane |
 | product_implementation_started | true |
-| active_session_id | 2026-08-03-task-8-vanilla-catalog |
+| active_session_id | 2026-08-04-dual-agent-autonomy-rules |
 | active_session_state | committed |
-| active_session_type | implementation |
-| current_task | MVP Task 8：已通过用户验收，focused commit 已创建并推送 |
-| blocker | 无；双语源已登记；edibility/sellPrice 使用原版观察范围，Buff duration 使用独立版本化 gameplay reference，均为 warning-only |
-| next_action | 等待下一个 Task 的用户授权；Task8 已完成并推送 |
+| active_session_type | control-plane-maintenance |
+| current_task | 双 Agent 自治规划、动态依赖闭包与 Milestone 提交规则已保留；Task 9 产品实现未开始 |
+| blocker | 无；旧 Task 9 实现和旧 Context Packet 产物未保留；当前规则控制面已完成验证 |
+| next_action | 等待 Task 9 重做实验授权；先生成闭包检查通过的最终 Context Packet |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送） |
+| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | Task8 focused commit |
+| 最新提交 | 双 Agent 自治规则控制面 focused commit |
 | 远端操作 | Task5、Task6、Task7 与 Task8 focused commit 已推送 |
-| 当前工作树范围 | Task8 双语源文件、目录构建、仓库、映射、Gameplay 校验及控制面文档已包含在 focused commit 并推送；工作树应保持干净 |
-## 当前 Task 8 Session（committed）
+| 当前工作树范围 | 仅包含已批准的自治规则控制面；Task 9 旧实现、旧 Context Packet 及其 Session 产物未保留；工作树应保持干净 |
+## 当前自治规则 Session（committed）
+
+- `2026-08-04-dual-agent-autonomy-rules` 已完成规则落地、协议静态验证和旧 Task 9 产物清点；未修改 backend、frontend 或生成产品契约。
+- Context Packet Schema、动态依赖闭包、技术冲突自治裁决、`BLOCKED` 边界、全局两轮 `REVISE` 上限、模型路由、Task 9 实验门和 Milestone push 门已写入控制面。
+- Task 9 重做只可从新的最终 Context Packet 开始；Task 9 旧 Context Packet fixture 已移除，当前 schema 内的 rerun fixture 仅用于验证协议，不授权产品实现。
+
+## 上一 Task 8 Session（committed）
 
 - 2026-08-03-task-8-vanilla-catalog 已完成用户验收、focused commit 和推送。
 - Task8 目标是把真实 Stardew 1.6.15 Data/Objects 变成可审计、可重复构建的原版目录，并提供安全映射与 Gameplay 校验。

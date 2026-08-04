@@ -112,3 +112,16 @@ END_TASK_HANDOFF
 ```
 
 收到 `REVISE` 后，只处理 Codex 明确指出的问题，重新运行受影响的测试和必要的完整验收；不要借修复机会扩大范围。收到 `BLOCKED` 后不要猜测实现，等待新的设计、授权或环境信息。
+
+## 全局自治执行补充
+
+本节优先于本文较早的固定文件清单、冲突停机表述和 Task 9 初始试运行范围；具体任务仍以 Codex 交付的最终 Context Packet 为准。
+
+- 开始执行前读取 `AGENTS.md`、`docs/development/REVIEW_PROTOCOL.md` 和 `docs/development/CONTEXT_PACKET_SCHEMA.md`，并使用 Packet 的 `acceptance_contract_id`、`planning_rulings`、`acceptance_ledger` 和 `architecture_budget`。
+- Main Agent 已对不改变用户可见行为的技术冲突完成裁决时，Implementer 必须按最终 Packet 一次性实现需求、缺陷修复、必要的设计/领域/持久化/API/测试/生成物变更；不得因新增的最小依赖文件再次返回 `BLOCKED`。
+- 本文较早的 Task 9 文件清单是基线提示，不是永久白名单。Packet 可以通过 `allowed_files` 的依赖闭包覆盖 domain、persistence、正式文档、测试和生成物；每个扩展必须有 criterion 和 reason。
+- 实施期发现相邻技术依赖时，若 `user_visible_delta: none`、由已有 criterion 直接要求且未超出 `architecture_budget`，记录 `implementation_scope_delta` 后继续，不等待用户决策。
+- 不得以架构偏好、未冻结的加固、法律/合规/内容安全判断或“需要设计决定”作为 `BLOCKED`；只有协议规定的用户可见分叉、不可逆数据操作、明确需求冲突、缺失外部输入、重试后仍失败的必需环境操作、不可避免的用户可见范围扩张或未授权模型不可用才可阻塞。
+- 收到 `REVISE` 时只修复明确的 MUST_FIX；全局最多两轮，第二轮后不得开启第三轮，Acceptance Ledger 之外的建议只能记录为非阻塞项。
+- 交接摘要必须附带 `acceptance_contract_id`、`planning_rulings_applied`、`implementation_scope_delta` 和实际 `actual_models`；完成后保持未提交，交给 Codex 复审。
+- Task 9 实验成功后，普通 Task 的 `PASS` 进入 `auto_accepted` 并由控制面创建本地 focused commit；单个 Task 不 push，Milestone 完整验证后才进入用户验收和统一 push。
