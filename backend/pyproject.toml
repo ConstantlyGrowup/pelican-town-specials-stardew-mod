@@ -16,7 +16,7 @@ dependencies = [
     "python-multipart>=0.0.20,<1",
     "platformdirs>=4.3,<5",
     "portalocker>=3.2,<4",
-    "Pillow>=11.3,<13",
+    "Pillow==12.3.0",
 ]
 
 [dependency-groups]

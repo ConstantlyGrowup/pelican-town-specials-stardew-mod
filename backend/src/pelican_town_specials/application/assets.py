@@ -2,44 +2,37 @@
 
 from __future__ import annotations
 
-import io
 from collections.abc import Iterator
 from datetime import datetime
 from typing import BinaryIO
 from uuid import UUID
 
-from PIL import Image, ImageOps
 from pydantic import Field, field_validator
 
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
 from pelican_town_specials.domain.common import StrictModel, ensure_utc, ensure_uuid4
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.images.input_normalizer import normalize_upload
 from pelican_town_specials.persistence.asset_store import (
     AssetMetadata,
     AssetNotFoundError,
     FileAssetStore,
 )
 
-MAX_ASSET_BYTES = 20 * 1024 * 1024
-MAX_IMAGE_SIDE = 8192
-MAX_IMAGE_PIXELS = 40_000_000
-
 _ALLOWED_CONTENT_TYPES = frozenset(
     {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 )
-_FORMAT_BY_CONTENT_TYPE = {
-    "image/png": "PNG",
-    "image/jpeg": "JPEG",
-    "image/jpg": "JPEG",
-    "image/webp": "WEBP",
-}
 _MEDIA_BY_CONTENT_TYPE = {
     "image/png": MediaType.PNG,
     "image/jpeg": MediaType.JPEG,
     "image/jpg": MediaType.JPEG,
     "image/webp": MediaType.WEBP,
 }
-_PIL_DECOMPRESSION_ERRORS = (Image.DecompressionBombError, Image.DecompressionBombWarning)
+_MEDIA_BY_SOURCE_FORMAT = {
+    "PNG": MediaType.PNG,
+    "JPEG": MediaType.JPEG,
+    "WEBP": MediaType.WEBP,
+}
 
 
 class AssetView(StrictModel):
@@ -121,20 +114,20 @@ class AssetService:
         data: bytes,
     ) -> AssetView:
         declared = self._declared_media_type(content_type)
-        normalized_media, normalized_bytes, width, height = self._normalize_upload(
-            declared, data
-        )
+        normalized = normalize_upload(data)
+        if declared is not _MEDIA_BY_SOURCE_FORMAT[normalized.source_format]:
+            raise self._invalid_image_error()
         metadata = AssetMetadata(
             kind=AssetKind.ORIGINAL_IMAGE,
-            mediaType=normalized_media,
+            mediaType=normalized.media_type,
             fileExtension=(
-                ".png" if normalized_media is MediaType.PNG else ".jpg"
+                ".png" if normalized.media_type is MediaType.PNG else ".jpg"
             ),
-            width=width,
-            height=height,
+            width=normalized.width,
+            height=normalized.height,
         )
         try:
-            ref = self._store.put(normalized_bytes, metadata)
+            ref = self._store.put(normalized.data, metadata)
         except ValueError as exc:
             raise self._invalid_image_error() from exc
         return AssetView.from_asset_ref(ref)
@@ -173,50 +166,6 @@ class AssetService:
         if content_type not in _ALLOWED_CONTENT_TYPES:
             raise self._invalid_image_error()
         return _MEDIA_BY_CONTENT_TYPE[content_type]
-
-    def _normalize_upload(
-        self,
-        declared: MediaType,
-        data: bytes,
-    ) -> tuple[MediaType, bytes, int, int]:
-        if not data:
-            raise self._limit_exceeded_error()
-        if len(data) > MAX_ASSET_BYTES:
-            raise self._limit_exceeded_error()
-        expected_format = _FORMAT_BY_CONTENT_TYPE[declared.value]
-        try:
-            with Image.open(io.BytesIO(data)) as source:
-                if source.format != expected_format:
-                    raise self._invalid_image_error()
-                width, height = source.size
-                if (
-                    width > MAX_IMAGE_SIDE
-                    or height > MAX_IMAGE_SIDE
-                    or width * height > MAX_IMAGE_PIXELS
-                ):
-                    raise self._limit_exceeded_error()
-                transposed = ImageOps.exif_transpose(source)
-                transposed.load()
-            normalized_media, normalized_bytes = self._reencode(declared, transposed)
-            return normalized_media, normalized_bytes, transposed.width, transposed.height
-        except _PIL_DECOMPRESSION_ERRORS:
-            raise self._limit_exceeded_error() from None
-        except AppError:
-            raise
-        except (OSError, ValueError, SyntaxError, TypeError, RuntimeError):
-            raise self._invalid_image_error() from None
-
-    def _reencode(
-        self,
-        declared: MediaType,
-        image: Image.Image,
-    ) -> tuple[MediaType, bytes]:
-        output = io.BytesIO()
-        if declared is MediaType.JPEG:
-            image.convert("RGB").save(output, format="JPEG", quality=90)
-            return MediaType.JPEG, output.getvalue()
-        image.convert("RGBA").save(output, format="PNG", compress_level=6)
-        return MediaType.PNG, output.getvalue()
 
     @staticmethod
     def _limit_exceeded_error() -> AppError:

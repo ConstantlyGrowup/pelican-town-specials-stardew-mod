@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "preview-resource-generator-v1",
+  "assets": [
+    {
+      "path": "templates/preview-v1/layout.json",
+      "source": "project-original",
+      "sourceVersion": "preview-resource-generator-v1",
+      "sha256": "5364db21d6f10c2c97bf1eb7f970e0b7e1b13203730ca2a7fe45766f07645080",
+      "licenseOrAuthorization": "project-original; no external license required",
+      "purpose": "preview-v1 deterministic placeholder resource"
+    },
+    {
+      "path": "templates/preview-v1/frame.png",
+      "source": "project-original",
+      "sourceVersion": "preview-resource-generator-v1",
+      "sha256": "c294d5a0401068f2d40c04d39325f5e2a1edb5f8d84fac372b9b46eb452135d0",
+      "licenseOrAuthorization": "project-original; no external license required",
+      "purpose": "preview-v1 deterministic placeholder resource"
+    },
+    {
+      "path": "templates/preview-v1/parchment.png",
+      "source": "project-original",
+      "sourceVersion": "preview-resource-generator-v1",
+      "sha256": "70519e04a381c09c0a96a5b4c221e01988451acd7e847dfa4e6194ad41b3995f",
+      "licenseOrAuthorization": "project-original; no external license required",
+      "purpose": "preview-v1 deterministic placeholder resource"
+    },
+    {
+      "path": "fonts/NotoSansSC-VF.ttf",
+      "source": "Google Fonts Noto Sans SC",
+      "sourceVersion": "2.04",
+      "sha256": "763146584cf0710223441356b4395e279021b0806c196614377a7a0174ae074a",
+      "licenseOrAuthorization": "SIL Open Font License 1.1",
+      "purpose": "Chinese preview text rendering"
+    }
+  ]
+}

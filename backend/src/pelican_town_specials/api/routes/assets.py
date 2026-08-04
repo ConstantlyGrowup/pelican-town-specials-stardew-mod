@@ -9,7 +9,8 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from pelican_town_specials.api.dependencies import asset_service
-from pelican_town_specials.application.assets import MAX_ASSET_BYTES, AssetView
+from pelican_town_specials.application.assets import AssetView
+from pelican_town_specials.images.input_normalizer import MAX_ASSET_BYTES
 
 router = APIRouter()
 

@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-04-task-11-provider-adapter |
+| active_session_id | 2026-08-04-task-12-image-pipeline |
 | active_session_state | committed |
 | active_session_type | implementation |
-| current_task | Task 11 Provider Adapter 已实现、两轮审阅修复、真实 capability probe 五项全绿并本地提交（10aa141 + 9555a55）；等待用户验收后进入 Task 12 |
-| blocker | 无；真实 probe 五项 capability 全部 supported=true，技术设计 §18.2 已按脱敏事实回写 |
-| next_action | 用户确认 Task 11 验收后按里程碑粒度继续 Task 12 |
+| current_task | Task 12 图像管线已 Review PASS 并本地提交；按里程碑粒度继续 Task 13 |
+| blocker | 无 |
+| next_action | 运行 Task 13 规划 thread（gpt-5.6-sol/high） |
 
 ## 当前 Git 状态事实
 
