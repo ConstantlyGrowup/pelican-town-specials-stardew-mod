@@ -7,27 +7,34 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | committed |
-| project_phase | dual-agent-autonomy-control-plane |
+| project_phase | mvp-task-9-draft-cookbook-api |
 | product_implementation_started | true |
-| active_session_id | 2026-08-04-dual-agent-autonomy-rules |
+| active_session_id | 2026-08-04-task-9-draft-cookbook-api |
 | active_session_state | committed |
-| active_session_type | control-plane-maintenance |
-| current_task | 双 Agent 自治规划、动态依赖闭包与 Milestone 提交规则已保留；Task 9 产品实现未开始 |
-| blocker | 无；旧 Task 9 实现和旧 Context Packet 产物未保留；当前规则控制面已完成验证 |
-| next_action | 等待 Task 9 重做实验授权；先生成闭包检查通过的最终 Context Packet |
+| active_session_type | implementation |
+| current_task | MVP Task 9 已完成用户确认、focused commit 创建（未推送）；双 Agent 协作实验成功，里程碑粒度验收已启用 |
+| blocker | 无；工作树核验干净 |
+| next_action | 里程碑粒度协作：继续 Milestone 2 中依赖满足的下一 Task（Task 10 前端页面），Milestone 全量验证后进入 awaiting_milestone_acceptance |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面已本地提交，未推送） |
+| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 双 Agent 自治规则控制面 focused commit |
-| 远端操作 | Task5、Task6、Task7 与 Task8 focused commit 已推送 |
-| 当前工作树范围 | 仅包含已批准的自治规则控制面；Task 9 旧实现、旧 Context Packet 及其 Session 产物未保留；工作树应保持干净 |
-## 当前自治规则 Session（committed）
+| 最新提交 | Task 9 focused commit（feat: add draft and cookbook lifecycle APIs） |
+| 远端操作 | Task5、Task6、Task7 与 Task8 focused commit 已推送；Task 9 与自治规则控制面等待 Milestone 统一 push |
+| 当前工作树范围 | 已创建 Task 9 focused commit，工作树核验干净；Task 9 旧实现、旧 Context Packet 及其 Session 产物未保留 |
+## 当前 Task 9 Session（committed）
+
+- `2026-08-04-task-9-draft-cookbook-api` 已按最终 Context Packet（`mvp-task-9-rerun-15405d0-20260804-final-v1`）完成实现、自动验证与两轮 Review（第一轮 REVISE 4 项 MUST_FIX 已修复，第二轮 PASS），用户确认实验成功后创建本地 focused commit；工作树核验干净。
+- domain 增加 `baseTemplateVersion`；persistence 扩展 asset UUID 查找与 Archive 幂等查询；application 新增 `AssetService`/`DraftService`/`CookbookService`/`Page`；api 新增 assets/drafts/cookbook 路由与 `dependencies.py` 装配。
+- 验证：focused 125 passed、全量 334 passed/2 skipped、Ruff、mypy、前端 test/lint/build、`git diff --check` 与本地文档忽略检查全部通过。
+- 用户已确认双 Agent 协作实验成功，后续采用里程碑粒度验收：普通 Task 的 PASS 自动进入 `auto_accepted` 并创建本地 focused commit，不在单个 Task 打断用户；Milestone 全量验证后统一验收与 push。
+
+## 已关闭自治规则 Session（committed）
 
 - `2026-08-04-dual-agent-autonomy-rules` 已完成规则落地、协议静态验证和旧 Task 9 产物清点；未修改 backend、frontend 或生成产品契约。
 - Context Packet Schema、动态依赖闭包、技术冲突自治裁决、`BLOCKED` 边界、全局两轮 `REVISE` 上限、模型路由、Task 9 实验门和 Milestone push 门已写入控制面。

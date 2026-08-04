@@ -12,7 +12,11 @@ import pytest
 from PIL import Image
 
 from pelican_town_specials.domain.assets import AssetKind, MediaType
-from pelican_town_specials.persistence.asset_store import AssetMetadata, FileAssetStore
+from pelican_town_specials.persistence.asset_store import (
+    AssetMetadata,
+    AssetNotFoundError,
+    FileAssetStore,
+)
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 
 
@@ -87,6 +91,59 @@ def test_file_asset_store_accepts_zip_assets_without_dimensions(
     assert asset_ref.media_type is MediaType.ZIP
     assert asset_ref.width is None
     assert asset_ref.height is None
+
+
+def test_asset_store_lookup_and_open_by_uuid(tmp_path: Path) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace", today=date(2026, 8, 2))
+    store = FileAssetStore(workspace)
+    output = io.BytesIO()
+    Image.new("RGB", (48, 24), "green").save(output, format="PNG")
+    data = output.getvalue()
+
+    ref = store.put(
+        data,
+        AssetMetadata(
+            kind=AssetKind.ORIGINAL_IMAGE,
+            mediaType=MediaType.PNG,
+            fileExtension=".png",
+            width=48,
+            height=24,
+        ),
+    )
+
+    assert store.stat(ref.asset_id) == ref
+    with store.open(ref.asset_id) as handle:
+        assert handle.read() == data
+
+    with pytest.raises(AssetNotFoundError):
+        store.stat(uuid4())
+    with pytest.raises(AssetNotFoundError):
+        store.open(uuid4())
+
+
+def test_asset_store_uuid_stat_detects_tampering(tmp_path: Path) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace", today=date(2026, 8, 2))
+    store = FileAssetStore(workspace)
+    output = io.BytesIO()
+    Image.new("RGB", (1, 1), "white").save(output, format="PNG")
+    ref = store.put(
+        output.getvalue(),
+        AssetMetadata(
+            kind=AssetKind.ORIGINAL_IMAGE,
+            mediaType=MediaType.PNG,
+            fileExtension=".png",
+            width=1,
+            height=1,
+        ),
+    )
+    tampered = bytearray(store._resolve_asset_path(ref.relative_path).read_bytes())
+    tampered[-1] ^= 0x01
+    store._resolve_asset_path(ref.relative_path).write_bytes(bytes(tampered))
+
+    with pytest.raises(ValueError, match="hash"):
+        store.stat(ref.asset_id)
+    with pytest.raises(ValueError, match="hash"):
+        store.open(ref.asset_id)
 
 
 def test_asset_metadata_rejects_unsupported_extension_and_missing_dimensions() -> None:

@@ -26,7 +26,11 @@ from pelican_town_specials.domain.dish import (
     Provenance,
     RecoverySpec,
 )
-from pelican_town_specials.domain.draft import DraftStatus, GenerationAttemptPublic
+from pelican_town_specials.domain.draft import (
+    DraftRecord,
+    DraftStatus,
+    GenerationAttemptPublic,
+)
 from pelican_town_specials.domain.errors import AppError, ErrorSummary
 from pelican_town_specials.domain.export import ExportSpec
 from pelican_town_specials.domain.validation import (
@@ -38,6 +42,7 @@ from pelican_town_specials.domain.validation import (
 
 from .factories import (
     archived_dish_fixture,
+    ask_gus_reviewable_fixture,
     blueprint_draft_fixture,
     initial_attempt_fixture,
 )
@@ -462,6 +467,36 @@ def test_draft_record_mode_is_immutable_after_creation_and_model_copy() -> None:
     assert updated.status is DraftStatus.READY
     assert updated.revision == 2
     assert updated.mode is DraftMode.BLUEPRINT
+
+def test_blueprint_draft_persists_base_template_version() -> None:
+    blueprint = blueprint_draft_fixture()
+    assert blueprint.base_template_version == "blueprint-v1"
+    assert (
+        json.loads(blueprint.model_dump_json(by_alias=True))["baseTemplateVersion"]
+        == "blueprint-v1"
+    )
+
+
+def test_ask_gus_draft_has_no_base_template_version() -> None:
+    draft = ask_gus_reviewable_fixture()
+    assert draft.base_template_version is None
+    assert (
+        json.loads(draft.model_dump_json(by_alias=True))["baseTemplateVersion"]
+        is None
+    )
+
+
+def test_base_template_version_enforces_mode_invariant() -> None:
+    blueprint_payload = blueprint_draft_fixture().model_dump(by_alias=True)
+    blueprint_payload["baseTemplateVersion"] = None
+    with pytest.raises(ValidationError):
+        DraftRecord.model_validate(blueprint_payload)
+
+    ask_gus_payload = ask_gus_reviewable_fixture().model_dump(by_alias=True)
+    ask_gus_payload["baseTemplateVersion"] = "blueprint-v1"
+    with pytest.raises(ValidationError):
+        DraftRecord.model_validate(ask_gus_payload)
+
 
 def test_generation_attempt_public_dto_hides_staging_path() -> None:
     attempt = initial_attempt_fixture(candidate_record_path="staging/candidate.json")

@@ -243,6 +243,13 @@ class ArchiveRepository:
             self._record_path(dish_id), _validate_model_payload(ArchivedDish)
         )
 
+    def get_by_idempotency_key(self, idempotency_key: str) -> ArchivedDish | None:
+        idempotency_index = self._load_idempotency_index()
+        dish_id = idempotency_index.keys.get(idempotency_key)
+        if dish_id is None:
+            return None
+        return self.get(UUID(dish_id))
+
     def list_active(self) -> list[ArchivedDish]:
         self._repair_deleted_state()
         index = self._load_or_rebuild_index()

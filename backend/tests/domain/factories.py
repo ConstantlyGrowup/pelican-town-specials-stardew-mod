@@ -145,6 +145,9 @@ def make_draft(
         schemaVersion=1,
         draftId=uuid4(),
         mode=mode,
+        baseTemplateVersion=(
+            "blueprint-v1" if mode is DraftMode.BLUEPRINT else None
+        ),
         status=status,
         revision=revision,
         source=_source_input(),

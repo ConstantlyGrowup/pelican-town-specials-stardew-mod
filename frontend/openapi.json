@@ -5,6 +5,64 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/session/bootstrap": {
+      "post": {
+        "summary": "Bootstrap Session",
+        "operationId": "bootstrap_session_session_bootstrap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaunchBootstrapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/app/heartbeat": {
+      "post": {
+        "summary": "Heartbeat",
+        "operationId": "heartbeat_app_heartbeat_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/app/shutdown": {
+      "post": {
+        "summary": "Shutdown",
+        "operationId": "shutdown_app_shutdown_post",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "summary": "Get Health",
@@ -22,10 +80,1494 @@
           }
         }
       }
+    },
+    "/api/v1/settings/provider": {
+      "get": {
+        "summary": "Get Provider Settings",
+        "operationId": "get_provider_settings_api_v1_settings_provider_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderSettingsView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Provider Settings",
+        "operationId": "put_provider_settings_api_v1_settings_provider_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderSettingsView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/provider/key": {
+      "put": {
+        "summary": "Put Provider Key",
+        "operationId": "put_provider_key_api_v1_settings_provider_key_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderKeyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderKeyStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Provider Key",
+        "operationId": "delete_provider_key_api_v1_settings_provider_key_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderKeyStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/images": {
+      "post": {
+        "summary": "Upload Image",
+        "operationId": "upload_image_api_v1_assets_images_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_image_api_v1_assets_images_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{asset_id}": {
+      "get": {
+        "summary": "Get Image",
+        "operationId": "get_image_api_v1_assets__asset_id__get",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Asset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/drafts": {
+      "get": {
+        "summary": "List Drafts",
+        "operationId": "list_drafts_api_v1_drafts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_DraftSummary_"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Draft",
+        "operationId": "create_draft_api_v1_drafts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/drafts/{draft_id}": {
+      "get": {
+        "summary": "Get Draft",
+        "operationId": "get_draft_api_v1_drafts__draft_id__get",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch Draft",
+        "operationId": "patch_draft_api_v1_drafts__draft_id__patch",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/drafts/{draft_id}/convert-to-blueprint": {
+      "post": {
+        "summary": "Convert To Blueprint",
+        "operationId": "convert_to_blueprint_api_v1_drafts__draft_id__convert_to_blueprint_post",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/drafts/{draft_id}/archive": {
+      "post": {
+        "summary": "Archive Draft",
+        "operationId": "archive_draft_api_v1_drafts__draft_id__archive_post",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookbookDishDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/drafts/{draft_id}/discard": {
+      "post": {
+        "summary": "Discard Draft",
+        "operationId": "discard_draft_api_v1_drafts__draft_id__discard_post",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cookbook": {
+      "get": {
+        "summary": "List Cookbook",
+        "operationId": "list_cookbook_api_v1_cookbook_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_CookbookDishSummary_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cookbook/{dish_id}": {
+      "get": {
+        "summary": "Get Cookbook Dish",
+        "operationId": "get_cookbook_dish_api_v1_cookbook__dish_id__get",
+        "parameters": [
+          {
+            "name": "dish_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Dish Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookbookDishDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Cookbook Dish",
+        "operationId": "delete_cookbook_dish_api_v1_cookbook__dish_id__delete",
+        "parameters": [
+          {
+            "name": "dish_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Dish Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ApiKeySource": {
+        "type": "string",
+        "enum": [
+          "ENVIRONMENT",
+          "SESSION",
+          "NONE"
+        ],
+        "title": "ApiKeySource"
+      },
+      "AssetKind": {
+        "type": "string",
+        "enum": [
+          "ORIGINAL_IMAGE",
+          "GENERATED_ART",
+          "PREVIEW",
+          "ICON_SOURCE",
+          "ICON_16",
+          "MOD_SPRITESHEET",
+          "EXPORT_ZIP"
+        ],
+        "title": "AssetKind"
+      },
+      "AssetView": {
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assetid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AssetKind"
+          },
+          "mediaType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "byteSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Bytesize"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8192.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8192.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "sourceRevision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcerevision"
+          },
+          "attemptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attemptid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assetId",
+          "kind",
+          "mediaType",
+          "sha256",
+          "byteSize",
+          "createdAt"
+        ],
+        "title": "AssetView"
+      },
+      "Body_upload_image_api_v1_assets_images_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "Original dish photo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_image_api_v1_assets_images_post"
+      },
+      "BuffAttributes": {
+        "properties": {
+          "farmingLevel": {
+            "type": "integer",
+            "title": "Farminglevel",
+            "default": 0
+          },
+          "fishingLevel": {
+            "type": "integer",
+            "title": "Fishinglevel",
+            "default": 0
+          },
+          "miningLevel": {
+            "type": "integer",
+            "title": "Mininglevel",
+            "default": 0
+          },
+          "foragingLevel": {
+            "type": "integer",
+            "title": "Foraginglevel",
+            "default": 0
+          },
+          "combatLevel": {
+            "type": "integer",
+            "title": "Combatlevel",
+            "default": 0
+          },
+          "luckLevel": {
+            "type": "integer",
+            "title": "Lucklevel",
+            "default": 0
+          },
+          "attack": {
+            "type": "integer",
+            "title": "Attack",
+            "default": 0
+          },
+          "defense": {
+            "type": "integer",
+            "title": "Defense",
+            "default": 0
+          },
+          "immunity": {
+            "type": "integer",
+            "title": "Immunity",
+            "default": 0
+          },
+          "magneticRadius": {
+            "type": "integer",
+            "title": "Magneticradius",
+            "default": 0
+          },
+          "maxStamina": {
+            "type": "integer",
+            "title": "Maxstamina",
+            "default": 0
+          },
+          "speed": {
+            "type": "integer",
+            "title": "Speed",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BuffAttributes"
+      },
+      "BuffSpec": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "maximum": 1440.0,
+            "minimum": 10.0,
+            "title": "Durationminutes"
+          },
+          "isDebuff": {
+            "type": "boolean",
+            "title": "Isdebuff",
+            "default": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/BuffAttributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "durationMinutes",
+          "attributes"
+        ],
+        "title": "BuffSpec"
+      },
+      "CookbookDishDetail": {
+        "properties": {
+          "dishId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Dishid"
+          },
+          "archivedAt": {
+            "type": "string",
+            "title": "Archivedat"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "internalName": {
+            "type": "string",
+            "maxLength": 48,
+            "minLength": 3,
+            "title": "Internalname"
+          },
+          "categoryLabel": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Categorylabel"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Tags"
+          },
+          "gameplay": {
+            "$ref": "#/components/schemas/GameplaySpec"
+          },
+          "visuals": {
+            "$ref": "#/components/schemas/CookbookVisuals"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dishId",
+          "archivedAt",
+          "displayName",
+          "internalName",
+          "categoryLabel",
+          "description",
+          "gameplay",
+          "visuals"
+        ],
+        "title": "CookbookDishDetail"
+      },
+      "CookbookDishSummary": {
+        "properties": {
+          "dishId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Dishid"
+          },
+          "archivedAt": {
+            "type": "string",
+            "title": "Archivedat"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "categoryLabel": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Categorylabel"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Tags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dishId",
+          "archivedAt",
+          "displayName",
+          "categoryLabel",
+          "description"
+        ],
+        "title": "CookbookDishSummary"
+      },
+      "CookbookVisuals": {
+        "properties": {
+          "generatedArtAssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedartassetid"
+          },
+          "previewAssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previewassetid"
+          },
+          "iconSourceAssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iconsourceassetid"
+          },
+          "icon16AssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon16Assetid"
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sourcerevision"
+          },
+          "promptVersion": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Promptversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sourceRevision",
+          "promptVersion"
+        ],
+        "title": "CookbookVisuals"
+      },
+      "DishAnalysis": {
+        "properties": {
+          "recognizedDish": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Recognizeddish"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "cuisine": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
+          "cookingMethods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Cookingmethods"
+          },
+          "flavorProfile": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Flavorprofile"
+          },
+          "semanticIngredients": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticIngredient"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Semanticingredients"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "safetyNotes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Safetynotes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "recognizedDish",
+          "summary",
+          "semanticIngredients",
+          "confidence"
+        ],
+        "title": "DishAnalysis"
+      },
+      "DraftCreateRequest": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/DraftMode"
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DraftCreateSource"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode",
+          "language",
+          "source"
+        ],
+        "title": "DraftCreateRequest"
+      },
+      "DraftCreateSource": {
+        "properties": {
+          "originalImageAssetId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Originalimageassetid"
+          },
+          "contextText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contexttext"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "originalImageAssetId"
+        ],
+        "title": "DraftCreateSource"
+      },
+      "DraftMode": {
+        "type": "string",
+        "enum": [
+          "ASK_GUS",
+          "BLUEPRINT"
+        ],
+        "title": "DraftMode"
+      },
+      "DraftPatchRequest": {
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expectedrevision"
+          },
+          "presentation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PresentationSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gameplay": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GameplaySpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expectedRevision"
+        ],
+        "title": "DraftPatchRequest"
+      },
+      "DraftStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "READY",
+          "GENERATING",
+          "REGENERATING",
+          "REVIEWABLE",
+          "STALE_PREVIEW",
+          "FAILED",
+          "ARCHIVED",
+          "DISCARDED"
+        ],
+        "title": "DraftStatus"
+      },
+      "DraftSummary": {
+        "properties": {
+          "draftId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Draftid"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DraftMode"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DraftStatus"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Revision"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "Displayname"
+          },
+          "originalImageAssetId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Originalimageassetid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "draftId",
+          "mode",
+          "status",
+          "revision",
+          "updatedAt",
+          "displayName",
+          "originalImageAssetId"
+        ],
+        "title": "DraftSummary"
+      },
+      "DraftView": {
+        "properties": {
+          "draftId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Draftid"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DraftMode"
+          },
+          "baseTemplateVersion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "blueprint-v1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basetemplateversion"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DraftStatus"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Revision"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceInput"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DishAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "presentation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PresentationSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gameplay": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GameplaySpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "visuals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisualSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "archivedDishId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archiveddishid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "draftId",
+          "mode",
+          "baseTemplateVersion",
+          "status",
+          "revision",
+          "source",
+          "provenance",
+          "createdAt",
+          "updatedAt",
+          "archivedDishId"
+        ],
+        "title": "DraftView"
+      },
+      "ErrorSummary": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Requestid"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurredat"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenerationStage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "retryable",
+          "requestId",
+          "occurredAt"
+        ],
+        "title": "ErrorSummary"
+      },
+      "FieldAuthority": {
+        "type": "string",
+        "enum": [
+          "AGENT_ASSIGNED",
+          "USER_ASSIGNED",
+          "SYSTEM_GENERATED",
+          "TEMPLATE_DEFAULT",
+          "CACHE_REUSED"
+        ],
+        "title": "FieldAuthority"
+      },
+      "GameIngredient": {
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Itemid"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          },
+          "mappingReason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Mappingreason"
+          },
+          "catalogVersion": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Catalogversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "itemId",
+          "displayName",
+          "quantity",
+          "mappingReason",
+          "catalogVersion"
+        ],
+        "title": "GameIngredient"
+      },
+      "GameplaySpec": {
+        "properties": {
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/GameIngredient"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Ingredients"
+          },
+          "recovery": {
+            "$ref": "#/components/schemas/RecoverySpec"
+          },
+          "buff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuffSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sellPrice": {
+            "type": "integer",
+            "maximum": 50000.0,
+            "minimum": 0.0,
+            "title": "Sellprice"
+          },
+          "isDrink": {
+            "type": "boolean",
+            "title": "Isdrink"
+          },
+          "recipeUnlock": {
+            "$ref": "#/components/schemas/RecipeUnlock",
+            "default": "DEFAULT"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ingredients",
+          "recovery",
+          "sellPrice",
+          "isDrink"
+        ],
+        "title": "GameplaySpec"
+      },
+      "GenerationSource": {
+        "type": "string",
+        "enum": [
+          "FRESH_GENERATION",
+          "USER_AUTHORED"
+        ],
+        "title": "GenerationSource"
+      },
+      "GenerationStage": {
+        "type": "string",
+        "enum": [
+          "INPUT_VALIDATION",
+          "DISH_ANALYSIS",
+          "GAMEPLAY_DESIGN",
+          "INGREDIENT_MAPPING",
+          "VISUAL_BRIEF",
+          "ICON_GENERATION_AND_NORMALIZATION",
+          "PREVIEW_ART_GENERATION_AND_COMPOSITION",
+          "RESULT_VALIDATION",
+          "ATOMIC_PROMOTION"
+        ],
+        "title": "GenerationStage"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -49,6 +1591,651 @@
         },
         "type": "object",
         "title": "HealthResponse"
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "zh-CN",
+          "en-US"
+        ],
+        "title": "Language"
+      },
+      "LaunchBootstrapRequest": {
+        "properties": {
+          "launchToken": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Launchtoken"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "launchToken"
+        ],
+        "title": "LaunchBootstrapRequest"
+      },
+      "MediaType": {
+        "type": "string",
+        "enum": [
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "application/zip"
+        ],
+        "title": "MediaType"
+      },
+      "Page_CookbookDishSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookDishSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "Page[CookbookDishSummary]"
+      },
+      "Page_DraftSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DraftSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "Page[DraftSummary]"
+      },
+      "PresentationSpec": {
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "internalName": {
+            "type": "string",
+            "maxLength": 48,
+            "minLength": 3,
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{2,47}$",
+            "title": "Internalname"
+          },
+          "categoryLabel": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Categorylabel"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "gusComment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 400
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guscomment"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "minItems": 0,
+            "title": "Tags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "displayName",
+          "internalName",
+          "categoryLabel",
+          "description"
+        ],
+        "title": "PresentationSpec"
+      },
+      "Provenance": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/DraftMode"
+          },
+          "authorityByField": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldAuthority"
+            },
+            "type": "object",
+            "title": "Authoritybyfield"
+          },
+          "visionModel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visionmodel"
+          },
+          "textModel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textmodel"
+          },
+          "imageModel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagemodel"
+          },
+          "promptVersions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Promptversions"
+          },
+          "generationSource": {
+            "$ref": "#/components/schemas/GenerationSource"
+          },
+          "canonicalDishSignature": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonicaldishsignature"
+          },
+          "cacheEligibility": {
+            "type": "boolean",
+            "title": "Cacheeligibility"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode",
+          "generationSource",
+          "cacheEligibility"
+        ],
+        "title": "Provenance"
+      },
+      "ProviderKeyStatus": {
+        "properties": {
+          "apiKeyConfigured": {
+            "type": "boolean",
+            "title": "Apikeyconfigured"
+          },
+          "apiKeySource": {
+            "$ref": "#/components/schemas/ApiKeySource"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "apiKeyConfigured",
+          "apiKeySource"
+        ],
+        "title": "ProviderKeyStatus"
+      },
+      "ProviderKeyUpdate": {
+        "properties": {
+          "apiKey": {
+            "type": "string",
+            "format": "password",
+            "title": "Apikey",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "apiKey"
+        ],
+        "title": "ProviderKeyUpdate"
+      },
+      "ProviderKind": {
+        "type": "string",
+        "enum": [
+          "OPENAI_COMPATIBLE"
+        ],
+        "title": "ProviderKind"
+      },
+      "ProviderSettingsUpdate": {
+        "properties": {
+          "providerKind": {
+            "$ref": "#/components/schemas/ProviderKind",
+            "default": "OPENAI_COMPATIBLE"
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Baseurl",
+            "default": "https://yibuapi.com/v1"
+          },
+          "visionModel": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Visionmodel"
+          },
+          "textModel": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Textmodel"
+          },
+          "imageModel": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Imagemodel"
+          },
+          "chatTimeoutSeconds": {
+            "type": "integer",
+            "maximum": 600.0,
+            "minimum": 30.0,
+            "title": "Chattimeoutseconds",
+            "default": 120
+          },
+          "imageTimeoutSeconds": {
+            "type": "integer",
+            "maximum": 900.0,
+            "minimum": 60.0,
+            "title": "Imagetimeoutseconds",
+            "default": 300
+          },
+          "maxAutomaticRetries": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Maxautomaticretries",
+            "default": 2
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "visionModel",
+          "textModel",
+          "imageModel"
+        ],
+        "title": "ProviderSettingsUpdate",
+        "description": "Full settings update; all model identifiers must be configured."
+      },
+      "ProviderSettingsView": {
+        "properties": {
+          "providerKind": {
+            "$ref": "#/components/schemas/ProviderKind",
+            "default": "OPENAI_COMPATIBLE"
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Baseurl",
+            "default": "https://yibuapi.com/v1"
+          },
+          "visionModel": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Visionmodel",
+            "default": ""
+          },
+          "textModel": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Textmodel",
+            "default": ""
+          },
+          "imageModel": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Imagemodel",
+            "default": ""
+          },
+          "chatTimeoutSeconds": {
+            "type": "integer",
+            "maximum": 600.0,
+            "minimum": 30.0,
+            "title": "Chattimeoutseconds",
+            "default": 120
+          },
+          "imageTimeoutSeconds": {
+            "type": "integer",
+            "maximum": 900.0,
+            "minimum": 60.0,
+            "title": "Imagetimeoutseconds",
+            "default": 300
+          },
+          "maxAutomaticRetries": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Maxautomaticretries",
+            "default": 2
+          },
+          "apiKeyConfigured": {
+            "type": "boolean",
+            "title": "Apikeyconfigured"
+          },
+          "apiKeySource": {
+            "$ref": "#/components/schemas/ApiKeySource"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "apiKeyConfigured",
+          "apiKeySource"
+        ],
+        "title": "ProviderSettingsView"
+      },
+      "RecipeUnlock": {
+        "type": "string",
+        "enum": [
+          "DEFAULT"
+        ],
+        "title": "RecipeUnlock"
+      },
+      "RecoverySpec": {
+        "properties": {
+          "edibility": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Edibility"
+          },
+          "energyRestore": {
+            "type": "integer",
+            "title": "Energyrestore",
+            "default": 0
+          },
+          "healthRestore": {
+            "type": "integer",
+            "title": "Healthrestore",
+            "default": 0
+          },
+          "calculationVersion": {
+            "type": "string",
+            "title": "Calculationversion",
+            "default": "stardew-1.6"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edibility"
+        ],
+        "title": "RecoverySpec"
+      },
+      "SemanticIngredient": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "normalizedName": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Normalizedname"
+          },
+          "visibleConfidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Visibleconfidence"
+          },
+          "quantityHint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantityhint"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "normalizedName",
+          "visibleConfidence"
+        ],
+        "title": "SemanticIngredient"
+      },
+      "SourceInput": {
+        "properties": {
+          "originalImageAssetId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Originalimageassetid"
+          },
+          "contextText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contexttext"
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "originalImageAssetId",
+          "language"
+        ],
+        "title": "SourceInput"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VisualSpec": {
+        "properties": {
+          "visualBrief": {
+            "type": "string",
+            "maxLength": 1500,
+            "minLength": 1,
+            "title": "Visualbrief"
+          },
+          "generatedArtAssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedartassetid"
+          },
+          "previewAssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previewassetid"
+          },
+          "iconSourceAssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iconsourceassetid"
+          },
+          "icon16AssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon16Assetid"
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sourcerevision"
+          },
+          "promptVersion": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Promptversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "visualBrief",
+          "sourceRevision",
+          "promptVersion"
+        ],
+        "title": "VisualSpec"
       }
     }
   }

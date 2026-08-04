@@ -97,6 +97,18 @@ def test_archive_repository_add_is_immutable_and_idempotent_per_key(
         repository.add_immutable(archive, idempotency_key="different-key")
 
 
+def test_archive_repository_lookup_by_idempotency_key(tmp_path: Path) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace", today=date(2026, 8, 2))
+    repository = ArchiveRepository(workspace)
+    archive = archived_dish_fixture()
+
+    assert repository.get_by_idempotency_key("missing-key") is None
+
+    repository.add_immutable(archive, idempotency_key="same-key")
+
+    assert repository.get_by_idempotency_key("same-key") == archive
+
+
 def test_archive_repository_delete_moves_record_to_trash_and_writes_tombstone(
     tmp_path: Path,
 ) -> None:

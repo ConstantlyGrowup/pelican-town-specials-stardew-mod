@@ -119,3 +119,43 @@ def test_create_app_registers_settings_and_preserves_health(
         "apiKeyConfigured": True,
         "apiKeySource": "ENVIRONMENT",
     }
+
+
+def test_create_app_wires_task9_services_and_routes(tmp_path: Path) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace")
+    adapter = FakeEnvironmentAdapter()
+    secret_store = WindowsEnvironmentSecretStore(adapter)
+    security = SecurityState(
+        config=SecurityConfig(
+            allowed_hosts=frozenset({"testserver"}),
+            expected_port=None,
+            allowed_origins=frozenset({"http://testserver"}),
+        )
+    )
+    app = create_app(
+        workspace_paths=workspace,
+        secret_store=secret_store,
+        security_state=security,
+    )
+
+    assert hasattr(app.state, "asset_service")
+    assert hasattr(app.state, "draft_service")
+    assert hasattr(app.state, "cookbook_service")
+    assert hasattr(app.state, "asset_store")
+    assert hasattr(app.state, "draft_repository")
+    assert hasattr(app.state, "archive_repository")
+    assert hasattr(app.state, "vanilla_catalog")
+
+    paths = set(app.openapi()["paths"])
+    for path in (
+        "/api/v1/assets/images",
+        "/api/v1/assets/{asset_id}",
+        "/api/v1/drafts",
+        "/api/v1/drafts/{draft_id}",
+        "/api/v1/drafts/{draft_id}/convert-to-blueprint",
+        "/api/v1/drafts/{draft_id}/archive",
+        "/api/v1/drafts/{draft_id}/discard",
+        "/api/v1/cookbook",
+        "/api/v1/cookbook/{dish_id}",
+    ):
+        assert path in paths

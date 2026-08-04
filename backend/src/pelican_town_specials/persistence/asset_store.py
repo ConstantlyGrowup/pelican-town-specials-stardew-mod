@@ -37,6 +37,10 @@ _ENUM_PARSERS = {
 }
 
 
+class AssetNotFoundError(Exception):
+    """Raised when no registered asset matches an opaque assetId."""
+
+
 class AssetMetadata(StrictModel):
     kind: AssetKind
     media_type: MediaType = Field(alias="mediaType")
@@ -161,11 +165,15 @@ class FileAssetStore:
         )
         return asset_ref
 
-    def open(self, asset_ref: AssetRef) -> BinaryIO:
-        validated = self.stat(asset_ref)
+    def open(self, asset_ref_or_id: AssetRef | UUID) -> BinaryIO:
+        validated = self.stat(asset_ref_or_id)
         return self._resolve_asset_path(validated.relative_path).open("rb")
 
-    def stat(self, asset_ref: AssetRef) -> AssetRef:
+    def stat(self, asset_ref_or_id: AssetRef | UUID) -> AssetRef:
+        if isinstance(asset_ref_or_id, UUID):
+            asset_ref = self._find_ref_by_asset_id(asset_ref_or_id)
+        else:
+            asset_ref = asset_ref_or_id
         sidecar_path = self._sidecar_path(asset_ref.relative_path)
         stored = read_json_with_backup(sidecar_path, _validate_asset_ref)
         if stored != asset_ref:
@@ -180,6 +188,13 @@ class FileAssetStore:
         if hashlib.sha256(path.read_bytes()).hexdigest() != stored.sha256:
             raise ValueError("asset hash does not match sidecar")
         return stored
+
+    def _find_ref_by_asset_id(self, asset_id: UUID) -> AssetRef:
+        for sidecar_path in self._assets_dir.rglob("*.asset.json"):
+            candidate = read_json_with_backup(sidecar_path, _validate_asset_ref)
+            if candidate.asset_id == asset_id:
+                return candidate
+        raise AssetNotFoundError(f"asset not found: {asset_id}")
 
     def _find_existing_ref(
         self,

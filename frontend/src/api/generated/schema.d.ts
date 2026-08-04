@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+    "/session/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bootstrap Session */
+        post: operations["bootstrap_session_session_bootstrap_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Heartbeat */
+        post: operations["heartbeat_app_heartbeat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/shutdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Shutdown */
+        post: operations["shutdown_app_shutdown_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -21,10 +72,553 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Provider Settings */
+        get: operations["get_provider_settings_api_v1_settings_provider_get"];
+        /** Put Provider Settings */
+        put: operations["put_provider_settings_api_v1_settings_provider_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/provider/key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Provider Key */
+        put: operations["put_provider_key_api_v1_settings_provider_key_put"];
+        post?: never;
+        /** Delete Provider Key */
+        delete: operations["delete_provider_key_api_v1_settings_provider_key_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Image */
+        post: operations["upload_image_api_v1_assets_images_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{asset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Image */
+        get: operations["get_image_api_v1_assets__asset_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Drafts */
+        get: operations["list_drafts_api_v1_drafts_get"];
+        put?: never;
+        /** Create Draft */
+        post: operations["create_draft_api_v1_drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/drafts/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Draft */
+        get: operations["get_draft_api_v1_drafts__draft_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Draft */
+        patch: operations["patch_draft_api_v1_drafts__draft_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/drafts/{draft_id}/convert-to-blueprint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Convert To Blueprint */
+        post: operations["convert_to_blueprint_api_v1_drafts__draft_id__convert_to_blueprint_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/drafts/{draft_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Draft */
+        post: operations["archive_draft_api_v1_drafts__draft_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/drafts/{draft_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard Draft */
+        post: operations["discard_draft_api_v1_drafts__draft_id__discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cookbook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cookbook */
+        get: operations["list_cookbook_api_v1_cookbook_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cookbook/{dish_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Cookbook Dish */
+        get: operations["get_cookbook_dish_api_v1_cookbook__dish_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Cookbook Dish */
+        delete: operations["delete_cookbook_dish_api_v1_cookbook__dish_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ApiKeySource
+         * @enum {string}
+         */
+        ApiKeySource: "ENVIRONMENT" | "SESSION" | "NONE";
+        /**
+         * AssetKind
+         * @enum {string}
+         */
+        AssetKind: "ORIGINAL_IMAGE" | "GENERATED_ART" | "PREVIEW" | "ICON_SOURCE" | "ICON_16" | "MOD_SPRITESHEET" | "EXPORT_ZIP";
+        /** AssetView */
+        AssetView: {
+            /**
+             * Assetid
+             * Format: uuid
+             */
+            assetId: string;
+            kind: components["schemas"]["AssetKind"];
+            mediaType: components["schemas"]["MediaType"];
+            /** Sha256 */
+            sha256: string;
+            /** Bytesize */
+            byteSize: number;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+            /** Sourcerevision */
+            sourceRevision?: number | null;
+            /** Attemptid */
+            attemptId?: string | null;
+        };
+        /** Body_upload_image_api_v1_assets_images_post */
+        Body_upload_image_api_v1_assets_images_post: {
+            /**
+             * File
+             * @description Original dish photo
+             */
+            file: string;
+        };
+        /** BuffAttributes */
+        BuffAttributes: {
+            /**
+             * Farminglevel
+             * @default 0
+             */
+            farmingLevel: number;
+            /**
+             * Fishinglevel
+             * @default 0
+             */
+            fishingLevel: number;
+            /**
+             * Mininglevel
+             * @default 0
+             */
+            miningLevel: number;
+            /**
+             * Foraginglevel
+             * @default 0
+             */
+            foragingLevel: number;
+            /**
+             * Combatlevel
+             * @default 0
+             */
+            combatLevel: number;
+            /**
+             * Lucklevel
+             * @default 0
+             */
+            luckLevel: number;
+            /**
+             * Attack
+             * @default 0
+             */
+            attack: number;
+            /**
+             * Defense
+             * @default 0
+             */
+            defense: number;
+            /**
+             * Immunity
+             * @default 0
+             */
+            immunity: number;
+            /**
+             * Magneticradius
+             * @default 0
+             */
+            magneticRadius: number;
+            /**
+             * Maxstamina
+             * @default 0
+             */
+            maxStamina: number;
+            /**
+             * Speed
+             * @default 0
+             */
+            speed: number;
+        };
+        /** BuffSpec */
+        BuffSpec: {
+            /** Id */
+            id: string;
+            /** Durationminutes */
+            durationMinutes: number;
+            /**
+             * Isdebuff
+             * @default false
+             */
+            isDebuff: boolean;
+            attributes: components["schemas"]["BuffAttributes"];
+        };
+        /** CookbookDishDetail */
+        CookbookDishDetail: {
+            /**
+             * Dishid
+             * Format: uuid
+             */
+            dishId: string;
+            /** Archivedat */
+            archivedAt: string;
+            /** Displayname */
+            displayName: string;
+            /** Internalname */
+            internalName: string;
+            /** Categorylabel */
+            categoryLabel: string;
+            /** Description */
+            description: string;
+            /** Tags */
+            tags?: string[];
+            gameplay: components["schemas"]["GameplaySpec"];
+            visuals: components["schemas"]["CookbookVisuals"];
+        };
+        /** CookbookDishSummary */
+        CookbookDishSummary: {
+            /**
+             * Dishid
+             * Format: uuid
+             */
+            dishId: string;
+            /** Archivedat */
+            archivedAt: string;
+            /** Displayname */
+            displayName: string;
+            /** Categorylabel */
+            categoryLabel: string;
+            /** Description */
+            description: string;
+            /** Tags */
+            tags?: string[];
+        };
+        /** CookbookVisuals */
+        CookbookVisuals: {
+            /** Generatedartassetid */
+            generatedArtAssetId?: string | null;
+            /** Previewassetid */
+            previewAssetId?: string | null;
+            /** Iconsourceassetid */
+            iconSourceAssetId?: string | null;
+            /** Icon16Assetid */
+            icon16AssetId?: string | null;
+            /** Sourcerevision */
+            sourceRevision: number;
+            /** Promptversion */
+            promptVersion: string;
+        };
+        /** DishAnalysis */
+        DishAnalysis: {
+            /** Recognizeddish */
+            recognizedDish: string;
+            /** Summary */
+            summary: string;
+            /** Cuisine */
+            cuisine?: string | null;
+            /** Cookingmethods */
+            cookingMethods?: string[];
+            /** Flavorprofile */
+            flavorProfile?: string[];
+            /** Semanticingredients */
+            semanticIngredients: components["schemas"]["SemanticIngredient"][];
+            /** Confidence */
+            confidence: number;
+            /** Safetynotes */
+            safetyNotes?: string[];
+        };
+        /** DraftCreateRequest */
+        DraftCreateRequest: {
+            mode: components["schemas"]["DraftMode"];
+            language: components["schemas"]["Language"];
+            source: components["schemas"]["DraftCreateSource"];
+        };
+        /** DraftCreateSource */
+        DraftCreateSource: {
+            /**
+             * Originalimageassetid
+             * Format: uuid
+             */
+            originalImageAssetId: string;
+            /** Contexttext */
+            contextText?: string | null;
+        };
+        /**
+         * DraftMode
+         * @enum {string}
+         */
+        DraftMode: "ASK_GUS" | "BLUEPRINT";
+        /** DraftPatchRequest */
+        DraftPatchRequest: {
+            /** Expectedrevision */
+            expectedRevision: number;
+            presentation?: components["schemas"]["PresentationSpec"] | null;
+            gameplay?: components["schemas"]["GameplaySpec"] | null;
+        };
+        /**
+         * DraftStatus
+         * @enum {string}
+         */
+        DraftStatus: "DRAFT" | "READY" | "GENERATING" | "REGENERATING" | "REVIEWABLE" | "STALE_PREVIEW" | "FAILED" | "ARCHIVED" | "DISCARDED";
+        /** DraftSummary */
+        DraftSummary: {
+            /**
+             * Draftid
+             * Format: uuid
+             */
+            draftId: string;
+            mode: components["schemas"]["DraftMode"];
+            status: components["schemas"]["DraftStatus"];
+            /** Revision */
+            revision: number;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Displayname */
+            displayName: string;
+            /**
+             * Originalimageassetid
+             * Format: uuid
+             */
+            originalImageAssetId: string;
+        };
+        /** DraftView */
+        DraftView: {
+            /**
+             * Draftid
+             * Format: uuid
+             */
+            draftId: string;
+            mode: components["schemas"]["DraftMode"];
+            /** Basetemplateversion */
+            baseTemplateVersion: "blueprint-v1" | null;
+            status: components["schemas"]["DraftStatus"];
+            /** Revision */
+            revision: number;
+            source: components["schemas"]["SourceInput"];
+            analysis?: components["schemas"]["DishAnalysis"] | null;
+            presentation?: components["schemas"]["PresentationSpec"] | null;
+            gameplay?: components["schemas"]["GameplaySpec"] | null;
+            visuals?: components["schemas"]["VisualSpec"] | null;
+            provenance: components["schemas"]["Provenance"];
+            lastError?: components["schemas"]["ErrorSummary"] | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Archiveddishid */
+            archivedDishId: string | null;
+        };
+        /** ErrorSummary */
+        ErrorSummary: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Retryable */
+            retryable: boolean;
+            /**
+             * Requestid
+             * Format: uuid
+             */
+            requestId: string;
+            /**
+             * Occurredat
+             * Format: date-time
+             */
+            occurredAt: string;
+            stage?: components["schemas"]["GenerationStage"] | null;
+        };
+        /**
+         * FieldAuthority
+         * @enum {string}
+         */
+        FieldAuthority: "AGENT_ASSIGNED" | "USER_ASSIGNED" | "SYSTEM_GENERATED" | "TEMPLATE_DEFAULT" | "CACHE_REUSED";
+        /** GameIngredient */
+        GameIngredient: {
+            /** Itemid */
+            itemId: string;
+            /** Displayname */
+            displayName: string;
+            /** Quantity */
+            quantity: number;
+            /** Mappingreason */
+            mappingReason: string;
+            /** Catalogversion */
+            catalogVersion: string;
+        };
+        /** GameplaySpec */
+        GameplaySpec: {
+            /** Ingredients */
+            ingredients: components["schemas"]["GameIngredient"][];
+            recovery: components["schemas"]["RecoverySpec"];
+            buff?: components["schemas"]["BuffSpec"] | null;
+            /** Sellprice */
+            sellPrice: number;
+            /** Isdrink */
+            isDrink: boolean;
+            /** @default DEFAULT */
+            recipeUnlock: components["schemas"]["RecipeUnlock"];
+        };
+        /**
+         * GenerationSource
+         * @enum {string}
+         */
+        GenerationSource: "FRESH_GENERATION" | "USER_AUTHORED";
+        /**
+         * GenerationStage
+         * @enum {string}
+         */
+        GenerationStage: "INPUT_VALIDATION" | "DISH_ANALYSIS" | "GAMEPLAY_DESIGN" | "INGREDIENT_MAPPING" | "VISUAL_BRIEF" | "ICON_GENERATION_AND_NORMALIZATION" | "PREVIEW_ART_GENERATION_AND_COMPOSITION" | "RESULT_VALIDATION" | "ATOMIC_PROMOTION";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -46,6 +640,250 @@ export interface components {
              */
             apiVersion: "v1";
         };
+        /**
+         * Language
+         * @enum {string}
+         */
+        Language: "zh-CN" | "en-US";
+        /** LaunchBootstrapRequest */
+        LaunchBootstrapRequest: {
+            /** Launchtoken */
+            launchToken: string;
+        };
+        /**
+         * MediaType
+         * @enum {string}
+         */
+        MediaType: "image/png" | "image/jpeg" | "image/webp" | "application/zip";
+        /** Page[CookbookDishSummary] */
+        Page_CookbookDishSummary_: {
+            /** Items */
+            items: components["schemas"]["CookbookDishSummary"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /** Total */
+            total: number;
+        };
+        /** Page[DraftSummary] */
+        Page_DraftSummary_: {
+            /** Items */
+            items: components["schemas"]["DraftSummary"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /** Total */
+            total: number;
+        };
+        /** PresentationSpec */
+        PresentationSpec: {
+            /** Displayname */
+            displayName: string;
+            /** Internalname */
+            internalName: string;
+            /** Categorylabel */
+            categoryLabel: string;
+            /** Description */
+            description: string;
+            /** Guscomment */
+            gusComment?: string | null;
+            /** Tags */
+            tags?: string[];
+        };
+        /** Provenance */
+        Provenance: {
+            mode: components["schemas"]["DraftMode"];
+            /** Authoritybyfield */
+            authorityByField?: {
+                [key: string]: components["schemas"]["FieldAuthority"];
+            };
+            /** Visionmodel */
+            visionModel?: string | null;
+            /** Textmodel */
+            textModel?: string | null;
+            /** Imagemodel */
+            imageModel?: string | null;
+            /** Promptversions */
+            promptVersions?: {
+                [key: string]: string;
+            };
+            generationSource: components["schemas"]["GenerationSource"];
+            /** Canonicaldishsignature */
+            canonicalDishSignature?: string | null;
+            /** Cacheeligibility */
+            cacheEligibility: boolean;
+        };
+        /** ProviderKeyStatus */
+        ProviderKeyStatus: {
+            /** Apikeyconfigured */
+            apiKeyConfigured: boolean;
+            apiKeySource: components["schemas"]["ApiKeySource"];
+        };
+        /** ProviderKeyUpdate */
+        ProviderKeyUpdate: {
+            /**
+             * Apikey
+             * Format: password
+             */
+            apiKey: string;
+        };
+        /**
+         * ProviderKind
+         * @enum {string}
+         */
+        ProviderKind: "OPENAI_COMPATIBLE";
+        /**
+         * ProviderSettingsUpdate
+         * @description Full settings update; all model identifiers must be configured.
+         */
+        ProviderSettingsUpdate: {
+            /** @default OPENAI_COMPATIBLE */
+            providerKind: components["schemas"]["ProviderKind"];
+            /**
+             * Baseurl
+             * @default https://yibuapi.com/v1
+             */
+            baseUrl: string;
+            /** Visionmodel */
+            visionModel: string;
+            /** Textmodel */
+            textModel: string;
+            /** Imagemodel */
+            imageModel: string;
+            /**
+             * Chattimeoutseconds
+             * @default 120
+             */
+            chatTimeoutSeconds: number;
+            /**
+             * Imagetimeoutseconds
+             * @default 300
+             */
+            imageTimeoutSeconds: number;
+            /**
+             * Maxautomaticretries
+             * @default 2
+             */
+            maxAutomaticRetries: number;
+        };
+        /** ProviderSettingsView */
+        ProviderSettingsView: {
+            /** @default OPENAI_COMPATIBLE */
+            providerKind: components["schemas"]["ProviderKind"];
+            /**
+             * Baseurl
+             * @default https://yibuapi.com/v1
+             */
+            baseUrl: string;
+            /**
+             * Visionmodel
+             * @default
+             */
+            visionModel: string;
+            /**
+             * Textmodel
+             * @default
+             */
+            textModel: string;
+            /**
+             * Imagemodel
+             * @default
+             */
+            imageModel: string;
+            /**
+             * Chattimeoutseconds
+             * @default 120
+             */
+            chatTimeoutSeconds: number;
+            /**
+             * Imagetimeoutseconds
+             * @default 300
+             */
+            imageTimeoutSeconds: number;
+            /**
+             * Maxautomaticretries
+             * @default 2
+             */
+            maxAutomaticRetries: number;
+            /** Apikeyconfigured */
+            apiKeyConfigured: boolean;
+            apiKeySource: components["schemas"]["ApiKeySource"];
+        };
+        /**
+         * RecipeUnlock
+         * @enum {string}
+         */
+        RecipeUnlock: "DEFAULT";
+        /** RecoverySpec */
+        RecoverySpec: {
+            /** Edibility */
+            edibility: number;
+            /**
+             * Energyrestore
+             * @default 0
+             */
+            energyRestore: number;
+            /**
+             * Healthrestore
+             * @default 0
+             */
+            healthRestore: number;
+            /**
+             * Calculationversion
+             * @default stardew-1.6
+             */
+            calculationVersion: string;
+        };
+        /** SemanticIngredient */
+        SemanticIngredient: {
+            /** Name */
+            name: string;
+            /** Normalizedname */
+            normalizedName: string;
+            /** Visibleconfidence */
+            visibleConfidence: number;
+            /** Quantityhint */
+            quantityHint?: string | null;
+        };
+        /** SourceInput */
+        SourceInput: {
+            /**
+             * Originalimageassetid
+             * Format: uuid
+             */
+            originalImageAssetId: string;
+            /** Contexttext */
+            contextText?: string | null;
+            language: components["schemas"]["Language"];
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
+        /** VisualSpec */
+        VisualSpec: {
+            /** Visualbrief */
+            visualBrief: string;
+            /** Generatedartassetid */
+            generatedArtAssetId?: string | null;
+            /** Previewassetid */
+            previewAssetId?: string | null;
+            /** Iconsourceassetid */
+            iconSourceAssetId?: string | null;
+            /** Icon16Assetid */
+            icon16AssetId?: string | null;
+            /** Sourcerevision */
+            sourceRevision: number;
+            /** Promptversion */
+            promptVersion: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -55,6 +893,75 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    bootstrap_session_session_bootstrap_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LaunchBootstrapRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    heartbeat_app_heartbeat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    shutdown_app_shutdown_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     get_health_api_v1_health_get: {
         parameters: {
             query?: never;
@@ -71,6 +978,468 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    get_provider_settings_api_v1_settings_provider_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSettingsView"];
+                };
+            };
+        };
+    };
+    put_provider_settings_api_v1_settings_provider_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSettingsView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_provider_key_api_v1_settings_provider_key_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderKeyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderKeyStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_provider_key_api_v1_settings_provider_key_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderKeyStatus"];
+                };
+            };
+        };
+    };
+    upload_image_api_v1_assets_images_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_image_api_v1_assets_images_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_image_api_v1_assets__asset_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_drafts_api_v1_drafts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_DraftSummary_"];
+                };
+            };
+        };
+    };
+    create_draft_api_v1_drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_draft_api_v1_drafts__draft_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_draft_api_v1_drafts__draft_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    convert_to_blueprint_api_v1_drafts__draft_id__convert_to_blueprint_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_draft_api_v1_drafts__draft_id__archive_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbookDishDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_draft_api_v1_drafts__draft_id__discard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cookbook_api_v1_cookbook_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CookbookDishSummary_"];
+                };
+            };
+        };
+    };
+    get_cookbook_dish_api_v1_cookbook__dish_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dish_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbookDishDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_cookbook_dish_api_v1_cookbook__dish_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dish_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

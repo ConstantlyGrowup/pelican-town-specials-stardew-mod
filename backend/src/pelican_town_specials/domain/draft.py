@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -84,6 +84,9 @@ class DraftRecord(StrictModel):
     schema_version: int = Field(ge=1)
     draft_id: UUID
     mode: DraftMode = Field(frozen=True)
+    base_template_version: Literal["blueprint-v1"] | None = Field(
+        default=None, alias="baseTemplateVersion"
+    )
     status: DraftStatus
     revision: int = Field(ge=1)
     source: SourceInput
@@ -121,6 +124,19 @@ class DraftRecord(StrictModel):
     def _validate_mode_alignment(self) -> DraftRecord:
         if self.provenance.mode is not self.mode:
             raise ValueError("provenance.mode must match draft mode")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_base_template_version(self) -> DraftRecord:
+        if self.mode is DraftMode.BLUEPRINT:
+            if self.base_template_version != "blueprint-v1":
+                raise ValueError(
+                    "blueprint drafts must define baseTemplateVersion blueprint-v1"
+                )
+        elif self.base_template_version is not None:
+            raise ValueError(
+                "baseTemplateVersion is only valid for blueprint drafts"
+            )
         return self
 
 
