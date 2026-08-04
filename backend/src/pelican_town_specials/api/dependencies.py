@@ -10,6 +10,7 @@ from pelican_town_specials.application.assets import AssetService
 from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
+from pelican_town_specials.application.meta import MetaService
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.persistence.repositories import (
@@ -40,6 +41,10 @@ def asset_service(request: Request) -> AssetService:
 
 def catalog_service(request: Request) -> CatalogService:
     return cast(CatalogService, request.app.state.catalog_service)
+
+
+def meta_service(request: Request) -> MetaService:
+    return cast(MetaService, request.app.state.meta_service)
 
 
 def draft_service(request: Request) -> DraftService:

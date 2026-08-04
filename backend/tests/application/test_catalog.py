@@ -36,10 +36,16 @@ def test_search_ingredients_returns_public_projection() -> None:
     assert set(serialized) == {"itemId", "displayNameEn", "displayNameZh"}
 
 
-def test_search_ingredients_requires_query() -> None:
-    with pytest.raises(AppError) as excinfo:
-        _service().search_ingredients("   ", 10)
-    assert excinfo.value.code == "PTS_INPUT_CATALOG_QUERY_REQUIRED"
+def test_search_ingredients_browses_all_when_query_empty() -> None:
+    service = _service()
+    first = service.search_ingredients("   ", 10, offset=0)
+    second = service.search_ingredients("   ", 10, offset=10)
+
+    assert first.total >= 100
+    assert len(first.items) == 10
+    assert all(item.item_id for item in first.items)
+    assert first.items[0].item_id != second.items[0].item_id
+    assert second.total == first.total
 
 
 def test_search_ingredients_rejects_invalid_limit() -> None:
@@ -50,3 +56,9 @@ def test_search_ingredients_rejects_invalid_limit() -> None:
     with pytest.raises(AppError) as excinfo:
         _service().search_ingredients("tomat", 101)
     assert excinfo.value.code == "PTS_INPUT_CATALOG_LIMIT_INVALID"
+
+
+def test_search_ingredients_rejects_invalid_offset() -> None:
+    with pytest.raises(AppError) as excinfo:
+        _service().search_ingredients("tomat", 10, offset=-1)
+    assert excinfo.value.code == "PTS_INPUT_CATALOG_OFFSET_INVALID"

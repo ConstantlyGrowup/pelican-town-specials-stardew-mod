@@ -36,6 +36,7 @@ _EXPECTED_ITEM_FIELDS = frozenset(
 _ITEM_ID_PATTERN = re.compile(r"^(?:0|[1-9][0-9]*|-5|[A-Za-z][A-Za-z0-9_]*)$")
 _CATEGORY_PATTERN = re.compile(r"^-?[0-9]+$")
 _TOKEN_PATTERN = re.compile(r"[^\W_]+", re.UNICODE)
+_CJK_PATTERN = re.compile(r"[一-鿿㐀-䶿]")
 _MAX_SEARCH_LIMIT = 100
 
 
@@ -104,6 +105,11 @@ class VanillaCatalog:
             self._items[item_id] for item_id in sorted(self._items, key=_item_sort_key)
         )
 
+    @property
+    def ingredients(self) -> tuple[CatalogItem, ...]:
+        """All usable-as-ingredient items in stable catalog order."""
+        return tuple(item for item in self.items if item.usable_as_ingredient)
+
     def require(self, item_id: str) -> CatalogItem:
         if not isinstance(item_id, str):
             raise _unknown_item_error()
@@ -148,14 +154,34 @@ class VanillaCatalog:
                 ranked.append((1, 1.0, item.item_id, item))
                 continue
 
+            # Match against aliases plus bilingual display names so CJK
+            # partial characters (e.g. "奶" for 牛奶) resolve via substring.
+            search_fields = (
+                *aliases,
+                _normalize(item.display_name_zh),
+                _normalize(item.display_name_en),
+            )
             prefix_scores = [
-                len(normalized_query) / len(alias)
-                for alias in aliases
-                if alias.startswith(normalized_query)
+                len(normalized_query) / len(field)
+                for field in search_fields
+                if field.startswith(normalized_query)
             ]
             if prefix_scores:
                 ranked.append((2, max(prefix_scores), item.item_id, item))
                 continue
+
+            # Only apply substring matching for CJK queries: character-level
+            # tokens make "奶" a substring of both 牛奶 and 奶酪, while latin
+            # queries stay prefix/token-based to avoid noisy partial hits.
+            if _CJK_PATTERN.search(normalized_query):
+                contains_scores = [
+                    len(normalized_query) / len(field)
+                    for field in search_fields
+                    if len(field) > len(normalized_query) and normalized_query in field
+                ]
+                if contains_scores:
+                    ranked.append((3, max(contains_scores), item.item_id, item))
+                    continue
 
             if query_tokens:
                 overlap_scores = [
@@ -164,7 +190,7 @@ class VanillaCatalog:
                 ]
                 overlap = max(overlap_scores, default=0.0)
                 if overlap > 0:
-                    ranked.append((3, overlap, item.item_id, item))
+                    ranked.append((4, overlap, item.item_id, item))
 
         ranked.sort(key=lambda match: (match[0], -match[1], _item_sort_key(match[2])))
         return [match[3] for match in ranked[:bounded_limit]]

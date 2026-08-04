@@ -36,6 +36,23 @@
         }
       }
     },
+    "/session/status": {
+      "get": {
+        "summary": "Session Status",
+        "description": "Recover the CSRF token for an existing session after a page reload.\n\nThe CSRF token is intentionally held only in browser memory; a reload\nclears it while the HttpOnly session cookie persists. This endpoint\nre-issues the token to the session holder so mutations do not spuriously\nfail with PTS_AUTH_CSRF_INVALID and force a re-launch.",
+        "operationId": "session_status_session_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/app/heartbeat": {
       "post": {
         "summary": "Heartbeat",
@@ -626,11 +643,11 @@
           {
             "name": "query",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
-              "minLength": 1,
               "maxLength": 80,
+              "default": "",
               "title": "Query"
             }
           },
@@ -645,6 +662,17 @@
               "default": 20,
               "title": "Limit"
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
           }
         ],
         "responses": {
@@ -654,6 +682,134 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/IngredientCatalogSearchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta/categories": {
+      "get": {
+        "summary": "List Categories",
+        "operationId": "list_categories_api_v1_meta_categories_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MetaOption_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta/tags": {
+      "get": {
+        "summary": "List Tags",
+        "operationId": "list_tags_api_v1_meta_tags_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "default": "",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MetaOption_"
                 }
               }
             }
@@ -1966,13 +2122,19 @@
             },
             "type": "array",
             "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "catalogVersion",
-          "items"
+          "items",
+          "total"
         ],
         "title": "IngredientCatalogSearchResult"
       },
@@ -2008,6 +2170,22 @@
           "application/zip"
         ],
         "title": "MediaType"
+      },
+      "MetaOption": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "MetaOption"
       },
       "Page_CookbookDishSummary_": {
         "properties": {
@@ -2076,6 +2254,40 @@
           "total"
         ],
         "title": "Page[DraftSummary]"
+      },
+      "Page_MetaOption_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MetaOption"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "Page[MetaOption]"
       },
       "PresentationSpec": {
         "properties": {

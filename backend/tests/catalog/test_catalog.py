@@ -514,3 +514,15 @@ def test_search_ingredients_only_returns_usable_items() -> None:
 
     non_usable = catalog.search_ingredients("349", limit=10)
     assert non_usable == []
+
+
+def test_search_ingredients_cjk_substring_matching() -> None:
+    path = ROOT / "resources/catalogs/stardew-1.6.15/vanilla-ingredients.json"
+    catalog = VanillaCatalog.from_json(path)
+
+    results = catalog.search_ingredients("奶", limit=10)
+    item_ids = [item.item_id for item in results]
+
+    assert "184" in item_ids  # 牛奶 Milk
+    assert "424" in item_ids  # 奶酪 Cheese
+    assert "436" in item_ids  # 羊奶 Goat Milk

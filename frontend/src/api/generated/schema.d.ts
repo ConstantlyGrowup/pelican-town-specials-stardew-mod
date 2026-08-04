@@ -21,6 +21,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/session/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Session Status
+         * @description Recover the CSRF token for an existing session after a page reload.
+         *
+         *     The CSRF token is intentionally held only in browser memory; a reload
+         *     clears it while the HttpOnly session cookie persists. This endpoint
+         *     re-issues the token to the session holder so mutations do not spuriously
+         *     fail with PTS_AUTH_CSRF_INVALID and force a re-launch.
+         */
+        get: operations["session_status_session_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/app/heartbeat": {
         parameters: {
             query?: never;
@@ -273,6 +298,40 @@ export interface paths {
         };
         /** Search Ingredients */
         get: operations["search_ingredients_api_v1_catalog_ingredients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Categories */
+        get: operations["list_categories_api_v1_meta_categories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tags */
+        get: operations["list_tags_api_v1_meta_tags_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -792,6 +851,8 @@ export interface components {
             catalogVersion: string;
             /** Items */
             items: components["schemas"]["IngredientCatalogItemView"][];
+            /** Total */
+            total: number;
         };
         /**
          * Language
@@ -808,6 +869,11 @@ export interface components {
          * @enum {string}
          */
         MediaType: "image/png" | "image/jpeg" | "image/webp" | "application/zip";
+        /** MetaOption */
+        MetaOption: {
+            /** Value */
+            value: string;
+        };
         /** Page[CookbookDishSummary] */
         Page_CookbookDishSummary_: {
             /** Items */
@@ -821,6 +887,15 @@ export interface components {
         Page_DraftSummary_: {
             /** Items */
             items: components["schemas"]["DraftSummary"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /** Total */
+            total: number;
+        };
+        /** Page[MetaOption] */
+        Page_MetaOption_: {
+            /** Items */
+            items: components["schemas"]["MetaOption"][];
             /** Nextcursor */
             nextCursor?: string | null;
             /** Total */
@@ -1073,6 +1148,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_status_session_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -1599,9 +1694,10 @@ export interface operations {
     };
     search_ingredients_api_v1_catalog_ingredients_get: {
         parameters: {
-            query: {
-                query: string;
+            query?: {
+                query?: string;
                 limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -1616,6 +1712,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IngredientCatalogSearchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_categories_api_v1_meta_categories_get: {
+        parameters: {
+            query?: {
+                query?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_MetaOption_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tags_api_v1_meta_tags_get: {
+        parameters: {
+            query?: {
+                query?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_MetaOption_"];
                 };
             };
             /** @description Validation Error */

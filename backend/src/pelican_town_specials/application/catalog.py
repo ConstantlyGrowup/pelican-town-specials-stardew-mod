@@ -29,6 +29,7 @@ class IngredientCatalogItemView(StrictModel):
 class IngredientCatalogSearchResult(StrictModel):
     catalog_version: str = Field(alias="catalogVersion", min_length=1)
     items: list[IngredientCatalogItemView]
+    total: int = Field(ge=0)
 
 
 class CatalogService:
@@ -39,26 +40,31 @@ class CatalogService:
         self,
         query: str,
         limit: int,
+        offset: int = 0,
     ) -> IngredientCatalogSearchResult:
-        normalized = query.strip()
-        if not normalized:
-            raise self._query_required_error()
-        if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
+        if (
+            not isinstance(limit, int)
+            or isinstance(limit, bool)
+            or not 1 <= limit <= 100
+        ):
             raise self._limit_invalid_error()
-        items = self._catalog.search_ingredients(normalized, limit=limit)
+        if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+            raise self._offset_invalid_error()
+
+        normalized = query.strip()
+        if normalized:
+            matches = self._catalog.search_ingredients(normalized, limit=100)
+            total = len(matches)
+            page = list(matches[offset : offset + limit])
+        else:
+            ingredients = self._catalog.ingredients
+            total = len(ingredients)
+            page = list(ingredients[offset : offset + limit])
+
         return IngredientCatalogSearchResult(
             catalogVersion=self._catalog.version,
-            items=[IngredientCatalogItemView.from_catalog_item(item) for item in items],
-        )
-
-    @staticmethod
-    def _query_required_error() -> AppError:
-        return AppError(
-            code="PTS_INPUT_CATALOG_QUERY_REQUIRED",
-            message="食材搜索需要查询词。",
-            http_status=422,
-            details={},
-            retryable=False,
+            items=[IngredientCatalogItemView.from_catalog_item(item) for item in page],
+            total=total,
         )
 
     @staticmethod
@@ -66,6 +72,16 @@ class CatalogService:
         return AppError(
             code="PTS_INPUT_CATALOG_LIMIT_INVALID",
             message="食材搜索 limit 必须在 1 到 100 之间。",
+            http_status=422,
+            details={},
+            retryable=False,
+        )
+
+    @staticmethod
+    def _offset_invalid_error() -> AppError:
+        return AppError(
+            code="PTS_INPUT_CATALOG_OFFSET_INVALID",
+            message="食材浏览 offset 必须是非负整数。",
             http_status=422,
             details={},
             retryable=False,

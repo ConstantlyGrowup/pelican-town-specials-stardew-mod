@@ -11,6 +11,11 @@ import {
   type BlueprintFormValues,
   type BlueprintIngredientRow,
 } from "./blueprintForm";
+import {
+  CategoryPickerModal,
+  IngredientPickerModal,
+  TagPickerModal,
+} from "./pickers";
 
 type DraftView = components["schemas"]["DraftView"];
 type IngredientCatalogItemView = components["schemas"]["IngredientCatalogItemView"];
@@ -21,9 +26,9 @@ export function BlueprintEditorPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [ingredients, setIngredients] = useState<BlueprintIngredientRow[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<IngredientCatalogItemView[]>([]);
-  const [searchCatalogVersion, setSearchCatalogVersion] = useState("");
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [ingredientPickerOpen, setIngredientPickerOpen] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [stale, setStale] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -66,24 +71,10 @@ export function BlueprintEditorPage() {
     setIngredients(values.ingredients);
   }, [query.data?.draftId, query.data?.revision, form]);
 
-  async function onSearch() {
-    const trimmed = searchQuery.trim();
-    if (!trimmed) {
-      setSearchResults([]);
-      return;
-    }
-    const { data, error } = await apiClient.GET("/api/v1/catalog/ingredients", {
-      params: { query: { query: trimmed, limit: 20 } },
-    });
-    if (error || !data) {
-      setSearchResults([]);
-      return;
-    }
-    setSearchResults(data.items);
-    setSearchCatalogVersion(data.catalogVersion);
-  }
-
-  function addIngredient(item: IngredientCatalogItemView) {
+  function addIngredient(
+    item: IngredientCatalogItemView,
+    catalogVersion: string,
+  ) {
     if (ingredients.length >= 8) {
       return;
     }
@@ -97,7 +88,7 @@ export function BlueprintEditorPage() {
         displayName: item.displayNameZh || item.displayNameEn,
         quantity: 1,
         mappingReason: "catalog selection",
-        catalogVersion: searchCatalogVersion,
+        catalogVersion: catalogVersion,
       },
     ]);
   }
@@ -117,6 +108,23 @@ export function BlueprintEditorPage() {
       current.filter((ingredient) => ingredient.itemId !== itemId),
     );
   }
+
+  function toggleTag(value: string) {
+    const current = (form.getValues("tags") ?? "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const next = current.includes(value)
+      ? current.filter((tag) => tag !== value)
+      : [...current, value];
+    form.setValue("tags", next.join(","), { shouldDirty: true });
+  }
+
+  const categoryLabel = form.watch("categoryLabel");
+  const tagList = (form.watch("tags") ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 
   async function onSave() {
     if (!query.data) {
@@ -298,7 +306,18 @@ export function BlueprintEditorPage() {
         </div>
         <div className="field">
           <label htmlFor="categoryLabel">{copy.categoryLabel}</label>
-          <input id="categoryLabel" {...form.register("categoryLabel")} />
+          <div>
+            <span id="categoryLabel" className="picker-value">
+              {categoryLabel || "—"}
+            </span>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setCategoryPickerOpen(true)}
+            >
+              {copy.pickCategory}
+            </button>
+          </div>
         </div>
         <div className="field">
           <label htmlFor="description">{copy.descriptionLabel}</label>
@@ -306,34 +325,29 @@ export function BlueprintEditorPage() {
         </div>
         <div className="field">
           <label htmlFor="tags">{copy.tagsLabel}</label>
-          <input id="tags" {...form.register("tags")} />
+          <div>
+            <span id="tags" className="picker-value">
+              {tagList.join("、") || "—"}
+            </span>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setTagPickerOpen(true)}
+            >
+              {copy.pickTags}
+            </button>
+          </div>
         </div>
 
         <div className="field">
           <label>{copy.ingredientsLabel}</label>
-          <div>
-            <input
-              aria-label={copy.ingredientSearchPlaceholder}
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={copy.ingredientSearchPlaceholder}
-            />
-            <button className="btn" type="button" onClick={onSearch}>
-              {copy.ingredientSearchPlaceholder}
-            </button>
-          </div>
-          {searchResults.length > 0 && (
-            <ul>
-              {searchResults.map((item) => (
-                <li key={item.itemId}>
-                  {item.displayNameZh}（{item.displayNameEn}）
-                  <button className="btn" type="button" onClick={() => addIngredient(item)}>
-                    {copy.addIngredient}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <button
+            className="btn"
+            type="button"
+            onClick={() => setIngredientPickerOpen(true)}
+          >
+            {copy.pickIngredient}
+          </button>
         </div>
         <ul>
           {ingredients.map((ingredient) => (
@@ -381,6 +395,28 @@ export function BlueprintEditorPage() {
         <button className="btn btn-primary" type="button" onClick={onArchive} disabled={busy}>
           {copy.archiveDish}
         </button>
+      )}
+
+      {categoryPickerOpen && (
+        <CategoryPickerModal
+          onPick={(value) => {
+            form.setValue("categoryLabel", value, { shouldDirty: true });
+            setCategoryPickerOpen(false);
+          }}
+          onClose={() => setCategoryPickerOpen(false)}
+        />
+      )}
+      {tagPickerOpen && (
+        <TagPickerModal
+          onPick={(value) => toggleTag(value)}
+          onClose={() => setTagPickerOpen(false)}
+        />
+      )}
+      {ingredientPickerOpen && (
+        <IngredientPickerModal
+          onAdd={(item, catalogVersion) => addIngredient(item, catalogVersion)}
+          onClose={() => setIngredientPickerOpen(false)}
+        />
       )}
     </main>
   );

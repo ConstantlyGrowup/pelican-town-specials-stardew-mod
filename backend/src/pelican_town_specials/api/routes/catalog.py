@@ -19,7 +19,8 @@ router = APIRouter()
 )
 def search_ingredients(
     request: Request,
-    query: Annotated[str, Query(min_length=1, max_length=80)],
+    query: Annotated[str, Query(max_length=80)] = "",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> IngredientCatalogSearchResult:
-    return catalog_service(request).search_ingredients(query, limit)
+    return catalog_service(request).search_ingredients(query, limit, offset)

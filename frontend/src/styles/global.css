@@ -119,6 +119,50 @@ button {
   color: var(--pts-color-danger);
 }
 
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.picker-panel {
+  background: var(--pts-color-surface);
+  border: 1px solid var(--pts-color-border);
+  border-radius: var(--pts-radius);
+  padding: var(--pts-space-4);
+  max-width: 520px;
+  width: calc(100% - 32px);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pts-space-3);
+  overflow: auto;
+}
+
+.picker-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pts-space-2);
+}
+
+.picker-option {
+  text-align: left;
+  width: 100%;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--pts-space-3);
+}
+
 :focus-visible {
   outline: 2px solid var(--pts-color-accent);
   outline-offset: 2px;

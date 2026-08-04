@@ -20,6 +20,7 @@ from pelican_town_specials.api.routes import (
     cookbook,
     drafts,
     health,
+    meta,
     session,
     settings,
 )
@@ -35,6 +36,7 @@ from pelican_town_specials.application.assets import AssetService
 from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
+from pelican_town_specials.application.meta import MetaService
 from pelican_town_specials.application.settings import ProviderSettingsService
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.config import AppConfig
@@ -96,6 +98,7 @@ def create_app(
         resolved_archive_repository
     )
     resolved_catalog_service = CatalogService(resolved_catalog)
+    resolved_meta_service = MetaService()
 
     resolved_activity_tracker = activity_tracker or ActivityTracker()
 
@@ -143,6 +146,7 @@ def create_app(
     app.state.draft_service = resolved_draft_service
     app.state.cookbook_service = resolved_cookbook_service
     app.state.catalog_service = resolved_catalog_service
+    app.state.meta_service = resolved_meta_service
     register_error_handlers(app)
     app.include_router(session.router)
     app.include_router(app_control.router)
@@ -152,6 +156,7 @@ def create_app(
     app.include_router(drafts.router, prefix="/api/v1")
     app.include_router(cookbook.router, prefix="/api/v1")
     app.include_router(catalog.router, prefix="/api/v1")
+    app.include_router(meta.router, prefix="/api/v1")
 
     @app.middleware("http")
     async def enforce_local_session(

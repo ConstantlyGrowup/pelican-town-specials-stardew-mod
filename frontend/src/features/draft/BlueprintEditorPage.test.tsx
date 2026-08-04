@@ -199,7 +199,7 @@ describe("blueprint editor", () => {
     expect(getSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("selects ingredients from the catalog search", async () => {
+  it("selects ingredients from the ingredient picker modal", async () => {
     server.use(
       http.get("/api/v1/drafts/:draft_id", () =>
         HttpResponse.json(blueprintDraft({ gameplay: null })),
@@ -208,19 +208,47 @@ describe("blueprint editor", () => {
         HttpResponse.json({
           catalogVersion: "stardew-1.6.15-v1",
           items: [{ itemId: "256", displayNameEn: "Tomato", displayNameZh: "西红柿" }],
+          total: 1,
         }),
       ),
     );
     renderPage();
 
     await screen.findByText(copy.editingBlueprint);
-    fireEvent.change(screen.getByRole("textbox", { name: copy.ingredientSearchPlaceholder }), {
-      target: { value: "tomat" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: copy.ingredientSearchPlaceholder }));
-    fireEvent.click(await screen.findByRole("button", { name: copy.addIngredient }));
+    fireEvent.click(screen.getByRole("button", { name: copy.pickIngredient }));
+    fireEvent.click(await screen.findByRole("button", { name: /西红柿/ }));
 
     expect(await screen.findByText(/西红柿（256）/)).toBeVisible();
+  });
+
+  it("picks a category and tags from their picker modals", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(blueprintDraft())),
+      http.get("/api/v1/meta/categories", () =>
+        HttpResponse.json({
+          items: [{ value: "主菜" }, { value: "汤类" }],
+          nextCursor: null,
+          total: 2,
+        }),
+      ),
+      http.get("/api/v1/meta/tags", () =>
+        HttpResponse.json({
+          items: [{ value: "家常" }, { value: "清淡" }],
+          nextCursor: null,
+          total: 2,
+        }),
+      ),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    fireEvent.click(screen.getByRole("button", { name: copy.pickCategory }));
+    fireEvent.click(await screen.findByRole("button", { name: "主菜" }));
+    expect(screen.getByText("主菜")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: copy.pickTags }));
+    fireEvent.click(await screen.findByRole("button", { name: "家常" }));
+    expect(await screen.findByText("家常")).toBeVisible();
   });
 
   it("shows ask gus as read-only with a convert action", async () => {
