@@ -4,6 +4,7 @@ import {
   apiClient,
   bootstrapSession,
   clearLaunchFragment,
+  restoreSession,
   startHeartbeat,
 } from "./api/client";
 import { App } from "./app/App";
@@ -37,6 +38,9 @@ export async function bootstrapAndProbe(
       console.warn("Pelican Town Specials session bootstrap failed");
     }
   }
+  // Recover the in-memory CSRF token after a reload so existing mutations do
+  // not fail with PTS_AUTH_CSRF_INVALID. No-op when there is no session.
+  await restoreSession();
 
   try {
     const { error } = await apiClient.GET("/api/v1/health");

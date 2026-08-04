@@ -25,6 +25,29 @@ export async function bootstrapSession(launchToken: string): Promise<string> {
   return responseToken;
 }
 
+/**
+ * Recover the CSRF token for an existing session after a page reload. The
+ * token lives only in browser memory, so reloads lose it while the HttpOnly
+ * session cookie persists; this endpoint re-issues it to the session holder.
+ */
+export async function restoreSession(): Promise<string | null> {
+  try {
+    const response = await fetch("/session/status", {
+      credentials: "same-origin",
+    });
+    const responseToken = response.headers.get("X-PTS-CSRF");
+    if (response.status === 200 && responseToken) {
+      csrfToken = responseToken;
+      return responseToken;
+    }
+    csrfToken = null;
+    return null;
+  } catch {
+    csrfToken = null;
+    return null;
+  }
+}
+
 export function clearLaunchFragment(location: Location, history: History): void {
   if (!location.hash.startsWith("#launch=")) {
     return;

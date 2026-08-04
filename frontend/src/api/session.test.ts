@@ -152,12 +152,18 @@ describe("local launch session", () => {
     expect(clearInterval).toHaveBeenCalledWith(42);
     expect(removeEventListener).toHaveBeenCalledWith("pagehide", expect.any(Function));
   });
-  it("bootstraps a launch fragment before the existing health probe", async () => {
+  it("bootstraps a launch fragment before recovering the session and probing health", async () => {
     const fetchStub = vi
       .fn()
       .mockResolvedValueOnce(
         new Response(null, {
           status: 204,
+          headers: { "X-PTS-CSRF": "csrf-from-server" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 200,
           headers: { "X-PTS-CSRF": "csrf-from-server" },
         }),
       )
@@ -174,26 +180,71 @@ describe("local launch session", () => {
 
     await bootstrapAndProbe(launchLocation("#launch=launch-token"), history);
 
+    const urls = fetchStub.mock.calls.map((call) =>
+      typeof call[0] === "string" ? call[0] : (call[0] as Request).url,
+    );
     expect(fetchStub.mock.calls[0]?.[0]).toBe("/session/bootstrap");
-    expect((fetchStub.mock.calls[1]?.[0] as Request).url).toContain("/api/v1/health");
+    expect(urls[1]).toContain("/session/status");
+    expect(urls[2]).toContain("/api/v1/health");
     expect(replaceState).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the existing health probe when there is no launch fragment", async () => {
-    const fetchStub = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ status: "ok", app: "PelicanTownSpecials", apiVersion: "v1" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+  it("keeps the existing health probe and restores the session when there is no launch fragment", async () => {
+    const fetchStub = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 200,
+          headers: { "X-PTS-CSRF": "csrf-restored" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "ok", app: "PelicanTownSpecials", apiVersion: "v1" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
     vi.stubGlobal("fetch", fetchStub);
     const { bootstrapAndProbe } = await import("../main");
     const replaceState = vi.fn();
 
     await bootstrapAndProbe(launchLocation(""), { replaceState, state: null } as unknown as History);
 
-    expect(fetchStub).toHaveBeenCalledTimes(1);
-    expect((fetchStub.mock.calls[0]?.[0] as Request).url).toContain("/api/v1/health");
+    expect(fetchStub).toHaveBeenCalledTimes(2);
+    const urls = fetchStub.mock.calls.map((call) =>
+      typeof call[0] === "string" ? call[0] : (call[0] as Request).url,
+    );
+    expect(urls[0]).toContain("/session/status");
+    expect(urls[1]).toContain("/api/v1/health");
     expect(replaceState).not.toHaveBeenCalled();
+  });
+
+  it("recovers the CSRF token for an existing session after a reload", async () => {
+    const fetchStub = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 200,
+        headers: { "X-PTS-CSRF": "csrf-restored" },
+      }),
+    );
+    const { getCsrfToken, restoreSession } = await loadSessionModule(fetchStub);
+
+    await expect(restoreSession()).resolves.toBe("csrf-restored");
+
+    expect(getCsrfToken()).toBe("csrf-restored");
+    expect(fetchStub).toHaveBeenCalledWith(
+      "/session/status",
+      expect.objectContaining({
+        credentials: "same-origin",
+      }),
+    );
+  });
+
+  it("clears the CSRF token when no session exists", async () => {
+    const fetchStub = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
+    const { getCsrfToken, restoreSession } = await loadSessionModule(fetchStub);
+
+    await expect(restoreSession()).resolves.toBeNull();
+
+    expect(getCsrfToken()).toBeNull();
   });
 });

@@ -285,3 +285,20 @@ def test_production_default_port_rejects_missing_or_wrong_host_port() -> None:
         "http://localhost:8000",
         "localhost:8000",
     )
+
+def test_session_status_returns_csrf_for_valid_session(
+    security_client: TestClient,
+) -> None:
+    csrf = _bootstrap(security_client)
+
+    response = security_client.get("/session/status", headers={"Host": "testserver"})
+
+    assert response.status_code == 200
+    assert response.headers["x-pts-csrf"] == csrf
+
+
+def test_session_status_requires_session(security_client: TestClient) -> None:
+    response = security_client.get("/session/status", headers={"Host": "testserver"})
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "PTS_AUTH_SESSION_REQUIRED"
