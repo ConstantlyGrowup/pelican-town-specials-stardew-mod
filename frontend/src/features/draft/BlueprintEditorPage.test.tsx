@@ -77,14 +77,6 @@ function blueprintDraft(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function askGusDraft() {
-  return blueprintDraft({
-    mode: "ASK_GUS",
-    baseTemplateVersion: null,
-    provenance: { ...provenance, mode: "ASK_GUS", visionModel: "vision-model", cacheEligibility: true },
-  });
-}
-
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -276,20 +268,101 @@ describe("blueprint editor", () => {
     expect(await screen.findByText("家常")).toBeVisible();
   });
 
-  it("shows ask gus as read-only with a convert action", async () => {
-    const convertSpy = vi.fn(() =>
-      HttpResponse.json(blueprintDraft({ draftId: "draft-2" })),
-    );
+  it("shows an update preview action when STALE_PREVIEW and blocks accept", async () => {
     server.use(
-      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
-      http.post("/api/v1/drafts/:draft_id/convert-to-blueprint", convertSpy),
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "STALE_PREVIEW", revision: 2 })),
+      ),
     );
     renderPage();
 
-    expect(await screen.findByText(copy.readOnlyAskGus)).toBeVisible();
-    expect(screen.queryByText(copy.saveDraft)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: copy.convertToBlueprint }));
+    await screen.findByText(copy.editingBlueprint);
+    expect(screen.getByRole("button", { name: copy.updatePreview })).toBeVisible();
+    expect(screen.queryByRole("button", { name: copy.archiveDish })).toBeNull();
+  });
 
-    await waitFor(() => expect(convertSpy).toHaveBeenCalledTimes(1));
+  it("updates preview from STALE_PREVIEW and returns to REVIEWABLE", async () => {
+    const getSpy = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json(blueprintDraft({ status: "STALE_PREVIEW", revision: 2 })),
+      )
+      .mockReturnValueOnce(
+        HttpResponse.json(blueprintDraft({ status: "REVIEWABLE", revision: 3 })),
+      );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", getSpy),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n{"type":"stage.started","stage":"INPUT_VALIDATION","ordinal":1,"total":6}\n{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":3,"draft":{}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    fireEvent.click(screen.getByRole("button", { name: copy.updatePreview }));
+
+    expect(await screen.findByRole("button", { name: copy.archiveDish })).toBeVisible();
+    expect(getSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps STALE_PREVIEW when update preview fails", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "STALE_PREVIEW", revision: 2 })),
+      ),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          JSON.stringify({
+            type: "attempt.failed",
+            attemptId: "a-1",
+            error: {
+              code: "PTS_GEN_VALIDATION_FAILED",
+              message: "生成结果未通过校验。",
+              retryable: false,
+              requestId: "req-1",
+              recommendedAction: "",
+            },
+          }) + "\n",
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    fireEvent.click(screen.getByRole("button", { name: copy.updatePreview }));
+
+    expect(await screen.findByText("生成结果未通过校验。")).toBeVisible();
+    expect(screen.getByRole("button", { name: copy.updatePreview })).toBeVisible();
+    expect(screen.queryByRole("button", { name: copy.archiveDish })).toBeNull();
+  });
+
+  it("cancels an update preview and stays recoverable", async () => {
+    const cancelSpy = vi.fn(() => new Response(null, { status: 202 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "STALE_PREVIEW", revision: 2 })),
+      ),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response('{"type":"attempt.started","attemptId":"a-1"}\n', {
+          status: 200,
+          headers: { "Content-Type": "application/x-ndjson" },
+        }),
+      ),
+      http.post("/api/v1/drafts/:draft_id/cancel", cancelSpy),
+    );
+    renderPage();
+
+    await screen.findByText(copy.editingBlueprint);
+    fireEvent.click(screen.getByRole("button", { name: copy.updatePreview }));
+
+    fireEvent.click(screen.getByRole("button", { name: copy.cancelGeneration }));
+
+    expect(await screen.findByText(copy.generationCancelled)).toBeVisible();
+    expect(cancelSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: copy.updatePreview })).toBeVisible();
   });
 });

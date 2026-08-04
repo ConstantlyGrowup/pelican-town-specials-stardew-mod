@@ -16,6 +16,9 @@ import {
   IngredientPickerModal,
   TagPickerModal,
 } from "./pickers";
+import { GenerationError } from "../generation/GenerationError";
+import { GenerationProgress } from "../generation/GenerationProgress";
+import { useGeneration } from "../generation/useGeneration";
 
 type DraftView = components["schemas"]["DraftView"];
 type IngredientCatalogItemView = components["schemas"]["IngredientCatalogItemView"];
@@ -33,6 +36,14 @@ export function BlueprintEditorPage() {
   const [stale, setStale] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const generation = useGeneration({
+    draftId: draftId ?? "",
+    onSuccess: () => {
+      setStale(false);
+      void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
+    },
+  });
 
   const form = useForm<BlueprintFormValues>({
     defaultValues: {
@@ -202,21 +213,6 @@ export function BlueprintEditorPage() {
     setConflict(false);
   }
 
-  async function onConvertToBlueprint() {
-    setBusy(true);
-    setActionError(null);
-    const { data, error } = await apiClient.POST(
-      "/api/v1/drafts/{draft_id}/convert-to-blueprint",
-      { params: { path: { draft_id: draftId ?? "" } } },
-    );
-    setBusy(false);
-    if (error || !data) {
-      setActionError(copy.saveFailed);
-      return;
-    }
-    navigate(`/drafts/${data.draftId}`);
-  }
-
   async function onArchive() {
     setBusy(true);
     setActionError(null);
@@ -256,49 +252,15 @@ export function BlueprintEditorPage() {
 
   const draft = query.data;
 
-  if (draft.mode === "ASK_GUS") {
+  if (draft.mode !== "BLUEPRINT") {
     return (
       <main>
-        <h1>{copy.draftTitle}</h1>
-        <p className="status-banner status-warning">{copy.readOnlyAskGus}</p>
-        <section className="card">
-          <p>
-            {copy.modeLabel}：{copy.askGus}；{copy.statusLabel}：{draft.status}；{copy.revisionLabel}：
-            {draft.revision}
-          </p>
-          {draft.presentation && (
-            <>
-              <h2>{draft.presentation.displayName}</h2>
-              <p>{draft.presentation.description}</p>
-            </>
-          )}
-          {draft.gameplay && (
-            <ul>
-              {draft.gameplay.ingredients.map((ingredient) => (
-                <li key={ingredient.itemId}>
-                  {ingredient.displayName} × {ingredient.quantity}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        {draft.status !== "ARCHIVED" && draft.status !== "DISCARDED" && (
-          <>
-            <p className="status-banner status-warning">{copy.convertHint}</p>
-            <button className="btn" type="button" onClick={onConvertToBlueprint} disabled={busy}>
-              {copy.convertToBlueprint}
-            </button>
-          </>
-        )}
-        {draft.status === "REVIEWABLE" && (
-          <button className="btn btn-primary" type="button" onClick={onArchive} disabled={busy}>
-            {copy.archiveDish}
-          </button>
-        )}
-        {actionError && <div className="status-banner status-error">{actionError}</div>}
+        <h1>{copy.draftNotFound}</h1>
       </main>
     );
   }
+
+  const previewStale = stale || draft.status === "STALE_PREVIEW";
 
   return (
     <main>
@@ -315,10 +277,38 @@ export function BlueprintEditorPage() {
           </button>
         </div>
       )}
-      {stale && (
+      {previewStale && (
         <div className="status-banner status-warning">
           <h2>{copy.stalePreviewTitle}</h2>
           <p>{copy.stalePreviewMessage}</p>
+        </div>
+      )}
+      {generation.phase === "streaming" && (
+        <GenerationProgress
+          currentStage={generation.currentStage}
+          succeededStages={generation.succeededStages}
+          totalStages={generation.totalStages}
+          preparingLabel={copy.updatingPreview}
+          onCancel={generation.cancel}
+        />
+      )}
+      {generation.phase === "error" && generation.error && (
+        <GenerationError error={generation.error} onRetry={generation.begin} />
+      )}
+      {generation.phase === "cancelled" && (
+        <p className="status-banner status-warning">{copy.generationCancelled}</p>
+      )}
+      {previewStale && (
+        <div className="card">
+          <p>{copy.updatePreviewHint}</p>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={generation.begin}
+            disabled={generation.phase === "streaming" || busy}
+          >
+            {generation.phase === "streaming" ? copy.updatingPreview : copy.updatePreview}
+          </button>
         </div>
       )}
 
@@ -446,8 +436,13 @@ export function BlueprintEditorPage() {
         </button>
       </form>
 
-      {draft.status === "REVIEWABLE" && !stale && (
-        <button className="btn btn-primary" type="button" onClick={onArchive} disabled={busy}>
+      {draft.status === "REVIEWABLE" && !previewStale && (
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={onArchive}
+          disabled={busy || generation.phase === "streaming"}
+        >
           {copy.archiveDish}
         </button>
       )}
