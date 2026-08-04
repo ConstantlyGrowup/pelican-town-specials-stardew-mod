@@ -50,9 +50,15 @@ Ask Gus/Blueprint 生成编排（Task 13/14）、图片归一化/图标/预览�
 
 - 第一轮（revise_round=0，gpt-5.6-luna/max）：`REVISE`，5 项 MUST_FIX（AppError details 类型、5xx 覆盖/网络重试、safe_download 缓冲/空 DNS、probe 未探 JSON-only、测试矩阵不足）。均已修复。
 - 第二轮（revise_round=1，gpt-5.6-luna/max）：`REVISE`，2 项 MUST_FIX（safe_download 追加前大小检查、双图 multipart 顺序断言）。均已修复并由自动测试验证。
-- 协议规定全局最多两轮 REVISE，不再开启第三轮审阅；最终以自动测试证据（providers 26 passed、全量 387 passed/2 skipped、Ruff、mypy 60 文件）收尾，进入用户决策。
+- 协议规定全局最多两轮 REVISE，不再开启第三轮审阅；最终以自动测试证据（providers 27 passed、全量 388 passed/2 skipped、Ruff、mypy 60 文件）+ 真实 probe 全绿收尾，进入用户决策。
+
+## 真实 capability probe 状态（成功）
+
+- 用户本机显式运行 `python scripts/probe_provider.py`（Base `https://yibuapi.com/v1`、文本/视觉 `gpt-5.6-luna`、图像 `gpt-image-2-max`），**五项 capability 全部 supported=true**：`chatMultimodal` 34s、`chatJsonSchema` 34s、`chatJsonOnly` 13s、`imageEdits` 51s、`imageGenerations` 24s。
+- 修复过程中由用户日志定位的两个根因已修复：strict json_schema 需 `required` 覆盖全部属性（`quantityHint` 缺失 400）；图片总像素需 ≥ 655360（`256x256` 被拒），probe 改用 `samples/牛肉0.jpg`（4032×2689）+ `size=1024x1024`。
+- 真实事实已按 T11-RULING-010 回写 ignored 技术设计 §18.2（脱敏，不含 Key/图片正文）。
 
 ## 当前状态
 
-- `state`: `committed`（本地 focused commit；不 push，Milestone 3 统一验收后推送）
-- `next_action`: 请用户本机运行真实 capability probe（设置五个 PTS_* 环境变量后 `python scripts/probe_provider.py`）；真实 probe 结果回写 ignored 技术设计 §18。按里程碑粒度继续 Task 12。
+- `state`: `committed`（本地 focused commit `10aa141` + 修复 `9555a55`；不 push，Milestone 3 统一验收后推送）
+- `next_action`: 用户确认 Task 11 验收后，按里程碑粒度继续 Task 12。

@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | verification |
+| overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
 | active_session_id | 2026-08-04-task-11-provider-adapter |
-| active_session_state | verification |
+| active_session_state | committed |
 | active_session_type | implementation |
-| current_task | Task 11 Provider Adapter 已实现并通过自动验证（fake 18 + 全量 379）；等待独立 Review；真实 capability probe 待用户本机运行 |
-| blocker | 无；实施沙箱无法访问真实外网，真实 probe 需用户本机运行 |
-| next_action | 运行 gpt-5.6-luna/max 独立 Review；PASS 后 auto_accepted + 本地 focused commit；同时请用户本机运行真实 probe |
+| current_task | Task 11 Provider Adapter 已实现、两轮审阅修复、真实 capability probe 五项全绿并本地提交（10aa141 + 9555a55）；等待用户验收后进入 Task 12 |
+| blocker | 无；真实 probe 五项 capability 全部 supported=true，技术设计 §18.2 已按脱敏事实回写 |
+| next_action | 用户确认 Task 11 验收后按里程碑粒度继续 Task 12 |
 
 ## 当前 Git 状态事实
 
