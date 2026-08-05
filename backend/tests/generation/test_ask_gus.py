@@ -67,9 +67,10 @@ async def test_ask_gus_stage_order(
         "售价：220g",
         "item hover tooltip",
         "不是海报",
-        "无 Buff：不要生成增益行",
+        "无 Buff：不要生成增益行和持续时间行",
     ):
         assert required_text in preview_request.prompt
+    assert "持续时间：" not in preview_request.prompt
     saved = harness.orchestrator.drafts.get(ready_draft.draft_id)
     assert saved.visuals is not None
     assert saved.visuals.generated_art_asset_id is None

@@ -28,6 +28,21 @@ BLUEPRINT_STAGE_ORDER: tuple[GenerationStage, ...] = (
 
 _PROMPT_MAX_CHARS = 1500
 
+_BUFF_ATTRIBUTE_LABELS: tuple[tuple[str, str], ...] = (
+    ("farming_level", "耕种"),
+    ("fishing_level", "钓鱼"),
+    ("mining_level", "采矿"),
+    ("foraging_level", "采集"),
+    ("combat_level", "战斗"),
+    ("luck_level", "幸运"),
+    ("attack", "攻击"),
+    ("defense", "防御"),
+    ("immunity", "免疫"),
+    ("magnetic_radius", "磁力"),
+    ("max_stamina", "最大体力"),
+    ("speed", "速度"),
+)
+
 
 def enforce_preview_prompt_budget(prompt: str) -> None:
     """Final shared budget gate for the Ask Gus and Blueprint edit prompts.
@@ -89,17 +104,26 @@ def build_full_tooltip_prompt(
     recovery = gameplay.recovery
     buff = gameplay.buff
     if buff is None:
-        buff_text = "无 Buff：不要生成增益行"
+        buff_rows = ""
+        duration_row = ""
+        row_guidance = (
+            "恢复值行左侧使用匹配的星露谷式像素状态图标；"
+            "售价行左侧使用金币像素图标，售价作为最后一行。"
+            "无 Buff：不要生成增益行和持续时间行。"
+        )
     else:
-        attributes = buff.attributes.model_dump(
-            exclude_defaults=True, by_alias=True
+        buff_rows = "".join(
+            f"{label} {value:+d}\n"
+            for field_name, label in _BUFF_ATTRIBUTE_LABELS
+            if (value := getattr(buff.attributes, field_name)) != 0
         )
-        attribute_text = "、".join(
-            f"{key}={value}" for key, value in attributes.items()
-        )
-        buff_text = (
-            f"Buff：{buff.id}，持续{buff.duration_minutes}分钟，"
-            f"属性：{attribute_text}"
+        hours, minutes = divmod(buff.duration_minutes, 60)
+        duration_row = f"持续时间：{hours}:{minutes:02d}\n"
+        row_guidance = (
+            "恢复值和每条增益行左侧使用匹配的星露谷式像素状态图标；"
+            "增益行后添加一条游戏式分隔线；"
+            "持续时间行左侧使用时钟像素图标；"
+            "售价行左侧使用金币像素图标，售价作为最后一行。"
         )
     return (
         "输入图1是真实菜品原图，必须作为不可替换的摄影底图保留。"
@@ -114,6 +138,7 @@ def build_full_tooltip_prompt(
         "词条框放在不遮挡主体的负空间区域。"
         "像素图标放在词条框上方或轻压上边框。"
         "除词条框和像素图标外，其余区域保持与原图一致。"
+        f"{row_guidance}"
         "所有文字必须严格来自以下结构化字段，不要增删改，"
         "不要虚构额外 Buff：\n"
         f"标题：{presentation.display_name}\n"
@@ -121,8 +146,9 @@ def build_full_tooltip_prompt(
         f"描述：{presentation.description}\n"
         f"能量：+{recovery.energy_restore}\n"
         f"生命：+{recovery.health_restore}\n"
-        f"售价：{gameplay.sell_price}g\n"
-        f"{buff_text}"
+        f"{buff_rows}"
+        f"{duration_row}"
+        f"售价：{gameplay.sell_price}g"
     )
 
 

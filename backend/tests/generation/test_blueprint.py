@@ -12,6 +12,7 @@ from pelican_town_specials.domain.dish import FieldAuthority
 from pelican_town_specials.domain.draft import DraftStatus
 from pelican_town_specials.generation.blueprint import (
     BLUEPRINT_STAGE_ORDER,
+    blueprint_preview_prompt,
     build_blueprint_visual_brief,
 )
 from pelican_town_specials.generation.events import GenerationEvent
@@ -90,15 +91,101 @@ async def test_blueprint_stage_order_and_image_only_calls(
         f"售价：{blueprint_stale.gameplay.sell_price}g",
         "item hover tooltip",
         "不是海报",
-        "无 Buff：不要生成增益行",
+        "无 Buff：不要生成增益行和持续时间行",
     ):
         assert required_text in preview_request.prompt
+    assert "持续时间：" not in preview_request.prompt
     assert events[-1].type == "attempt.succeeded"
 
     restored = harness.orchestrator.drafts.get(blueprint_stale.draft_id)
     assert restored.revision == blueprint_stale.revision + 1
     assert restored.visuals is not None
     assert restored.visuals.source_revision == restored.revision
+
+
+def test_blueprint_buff_prompt_uses_localized_rows_icons_and_duration(
+    blueprint_stale,
+) -> None:
+    from pelican_town_specials.domain.dish import BuffAttributes, BuffSpec
+
+    assert blueprint_stale.presentation is not None
+    assert blueprint_stale.gameplay is not None
+    gameplay = blueprint_stale.gameplay.model_copy(
+        update={
+            "buff": BuffSpec(
+                id="internal-buff-id",
+                durationMinutes=490,
+                attributes=BuffAttributes(
+                    farmingLevel=1,
+                    fishingLevel=-2,
+                    miningLevel=3,
+                    foragingLevel=-4,
+                    combatLevel=5,
+                    luckLevel=1,
+                    attack=-6,
+                    defense=7,
+                    immunity=-8,
+                    magneticRadius=9,
+                    maxStamina=-10,
+                    speed=1,
+                ),
+            )
+        }
+    )
+
+    prompt = blueprint_preview_prompt(blueprint_stale.presentation, gameplay)
+
+    expected_price = f"售价：{gameplay.sell_price}g"
+    assert prompt.endswith(expected_price)
+
+    for row in (
+        "耕种 +1",
+        "钓鱼 -2",
+        "采矿 +3",
+        "采集 -4",
+        "战斗 +5",
+        "幸运 +1",
+        "攻击 -6",
+        "防御 +7",
+        "免疫 -8",
+        "磁力 +9",
+        "最大体力 -10",
+        "速度 +1",
+        "持续时间：8:10",
+    ):
+        assert row in prompt
+    for internal_text in (
+        "internal-buff-id",
+        "farmingLevel",
+        "fishingLevel",
+        "miningLevel",
+        "foragingLevel",
+        "combatLevel",
+        "luckLevel",
+        "attack",
+        "defense",
+        "immunity",
+        "magneticRadius",
+        "maxStamina",
+        "speed",
+    ):
+        assert internal_text not in prompt
+    for layout_instruction in (
+        "恢复值和每条增益行左侧使用匹配的星露谷式像素状态图标",
+        "增益行后添加一条游戏式分隔线",
+        "时钟像素图标",
+        "金币像素图标",
+        "售价作为最后一行",
+    ):
+        assert layout_instruction in prompt
+
+    assert gameplay.buff is not None
+    seven_hour_buff = gameplay.buff.model_copy(update={"duration_minutes": 420})
+    seven_hour_gameplay = gameplay.model_copy(update={"buff": seven_hour_buff})
+    seven_hour_prompt = blueprint_preview_prompt(
+        blueprint_stale.presentation, seven_hour_gameplay
+    )
+    assert "持续时间：7:00" in seven_hour_prompt
 
 
 async def test_blueprint_visual_brief_is_deterministic_and_model_free(
