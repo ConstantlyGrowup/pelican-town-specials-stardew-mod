@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "dishId": "1c1c1c1c-1c1c-4c1c-8c1c-1c1c1c1c1c1c",
+  "archiveRevision": 1,
+  "archivedAt": "2026-08-01T12:00:00Z",
+  "presentation": {
+    "displayName": "番茄炖菜",
+    "internalName": "TomatoStew",
+    "categoryLabel": "主菜",
+    "description": "慢炖番茄与欧防风，暖胃又满足。",
+    "gusComment": "Gus 说这锅炖菜能抚慰整个冬季。",
+    "tags": [
+      "stew",
+      "tomato"
+    ]
+  },
+  "gameplay": {
+    "ingredients": [
+      {
+        "itemId": "24",
+        "displayName": "Parsnip",
+        "quantity": 1,
+        "mappingReason": "catalog match",
+        "catalogVersion": "stardew-1.6.15-v1"
+      },
+      {
+        "itemId": "256",
+        "displayName": "Tomato",
+        "quantity": 2,
+        "mappingReason": "catalog match",
+        "catalogVersion": "stardew-1.6.15-v1"
+      }
+    ],
+    "recovery": {
+      "edibility": 80,
+      "energyRestore": 200,
+      "healthRestore": 90,
+      "calculationVersion": "stardew-1.6"
+    },
+    "buff": {
+      "id": "speed",
+      "durationMinutes": 10,
+      "isDebuff": false,
+      "attributes": {
+        "farmingLevel": 0,
+        "fishingLevel": 0,
+        "miningLevel": 0,
+        "foragingLevel": 0,
+        "combatLevel": 0,
+        "luckLevel": 0,
+        "attack": 0,
+        "defense": 0,
+        "immunity": 0,
+        "magneticRadius": 0,
+        "maxStamina": 0,
+        "speed": 1
+      }
+    },
+    "sellPrice": 220,
+    "isDrink": false,
+    "recipeUnlock": "DEFAULT"
+  },
+  "visuals": {
+    "visualBrief": "A clay pot of tomato stew on a tavern table.",
+    "generatedArtAssetId": "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
+    "previewAssetId": "6b6b6b6b-6b6b-4b6b-8b6b-6b6b6b6b6b6b",
+    "iconSourceAssetId": "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
+    "icon16AssetId": "99999999-9999-4999-8999-999999999999",
+    "sourceRevision": 1,
+    "promptVersion": "visual-v1"
+  },
+  "contentHash": "2483a749a35dae18b2c22e7f64eb0f334812becd1e45f5514a83314b65ff1b9a",
+  "internalProvenance": {
+    "mode": "ASK_GUS",
+    "authorityByField": {
+      "presentation.display_name": "AGENT_ASSIGNED",
+      "gameplay.ingredients": "SYSTEM_GENERATED",
+      "gameplay.recovery": "SYSTEM_GENERATED",
+      "gameplay.sell_price": "SYSTEM_GENERATED",
+      "gameplay.is_drink": "SYSTEM_GENERATED"
+    },
+    "visionModel": "vision-model-v1",
+    "textModel": "text-model-v1",
+    "imageModel": "image-model-v1",
+    "promptVersions": {
+      "dish": "dish-v1",
+      "visual": "visual-v1"
+    },
+    "generationSource": "FRESH_GENERATION",
+    "canonicalDishSignature": "tomato-stew",
+    "cacheEligibility": true
+  },
+  "sourceDraftId": "2d2d2d2d-2d2d-4d2d-8d2d-2d2d2d2d2d2d"
+}

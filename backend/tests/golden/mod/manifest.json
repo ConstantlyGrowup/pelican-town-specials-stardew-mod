@@ -1,0 +1,13 @@
+{
+  "Author": "D20260801",
+  "ContentPackFor": {
+    "MinimumVersion": "2.9.0",
+    "UniqueID": "Pathoschild.ContentPatcher"
+  },
+  "Description": "一份装满鹈鹕镇风味的菜单。",
+  "MinimumGameVersion": "1.6.15",
+  "Name": "Pelican Town Specials - FamilyMenu",
+  "UniqueID": "D20260801.PelicanTownSpecials.FamilyMenu",
+  "UpdateKeys": [],
+  "Version": "1.0.0"
+}

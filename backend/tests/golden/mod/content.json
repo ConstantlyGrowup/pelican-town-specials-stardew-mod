@@ -1,0 +1,60 @@
+{
+  "Changes": [
+    {
+      "Action": "Load",
+      "FromFile": "assets/objects.png",
+      "Target": "Mods/{{ModId}}/Objects"
+    },
+    {
+      "Action": "EditData",
+      "Entries": {
+        "{{ModId}}_ParsnipSoup": {
+          "Category": -7,
+          "Description": "{{i18n:item.ParsnipSoup.description}}",
+          "DisplayName": "{{i18n:item.ParsnipSoup.name}}",
+          "Edibility": 35,
+          "IsDrink": false,
+          "Name": "ParsnipSoup",
+          "Price": 120,
+          "SpriteIndex": 0,
+          "Texture": "Mods/{{ModId}}/Objects",
+          "Type": "Cooking"
+        },
+        "{{ModId}}_TomatoStew": {
+          "Category": -7,
+          "Description": "{{i18n:item.TomatoStew.description}}",
+          "DisplayName": "{{i18n:item.TomatoStew.name}}",
+          "Edibility": 80,
+          "IsDrink": false,
+          "Name": "TomatoStew",
+          "Price": 220,
+          "SpriteIndex": 1,
+          "Texture": "Mods/{{ModId}}/Objects",
+          "Type": "Cooking"
+        }
+      },
+      "Target": "Data/Objects"
+    },
+    {
+      "Action": "EditData",
+      "Entries": {
+        "{{ModId}}_ParsnipSoup": "24 2/0 0/{{ModId}}_ParsnipSoup/default/{{i18n:recipe.ParsnipSoup.name}}",
+        "{{ModId}}_TomatoStew": "24 1 256 2/0 0/{{ModId}}_TomatoStew/default/{{i18n:recipe.TomatoStew.name}}"
+      },
+      "Target": "Data/CookingRecipes"
+    },
+    {
+      "Action": "EditData",
+      "Entries": {
+        "{{ModId}}_TomatoStew": {
+          "CustomAttributes": "Speed 1",
+          "Duration": 600000,
+          "Id": "{{ModId}}_TomatoStew_speed",
+          "IsDebuff": false
+        }
+      },
+      "Target": "Data/Objects.Buffs"
+    }
+  ],
+  "Format": "2.9.0"
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "dishId": "3e3e3e3e-3e3e-4e3e-8e3e-3e3e3e3e3e3e",
+  "archiveRevision": 1,
+  "archivedAt": "2026-08-02T08:30:00Z",
+  "presentation": {
+    "displayName": "欧防风浓汤",
+    "internalName": "ParsnipSoup",
+    "categoryLabel": "汤品",
+    "description": "细腻的欧防风浓汤，点缀少许香草。",
+    "gusComment": null,
+    "tags": [
+      "soup",
+      "parsnip"
+    ]
+  },
+  "gameplay": {
+    "ingredients": [
+      {
+        "itemId": "24",
+        "displayName": "Parsnip",
+        "quantity": 2,
+        "mappingReason": "catalog match",
+        "catalogVersion": "stardew-1.6.15-v1"
+      }
+    ],
+    "recovery": {
+      "edibility": 35,
+      "energyRestore": 87,
+      "healthRestore": 39,
+      "calculationVersion": "stardew-1.6"
+    },
+    "buff": null,
+    "sellPrice": 120,
+    "isDrink": false,
+    "recipeUnlock": "DEFAULT"
+  },
+  "visuals": {
+    "visualBrief": "A bowl of pale parsnip soup with herbs.",
+    "generatedArtAssetId": "6b6b6b6b-6b6b-4b6b-8b6b-6b6b6b6b6b6b",
+    "previewAssetId": "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
+    "iconSourceAssetId": "6b6b6b6b-6b6b-4b6b-8b6b-6b6b6b6b6b6b",
+    "icon16AssetId": "99999999-9999-4999-8999-999999999999",
+    "sourceRevision": 1,
+    "promptVersion": "visual-v1"
+  },
+  "contentHash": "823438581b5552995b5b78098fa580e20c021b39f39a3c856d70a7d9f58ce6b5",
+  "internalProvenance": {
+    "mode": "BLUEPRINT",
+    "authorityByField": {
+      "presentation.display_name": "USER_ASSIGNED",
+      "presentation.internal_name": "USER_ASSIGNED",
+      "presentation.category_label": "USER_ASSIGNED",
+      "presentation.description": "USER_ASSIGNED",
+      "gameplay.ingredients": "USER_ASSIGNED",
+      "gameplay.recovery": "USER_ASSIGNED",
+      "gameplay.sell_price": "USER_ASSIGNED",
+      "gameplay.is_drink": "USER_ASSIGNED",
+      "gameplay.recipe_unlock": "USER_ASSIGNED"
+    },
+    "visionModel": null,
+    "textModel": null,
+    "imageModel": null,
+    "promptVersions": {},
+    "generationSource": "USER_AUTHORED",
+    "canonicalDishSignature": "parsnip-soup",
+    "cacheEligibility": false
+  },
+  "sourceDraftId": "4f4f4f4f-4f4f-4f4f-8f4f-4f4f4f4f4f4f"
+}
