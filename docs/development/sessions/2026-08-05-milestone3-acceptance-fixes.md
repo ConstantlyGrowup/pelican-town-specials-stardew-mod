@@ -47,8 +47,16 @@ actual_models:
 
 - HomePage 删除草稿后 `list_drafts` 仍含 DISCARDED 记录；如产品要求丢弃后完全隐藏需另行过滤终态（待用户确认）。
 - `_strip_frozen_fields` 按 schema `title` 匹配模型类名；未来可用显式 ref/模型映射避免同名或泛型冲突（Codex 非阻塞观察）。
+- `providers/structured_output.py` docstring「one repair」已过时（现为 2 次修复），非阻塞。
+
+## R3（commit `1996d85`）
+
+- INGREDIENT_MAPPING 兜底：`map_ingredient` 空候选/无可用项返回确定性 fallback（Egg 176，按 `used_item_ids` 去重选未用项），mappingReason 标记 catalog fallback；`orchestrator._map_gameplay` 维护 used_item_ids 避免重复 itemId（GameplaySpec 唯一性）。
+- 结构化输出修复轮次 1→2：`_chat_structured` MAX_REPAIRS=2（最多 3 次尝试）；`_extract_chat_text` 移入 repair try，envelope 错误（无 choices/非法 JSON/非 object）也进入修复计数。
+- round-1 修复：fallback 去重（Codex R3-ING-001/002）+ extract 入 repair（R3-REPAIR-001）。
+- 验证：backend **461 passed / 2 skipped**、frontend 64、E2E 7、ruff/mypy/build/lint/diff-check clean；无 OpenAPI/契约变化。
 
 ## 当前状态
 
 - `state`: `committed`
-- `next_action`: 交还 Milestone 3 验收——用户重测 Ask Gus 完整流程（GAMEPLAY_DESIGN 不再卡 recovery）、Blueprint 重试与删除、首页草稿区；通过后进入 Milestone 3 全量验收与统一 push。
+- `next_action`: 交还 Milestone 3 验收——用户重测 Ask Gus 完整流程（INGREDIENT_MAPPING 未匹配原料走 fallback 不再失败）、Blueprint 重试与删除、首页草稿区；通过后进入 Milestone 3 全量验收与统一 push。
