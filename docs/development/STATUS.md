@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-r10-buff-tooltip-prompt |
+| active_session_id | 2026-08-05-r11-min-pixels |
 | active_session_state | committed |
 | active_session_type | milestone-acceptance-fix |
-| current_task | Milestone 3 验收修复（R1–R10）已提交；等待用户重测模型生成预览 |
+| current_task | Milestone 3 验收修复（R1–R11）已提交；等待用户重测模型生成预览 |
 | blocker | 无（等待用户重测反馈；通过后进入 Milestone 3 全量验收与统一 push） |
-| next_action | 用户重测含 Buff 菜品的词条图：逐行中文 Buff、像素状态图标、分隔线、H:MM 持续时间与末行售价；同时确认无 Buff 菜品不生成持续时间行 |
+| next_action | 用户重测 Ask Gus 完整流程：含 Buff 词条图（逐行中文 Buff、H:MM 持续时间、像素图标）、无 Buff 不生成持续时间行、预览渲染（R11 已修复最小像素 400）；通过后全量验收与 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 732b3ac（fix: format buff rows in stardew tooltip prompt） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992/90700b6/787b82c/a727a8f/732b3ac）已本地提交，未 push（Milestone 门） |
+| 最新提交 | 8f36b6d（fix: enforce provider minimum pixels for vision inputs） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992/90700b6/787b82c/a727a8f/732b3ac/8f36b6d）已本地提交，未 push（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
@@ -49,6 +49,11 @@
 - 验证：vitest 52 passed；Playwright E2E 7 passed；build/lint 通过；后端 428 passed/2 skipped（无后端改动）。
 - 已知限制：后端 FAILED 重试未接线（`RETRY_FAILED_GENERATION` 已存在于状态机），FAILED ask-gus 草稿无操作入口；延后为单独后端 Task。
 - **Milestone 3（Task 11–15）全部完成**：本地 commits（10aa141/9555a55/145e164、5949516/aca590b、daeacfd/5df2352、038635a）均已本地提交、未 push。
+
+## 当前 R11 Session（committed）
+
+- `2026-08-05-r11-min-pixels`：用户真实环境 Ask Gus 双图 EDIT 报 `total pixels must not be less than 655360 (got "752x672")`。方案选定：LANCZOS 放大为主、极端比例受控拦截兜底。修复（commit `8f36b6d`，4 文件 +107/-10）：`downscale_for_vision` 新增 `min_pixels`（默认 655,360）——缩放+16 倍数对齐后不足则 `_ceil_align_edge` 两轴放大到满足下限的最小尺寸（752x672→864x768=663,552、640x480→944x704=664,576）；放大后长边将超 2048（如 16x2048）抛 ValueError；orchestrator `_prepare_vision_input` 将 ValueError 转受控 `PTS_IMAGE_INPUT_UNSUPPORTED`（422 非重试），DISH_ANALYSIS 与 PREVIEW 统一使用。
+- 验证：focused 32 passed、全量 backend **468 passed/2 skipped**、ruff/mypy/diff-check clean；Codex 审阅 **PASS**（round 0）；无契约变化。未 push。
 
 ## 当前 R10 Session（committed）
 
