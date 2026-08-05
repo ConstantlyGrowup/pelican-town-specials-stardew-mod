@@ -72,7 +72,6 @@ from .attempt_registry import AttemptRegistry
 from .blueprint import (
     BLUEPRINT_STAGE_ORDER,
     blueprint_icon_prompt,
-    blueprint_preview_prompt,
     build_blueprint_visual_brief,
 )
 from .events import (
@@ -87,10 +86,8 @@ from .events import (
 STAGE_ORDER = tuple(GenerationStage)
 
 _ASK_GUS_PROMPT_VERSION = "ask-gus-v1"
-_VISUAL_PROMPT_VERSION = "visual-v1"
+_VISUAL_PROMPT_VERSION = "visual-v2-local-composite"
 _ICON_SIZE = "1024x1024"
-_PREVIEW_WIDTH = 960
-_PREVIEW_HEIGHT = 540
 
 
 class _RunState:
@@ -109,8 +106,6 @@ class _RunState:
         "icon_source_asset_id",
         "presentation",
         "preview",
-        "preview_art",
-        "preview_art_asset_id",
         "staged",
         "visual_brief",
     )
@@ -130,8 +125,6 @@ class _RunState:
     icon_source: GeneratedImage | None
     icon_source_asset_id: UUID | None
     icon_16: AssetRef | None
-    preview_art: GeneratedImage | None
-    preview_art_asset_id: UUID | None
     preview: AssetRef | None
 
     def __init__(
@@ -160,8 +153,6 @@ class _RunState:
         self.icon_source = None
         self.icon_source_asset_id = None
         self.icon_16 = None
-        self.preview_art = None
-        self.preview_art_asset_id = None
         self.preview = None
 
 
@@ -231,10 +222,6 @@ def _image_dimensions(data: bytes) -> tuple[int, int]:
 
 def _icon_prompt(core: GeneratedDishCore) -> str:
     return f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
-
-
-def _preview_prompt(core: GeneratedDishCore) -> str:
-    return f"星露谷风格的菜品插画：{core.presentation.display_name}，{core.visual_brief}"
 
 
 def _to_summary(error: AppError) -> ErrorSummary:
@@ -650,55 +637,35 @@ class GenerationOrchestrator:
                 assert draft.presentation is not None
                 assert draft.gameplay is not None
                 assert state.visual_brief is not None
-                preview_prompt = blueprint_preview_prompt(
-                    draft.presentation, state.visual_brief
-                )
                 snapshot_presentation = draft.presentation
                 snapshot_gameplay = draft.gameplay
             else:
                 assert state.core is not None
                 assert state.presentation is not None
                 assert state.gameplay is not None
-                preview_prompt = _preview_prompt(state.core)
                 snapshot_presentation = state.presentation
                 snapshot_gameplay = state.gameplay
-            state.preview_art = await gateway.generate_image(
-                ImageGenerationRequest(
-                    operation=ImageOperation.GENERATION,
-                    prompt=preview_prompt,
-                    size=_ICON_SIZE,
-                    request_id=state.command.request_id,
-                )
-            )
-            art_w, art_h = _image_dimensions(state.preview_art.data)
-            preview_art_ref = self._assets.put(
-                state.preview_art.data,
-                AssetMetadata(
-                    kind=AssetKind.GENERATED_ART,
-                    mediaType=_domain_media_type(state.preview_art.media_type),
-                    fileExtension=_extension_for_media_type(
-                        state.preview_art.media_type
-                    ),
-                    width=art_w,
-                    height=art_h,
-                ),
-            )
-            state.preview_art_asset_id = preview_art_ref.asset_id
+            assert state.icon_16 is not None
+            original_image = _read_source_image(self._assets, draft)
+            with self._assets.open(state.icon_16) as handle:
+                icon_16 = handle.read()
             preview_bytes = compose_preview(
                 PreviewSnapshot(
-                    generated_art=state.preview_art.data,
+                    original_image=original_image,
+                    icon_16=icon_16,
                     presentation=snapshot_presentation,
                     gameplay=snapshot_gameplay,
                 )
             )
+            preview_w, preview_h = _image_dimensions(preview_bytes)
             state.preview = self._assets.put(
                 preview_bytes,
                 AssetMetadata(
                     kind=AssetKind.PREVIEW,
                     mediaType=MediaType.PNG,
                     fileExtension=".png",
-                    width=_PREVIEW_WIDTH,
-                    height=_PREVIEW_HEIGHT,
+                    width=preview_w,
+                    height=preview_h,
                 ),
             )
             next_revision = draft.revision + 1
@@ -913,11 +880,9 @@ def _build_visual_spec(state: _RunState, source_revision: int) -> VisualSpec:
     assert state.visual_brief is not None
     assert state.icon_source_asset_id is not None
     assert state.icon_16 is not None
-    assert state.preview_art_asset_id is not None
     assert state.preview is not None
     return VisualSpec(
         visualBrief=state.visual_brief,
-        generatedArtAssetId=state.preview_art_asset_id,
         previewAssetId=state.preview.asset_id,
         iconSourceAssetId=state.icon_source_asset_id,
         icon16AssetId=state.icon_16.asset_id,

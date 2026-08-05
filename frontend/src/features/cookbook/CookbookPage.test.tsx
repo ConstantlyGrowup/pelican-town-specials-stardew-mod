@@ -125,6 +125,14 @@ describe("cookbook", () => {
 
     expect(await screen.findByRole("heading", { name: "春日面碗" })).toBeVisible();
     expect(screen.getByText("Parsnip × 1")).toBeVisible();
+    expect(screen.getByRole("img", { name: "春日面碗预览" })).toHaveAttribute(
+      "src",
+      "/api/v1/assets/00000000-0000-4000-8000-000000000002",
+    );
+    expect(screen.getByRole("img", { name: "春日面碗像素图标" })).toHaveAttribute(
+      "src",
+      "/api/v1/assets/00000000-0000-4000-8000-000000000003",
+    );
     expect(screen.queryByText(/internalProvenance|secret/)).not.toBeInTheDocument();
   });
 

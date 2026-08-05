@@ -7,6 +7,13 @@ export function getCsrfToken(): string | null {
   return csrfToken;
 }
 
+export function assetUrl(assetId: string | null | undefined): string | null {
+  if (!assetId) {
+    return null;
+  }
+  return `/api/v1/assets/${encodeURIComponent(assetId)}`;
+}
+
 export async function bootstrapSession(launchToken: string): Promise<string> {
   csrfToken = null;
   const response = await fetch("/session/bootstrap", {

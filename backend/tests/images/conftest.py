@@ -24,7 +24,12 @@ def png_bytes(*, size: tuple[int, int] = (64, 64), color: str = "red") -> bytes:
 
 @pytest.fixture
 def rgba_png() -> bytes:
-    return png_bytes()
+    return png_bytes(size=(640, 360), color="seagreen")
+
+
+@pytest.fixture
+def icon_16_png() -> bytes:
+    return png_bytes(size=(16, 16), color="red")
 
 
 @pytest.fixture
@@ -59,11 +64,13 @@ def gameplay() -> GameplaySpec:
 @pytest.fixture
 def snapshot(
     rgba_png: bytes,
+    icon_16_png: bytes,
     presentation: PresentationSpec,
     gameplay: GameplaySpec,
 ) -> PreviewSnapshot:
     return PreviewSnapshot(
-        generated_art=rgba_png,
+        original_image=rgba_png,
+        icon_16=icon_16_png,
         presentation=presentation,
         gameplay=gameplay,
     )

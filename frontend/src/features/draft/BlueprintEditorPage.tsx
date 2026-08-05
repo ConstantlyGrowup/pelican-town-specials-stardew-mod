@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useForm, useFormState } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiClient, getCsrfToken } from "../../api/client";
+import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import {
@@ -303,6 +303,8 @@ export function BlueprintEditorPage() {
   const generationHint = previewStale
     ? copy.updatePreviewHint
     : copy.generatePreviewHint;
+  const previewUrl = assetUrl(draft.visuals?.previewAssetId);
+  const iconUrl = assetUrl(draft.visuals?.icon16AssetId);
 
   return (
     <main>
@@ -324,6 +326,26 @@ export function BlueprintEditorPage() {
           <h2>{copy.stalePreviewTitle}</h2>
           <p>{copy.stalePreviewMessage}</p>
         </div>
+      )}
+      {(previewUrl || iconUrl) && (
+        <section className="card" aria-label={`${draft.presentation?.displayName ?? copy.draftTitle}预览资源`}>
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt={`${draft.presentation?.displayName ?? copy.draftTitle}预览`}
+              style={{ maxWidth: "100%", height: "auto", display: "block" }}
+            />
+          )}
+          {iconUrl && (
+            <img
+              src={iconUrl}
+              alt={`${draft.presentation?.displayName ?? copy.draftTitle}像素图标`}
+              width={32}
+              height={32}
+              style={{ imageRendering: "pixelated", display: "block" }}
+            />
+          )}
+        </section>
       )}
       {generation.phase === "streaming" && (
         <GenerationProgress

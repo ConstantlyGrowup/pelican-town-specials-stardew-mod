@@ -48,6 +48,22 @@ async def test_ask_gus_stage_order(
     assert succeeded == EXPECTED_ASK_GUS_STAGES
     assert events[-1].type == "attempt.succeeded"
     assert events[-1].draft_revision == ready_draft.revision + 1
+    assert harness.gateway.calls == ["analyze", "design", "image"]
+    saved = harness.orchestrator.drafts.get(ready_draft.draft_id)
+    assert saved.visuals is not None
+    assert saved.visuals.generated_art_asset_id is None
+    assert saved.visuals.preview_asset_id is not None
+    assert saved.visuals.icon_16_asset_id is not None
+    original_ref = harness.asset_store.stat(saved.source.original_image_asset_id)
+    preview_ref = harness.asset_store.stat(saved.visuals.preview_asset_id)
+    original = Image.open(
+        io.BytesIO(_read_asset(harness.asset_store, original_ref))
+    ).convert("RGBA")
+    preview = Image.open(
+        io.BytesIO(_read_asset(harness.asset_store, preview_ref))
+    ).convert("RGBA")
+    assert preview.size == original.size
+    assert preview.getpixel((0, 0)) == original.getpixel((0, 0))
 
 
 async def test_low_confidence_stops_after_dish_analysis(

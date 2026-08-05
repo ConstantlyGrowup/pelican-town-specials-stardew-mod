@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { apiClient } from "../../api/client";
+import { apiClient, assetUrl } from "../../api/client";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import { clearSelectionFor } from "./selectionStore";
@@ -72,6 +72,8 @@ export function CookbookDetailPage() {
   }
 
   const dish = query.data;
+  const previewUrl = assetUrl(dish.visuals.previewAssetId);
+  const iconUrl = assetUrl(dish.visuals.icon16AssetId);
 
   return (
     <main>
@@ -79,6 +81,26 @@ export function CookbookDetailPage() {
         <Link to="/cookbook">{copy.backToList}</Link>
       </p>
       <article className="card">
+        {(previewUrl || iconUrl) && (
+          <section aria-label={`${dish.displayName}预览资源`}>
+            {previewUrl && (
+              <img
+                src={previewUrl}
+                alt={`${dish.displayName}预览`}
+                style={{ maxWidth: "100%", height: "auto", display: "block" }}
+              />
+            )}
+            {iconUrl && (
+              <img
+                src={iconUrl}
+                alt={`${dish.displayName}像素图标`}
+                width={32}
+                height={32}
+                style={{ imageRendering: "pixelated", display: "block" }}
+              />
+            )}
+          </section>
+        )}
         <h1>{dish.displayName}</h1>
         <p>{dish.internalName}</p>
         <p>{dish.categoryLabel}</p>

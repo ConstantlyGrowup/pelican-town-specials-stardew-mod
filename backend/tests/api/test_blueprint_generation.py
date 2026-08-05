@@ -229,7 +229,7 @@ def test_blueprint_patch_stale_then_generate_preview(
     events = _generate(gen_services, gen_auth_client, draft_id)
     assert events[0]["type"] == "attempt.started"
     assert events[-1]["type"] == "attempt.succeeded"
-    assert gen_services.gateway.calls == ["image", "image"]
+    assert gen_services.gateway.calls == ["image"]
     reviewable = gen_services.draft_repository.get(draft_id)
     assert reviewable.status.value == "REVIEWABLE"
     assert reviewable.visuals is not None
@@ -248,7 +248,7 @@ def test_blueprint_patch_stale_then_generate_preview(
     stale_revision = stale["revision"]
     events = _generate(gen_services, gen_auth_client, draft_id)
     assert events[-1]["type"] == "attempt.succeeded"
-    assert gen_services.gateway.calls == ["image", "image", "image", "image"]
+    assert gen_services.gateway.calls == ["image", "image"]
     previewed = gen_services.draft_repository.get(draft_id)
     assert previewed.status.value == "REVIEWABLE"
     assert previewed.revision == stale_revision + 1

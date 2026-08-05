@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiClient, getCsrfToken } from "../../api/client";
+import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import { GenerationError } from "../generation/GenerationError";
@@ -134,6 +134,9 @@ export function AskGusReviewPage() {
   const running =
     draft.status === "GENERATING" || draft.status === "REGENERATING";
   const terminal = draft.status === "ARCHIVED" || draft.status === "DISCARDED";
+  const previewUrl = assetUrl(draft.visuals?.previewAssetId);
+  const iconUrl = assetUrl(draft.visuals?.icon16AssetId);
+  const visualName = draft.presentation?.displayName ?? copy.draftTitle;
 
   return (
     <main>
@@ -174,6 +177,27 @@ export function AskGusReviewPage() {
             {copy.refreshDraft}
           </button>
         </div>
+      )}
+
+      {(previewUrl || iconUrl) && (
+        <section className="card" aria-label={`${visualName}预览资源`}>
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt={`${visualName}预览`}
+              style={{ maxWidth: "100%", height: "auto", display: "block" }}
+            />
+          )}
+          {iconUrl && (
+            <img
+              src={iconUrl}
+              alt={`${visualName}像素图标`}
+              width={32}
+              height={32}
+              style={{ imageRendering: "pixelated", display: "block" }}
+            />
+          )}
+        </section>
       )}
 
       <section className="card">

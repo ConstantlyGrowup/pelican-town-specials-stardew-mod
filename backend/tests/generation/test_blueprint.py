@@ -60,8 +60,8 @@ async def test_blueprint_stage_order_and_image_only_calls(
     assert succeeded == list(BLUEPRINT_STAGE_ORDER)
     for forbidden in BLUEPRINT_FORBIDDEN_STAGES:
         assert forbidden not in succeeded
-    # The model is only used for the two image generations.
-    assert harness.gateway.calls == ["image", "image"]
+    # The model is only used for the icon; preview composition is local.
+    assert harness.gateway.calls == ["image"]
     assert events[-1].type == "attempt.succeeded"
 
     restored = harness.orchestrator.drafts.get(blueprint_stale.draft_id)
@@ -77,7 +77,7 @@ async def test_blueprint_visual_brief_is_deterministic_and_model_free(
         harness.orchestrator.run(blueprint_preview_command(blueprint_stale))
     )
     # No analyze/design calls: VISUAL_BRIEF is a deterministic user-field function.
-    assert harness.gateway.calls == ["image", "image"]
+    assert harness.gateway.calls == ["image"]
     restored = harness.orchestrator.drafts.get(blueprint_stale.draft_id)
     assert restored.visuals is not None
     assert restored.visuals.visual_brief == build_blueprint_visual_brief(

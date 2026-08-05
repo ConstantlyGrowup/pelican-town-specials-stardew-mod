@@ -175,7 +175,6 @@ def test_generate_streams_ndjson_to_success(
         "analyze",
         "design",
         "image",
-        "image",
     ]
 
     saved = gen_services.draft_repository.get(draft_id)

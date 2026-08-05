@@ -128,6 +128,32 @@ function renderPage() {
 }
 
 describe("blueprint editor", () => {
+  it("renders preview and icon assets through the asset endpoint", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          blueprintDraft({
+            status: "REVIEWABLE",
+            visuals: {
+              previewAssetId: "preview-1",
+              icon16AssetId: "icon-1",
+            },
+          }),
+        ),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findByRole("img", { name: "南瓜汤预览" })).toHaveAttribute(
+      "src",
+      "/api/v1/assets/preview-1",
+    );
+    expect(screen.getByRole("img", { name: "南瓜汤像素图标" })).toHaveAttribute(
+      "src",
+      "/api/v1/assets/icon-1",
+    );
+  });
+
   it("loads a blueprint draft into an editable form and saves with expectedRevision", async () => {
     const patchSpy = vi.fn((info: { request: Request }) => {
       void info;

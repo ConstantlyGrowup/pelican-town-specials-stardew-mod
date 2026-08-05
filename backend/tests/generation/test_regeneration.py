@@ -63,6 +63,7 @@ async def test_successful_full_regeneration_replaces_all_fields(
     assert restored.visuals is not None
     assert restored.visuals.icon_16_asset_id != old_visuals.icon_16_asset_id
     assert restored.visuals.preview_asset_id != old_visuals.preview_asset_id
+    assert restored.visuals.generated_art_asset_id is None
     assert restored.visuals.source_revision == restored.revision
 
     # The attempt is finished; no active attempt remains on the promoted draft.
