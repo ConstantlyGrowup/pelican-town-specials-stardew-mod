@@ -4,7 +4,7 @@
 |---|---|
 | `session_id` | `2026-08-05-task-16-mod-compiler` |
 | `session_type` | implementation |
-| `state` | active |
+| `state` | committed |
 | `date` | 2026-08-05 |
 | `task` | Task 16：实现 deterministic Content Patcher 编译器 |
 | `acceptance_contract_id` | `mvp-task-16-mod-compiler-v1` |
@@ -16,7 +16,7 @@
 ```yaml
 actual_models:
   main/coordinator: deepseek-v4-flash / effort: max
-  implementer: <实施子代理填写>
+  implementer: deepseek-v4-flash（Claude Code 子代理）
   review: Codex gpt-5.6-luna / xhigh（经 codex-mcp 独立新 thread）
 ```
 
@@ -38,4 +38,14 @@ actual_models:
 
 ## 验证记录
 
-（实施完成后由包工填充：focused/green/static/manual 证据、Codex 审阅结果、commit hash）
+- 实施子代理（TDD）：红（`pytest backend/tests/mod_compiler` FAIL：ModuleNotFoundError）→ 绿 60 passed；Step 6 回归 208 passed；全量后端 528 passed/2 skipped；ruff/mypy（77 源文件）/diff-check clean。
+- 确定性实测：同一输入两次 `compile_to_bytes` SHA-256 一致（8d0d7721…）。
+- golden 由实现输出生成后对照设计 §14.4/14.5 逐字段核验；fixtures 为 `ArchivedDish.model_dump(by_alias=True)`，conftest 经生产 deserializer 加载并替换 icon16AssetId 为真实 put 的 16×16 RGBA 资产。
+- Codex 独立审阅 **PASS**（round 0，无 MUST_FIX；14/14 criterion 通过；R16-1..6 全部验证；scope_delta none）。
+- 包工复跑确认：focused 60 passed、回归 208 passed、全量 528 passed/2 skipped、ruff/mypy/diff-check clean。
+- 本地 focused commits（未 push，Milestone 4 门）：`1730578`（feat: compile deterministic Content Patcher packs，20 文件 +1969）、`be6eb1b`（docs: record Task 16 compiler session and Milestone 3 acceptance）。工作树核验干净（仅预存未跟踪 `samples/`、`.pytest_tmp/`）。
+
+## 非阻塞观察
+
+- Task 17 接线顺序应为 `validate_export` 通过后再 `compile`（compile 内部只做结构性校验）。
+- Buff entry Id 形如 `{{ModId}}_<internalName>_<sanitizedBuffId>`；Task 18 游戏 Spike 按 R16-3 冻结最终 codec。
