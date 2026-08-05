@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-04-task-15-generation-experience |
+| active_session_id | 2026-08-05-preview-pipeline-refactor |
 | active_session_state | committed |
-| active_session_type | implementation |
-| current_task | Milestone 3 验收修复（R1/R2）已提交；等待用户重测 Ask Gus 完整流程与 Blueprint 重试/删除 |
+| active_session_type | milestone-acceptance-fix |
+| current_task | Milestone 3 验收修复（R1–R5）已提交；等待用户重测 Ask Gus 完整流程、Blueprint 重试/删除与预览渲染 |
 | blocker | 无（等待用户重测反馈；通过后进入 Milestone 3 全量验收与统一 push） |
-| next_action | 用户重测 Ask Gus（GAMEPLAY_DESIGN 不再卡 recovery）、Blueprint 重试/删除、首页草稿区；通过后全量验收与 push |
+| next_action | 用户重测 Ask Gus 完整流程、Blueprint 重试/删除、首页草稿区、三页预览/图标渲染；通过后全量验收与 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 5676ebe（feat: permanently delete drafts and local files on discard） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe）已本地提交，未推送（Milestone 门） |
+| 最新提交 | 8e5aaee（feat: compose previews from original photos） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee）已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
@@ -49,6 +49,14 @@
 - 验证：vitest 52 passed；Playwright E2E 7 passed；build/lint 通过；后端 428 passed/2 skipped（无后端改动）。
 - 已知限制：后端 FAILED 重试未接线（`RETRY_FAILED_GENERATION` 已存在于状态机），FAILED ask-gus 草稿无操作入口；延后为单独后端 Task。
 - **Milestone 3（Task 11–15）全部完成**：本地 commits（10aa141/9555a55/145e164、5949516/aca590b、daeacfd/5df2352、038635a）均已本地提交、未 push。
+
+## 当前 Preview Pipeline Session（committed）
+
+- `2026-08-05-preview-pipeline-refactor`（R5）：用户反馈两问题——（1）三页只显示文案不渲染预览/图标（schema 有字段、端点已存在但无 `<img>`）；（2）orchestrator 预览阶段用 `ImageOperation.GENERATION` 生成整幅像素画，违反用户 skill `stardew-dish-card-overlay` 的「原图不可替换、只叠加词条卡」核心判定。
+- 用户确认正确范式（`samples/image-edit/case/`）并要求实现走 codex-mcp（`gpt-5.6-luna`/xhigh）、主会话负责通信与验收。Context Packet：`docs/plans/2026-08-06-preview-pipeline-packet.md`（gitignored，`preview-pipeline-refactor-fd79f6a-20260805-v1`）。
+- 实现（commit `8e5aaee`，17 文件 +363/-130）：合成器 `PreviewSnapshot` 改 `original_image + icon_16`、以原图为画布（保留尺寸/构图）、卡片自适应右上角、NEAREST 图标缩放、确定性文字；orchestrator PREVIEW 阶段删除模型调用，直接读原图 + icon_16 本地合成，`generatedArtAssetId` 新记录不再设置；前端三页（AskGusReviewPage/CookbookDetailPage/BlueprintEditorPage）经 `assetUrl()` 渲染 preview + icon，`imageRendering: pixelated`。
+- 验证：backend **466 passed/2 skipped**、frontend **71 passed**、E2E **7 passed**、ruff/mypy/build/lint/资源检查/diff-check clean；无 OpenAPI/契约变化；包工人工核查 PREVIEW 阶段零 `ImageOperation.GENERATION`、`_read_source_image` 读 `original_image_asset_id`（skill 硬约束满足）。
+- 非阻塞：真实 Provider 端到端预览视觉未验证（下次用户验收时确认）；卡片几何为确定性算法，产品侧如需微调可另立 Task。
 
 ## 当前 Milestone 3 验收修复 Session（committed）
 
