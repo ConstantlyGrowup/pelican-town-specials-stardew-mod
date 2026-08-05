@@ -31,6 +31,7 @@ def _cookbook(services: AppServices) -> tuple[DraftService, CookbookService]:
         archive_repository=services.archive_repository,
         asset_store=services.asset_store,
         catalog=services.catalog,
+        attempt_repository=services.attempt_repository,
     )
     return draft_service, CookbookService(services.archive_repository)
 

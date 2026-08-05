@@ -109,6 +109,8 @@ export const PRODUCT_COPY = {
     discardDraft: "放弃草稿",
     discardingDraft: "删除中…",
     discardDraftFailed: "删除失败，请稍后重试。",
+    deleteDraftConfirm: "删除后草稿记录与本地素材文件将一并删除，且无法恢复。确认删除这道草稿吗？",
+    discardDraftConfirm: "放弃后草稿记录与本地素材文件将一并删除，且无法恢复。确认放弃这道草稿吗？",
     revisionConflictTitle: "草稿已在其它窗口更新",
     revisionConflictMessage: "请刷新草稿后重试，避免覆盖最新版本。",
     refreshDraft: "刷新草稿",

@@ -41,6 +41,9 @@ export function HomePage() {
   });
 
   async function onDiscard(draftId: string) {
+    if (!window.confirm(copy.deleteDraftConfirm)) {
+      return;
+    }
     setDeleting((current) => new Set(current).add(draftId));
     const headers: Record<string, string> = {};
     const csrfToken = getCsrfToken();
@@ -98,16 +101,18 @@ export function HomePage() {
                 {" · "}
                 <span>{formatUpdatedAt(draft.updatedAt)}</span>
               </p>
-              <button
-                className="btn"
-                type="button"
-                onClick={() => void onDiscard(draft.draftId)}
-                disabled={deleting.has(draft.draftId)}
-              >
-                {deleting.has(draft.draftId)
-                  ? copy.discardingDraft
-                  : copy.discardDraft}
-              </button>
+              {draft.status !== "ARCHIVED" && draft.status !== "DISCARDED" && (
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => void onDiscard(draft.draftId)}
+                  disabled={deleting.has(draft.draftId)}
+                >
+                  {deleting.has(draft.draftId)
+                    ? copy.discardingDraft
+                    : copy.discardDraft}
+                </button>
+              )}
             </li>
           ))}
         </ul>

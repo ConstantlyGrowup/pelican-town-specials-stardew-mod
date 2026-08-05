@@ -20,6 +20,7 @@ from pelican_town_specials.persistence.asset_store import (
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+    GenerationAttemptRepository,
 )
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 
@@ -39,6 +40,7 @@ class AppServices:
     asset_store: FileAssetStore
     draft_repository: DraftRepository
     archive_repository: ArchiveRepository
+    attempt_repository: GenerationAttemptRepository
     catalog: VanillaCatalog
 
 
@@ -48,12 +50,14 @@ def services(tmp_path: Path) -> AppServices:
     asset_store = FileAssetStore(workspace)
     draft_repository = DraftRepository(workspace)
     archive_repository = ArchiveRepository(workspace)
+    attempt_repository = GenerationAttemptRepository(workspace)
     catalog = VanillaCatalog.from_json(_CATALOG_PATH)
     return AppServices(
         workspace=workspace,
         asset_store=asset_store,
         draft_repository=draft_repository,
         archive_repository=archive_repository,
+        attempt_repository=attempt_repository,
         catalog=catalog,
     )
 

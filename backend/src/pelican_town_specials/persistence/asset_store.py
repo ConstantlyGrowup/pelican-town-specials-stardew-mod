@@ -189,6 +189,15 @@ class FileAssetStore:
             raise ValueError("asset hash does not match sidecar")
         return stored
 
+    def delete(self, asset_id: UUID) -> None:
+        """Delete the data file and sidecar for a registered asset.
+
+        Raises AssetNotFoundError when no registered asset matches the id.
+        """
+        asset_ref = self._find_ref_by_asset_id(asset_id)
+        self._resolve_asset_path(asset_ref.relative_path).unlink(missing_ok=True)
+        self._sidecar_path(asset_ref.relative_path).unlink(missing_ok=True)
+
     def _find_ref_by_asset_id(self, asset_id: UUID) -> AssetRef:
         for sidecar_path in self._assets_dir.rglob("*.asset.json"):
             candidate = read_json_with_backup(sidecar_path, _validate_asset_ref)

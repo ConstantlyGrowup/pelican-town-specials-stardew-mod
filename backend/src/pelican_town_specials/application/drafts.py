@@ -47,6 +47,7 @@ from pelican_town_specials.persistence.asset_store import (
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+    GenerationAttemptRepository,
     IdempotencyConflictError,
     TombstonedDishError,
 )
@@ -77,6 +78,12 @@ _PATCH_USER_ASSIGNED_GAMEPLAY = frozenset(
 )
 _TERMINAL_OR_FAILED = frozenset(
     {DraftStatus.ARCHIVED, DraftStatus.DISCARDED, DraftStatus.FAILED}
+)
+_VISUAL_ASSET_FIELD_NAMES = (
+    "generated_art_asset_id",
+    "preview_asset_id",
+    "icon_source_asset_id",
+    "icon_16_asset_id",
 )
 
 
@@ -398,11 +405,13 @@ class DraftService:
         archive_repository: ArchiveRepository,
         asset_store: FileAssetStore,
         catalog: VanillaCatalog,
+        attempt_repository: GenerationAttemptRepository,
     ) -> None:
         self._drafts = draft_repository
         self._archives = archive_repository
         self._assets = asset_store
         self._catalog = catalog
+        self._attempts = attempt_repository
 
     def create_draft(self, request: DraftCreateRequest) -> DraftRecord:
         self._require_source_asset(request.source.original_image_asset_id)
@@ -501,9 +510,26 @@ class DraftService:
         return self._drafts.save(updated, expected_revision=draft.revision)
 
     def discard_draft(self, draft_id: UUID) -> None:
+        """Permanently delete a draft and its local files.
+
+        ARCHIVED drafts are rejected. The draft record directory, its
+        generation attempts, and any asset files it exclusively owns are
+        removed; assets referenced by other drafts or archived dishes are
+        preserved.
+        """
         draft = self.get_draft(draft_id)
-        discarded = transition(draft, DraftAction.DISCARD)
-        self._drafts.save(discarded, expected_revision=draft.revision)
+        if draft.status is DraftStatus.ARCHIVED:
+            raise self._illegal_transition_error(draft)
+        shared = self._referenced_asset_ids(excluding=draft_id)
+        for asset_id in self._draft_asset_ids(draft):
+            if asset_id in shared:
+                continue
+            try:
+                self._assets.delete(asset_id)
+            except AssetNotFoundError:
+                continue
+        self._attempts.delete_for_draft(draft_id)
+        self._drafts.delete(draft_id)
 
     def archive_draft(
         self,
@@ -597,6 +623,32 @@ class DraftService:
             raise self._asset_unavailable_error() from exc
         if ref.kind is not AssetKind.ORIGINAL_IMAGE:
             raise self._source_image_missing_error()
+
+    def _draft_asset_ids(self, draft: DraftRecord) -> set[UUID]:
+        asset_ids = {draft.source.original_image_asset_id}
+        if draft.visuals is not None:
+            asset_ids.update(self._visual_asset_ids(draft.visuals))
+        return asset_ids
+
+    def _referenced_asset_ids(self, *, excluding: UUID) -> set[UUID]:
+        """Collect every asset id referenced by other drafts or archived dishes."""
+        referenced: set[UUID] = set()
+        for other in self._drafts.list():
+            if other.draft_id == excluding:
+                continue
+            referenced.update(self._draft_asset_ids(other))
+        for archive in self._archives.list_active():
+            referenced.update(self._visual_asset_ids(archive.visuals))
+        return referenced
+
+    @staticmethod
+    def _visual_asset_ids(visuals: VisualSpec) -> set[UUID]:
+        asset_ids: set[UUID] = set()
+        for field_name in _VISUAL_ASSET_FIELD_NAMES:
+            asset_id = getattr(visuals, field_name)
+            if asset_id is not None:
+                asset_ids.add(asset_id)
+        return asset_ids
 
     def _validate_archive_eligibility(self, draft: DraftRecord) -> None:
         if (

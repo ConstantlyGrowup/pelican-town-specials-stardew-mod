@@ -326,7 +326,7 @@ def test_archive_non_reviewable_draft_rejected(auth_client: ApiClient) -> None:
     assert response.json()["error"]["code"] == "PTS_STATE_ILLEGAL_TRANSITION"
 
 
-def test_discard_draft_returns_204(auth_client: ApiClient) -> None:
+def test_discard_draft_returns_204_and_deletes(auth_client: ApiClient) -> None:
     uploaded = _upload(auth_client)
     created = _create_blueprint(auth_client, uploaded["assetId"])
 
@@ -340,4 +340,12 @@ def test_discard_draft_returns_204(auth_client: ApiClient) -> None:
         f"/api/v1/drafts/{created['draftId']}",
         headers=auth_client.session_headers,
     )
-    assert detail.json()["status"] == "DISCARDED"
+    assert detail.status_code == 404
+    assert detail.json()["error"]["code"] == "PTS_DRAFT_NOT_FOUND"
+
+    listing = auth_client.client.get(
+        "/api/v1/drafts",
+        headers=auth_client.session_headers,
+    )
+    assert listing.status_code == 200
+    assert listing.json()["total"] == 0

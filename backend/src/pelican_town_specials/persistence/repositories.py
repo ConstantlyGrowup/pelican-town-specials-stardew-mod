@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -184,6 +185,11 @@ class DraftRepository:
         index = self._load_or_rebuild_index()
         return [self.get(UUID(draft_id)) for draft_id in index.draft_ids]
 
+    def delete(self, draft_id: UUID) -> None:
+        """Permanently remove a draft record directory and refresh the index."""
+        shutil.rmtree(self._workspace.drafts_dir / str(draft_id), ignore_errors=True)
+        self._write_index()
+
     def _load_or_rebuild_index(self) -> DraftIndex:
         try:
             return DraftIndex.model_validate(
@@ -366,6 +372,24 @@ class GenerationAttemptRepository:
             self.save(updated)
             interrupted.append(updated)
         return interrupted
+
+    def delete_for_draft(self, draft_id: UUID) -> int:
+        """Remove every attempt directory belonging to a draft.
+
+        Returns the number of attempt directories removed. Attempts that
+        cannot be read are skipped so a corrupt staging entry never blocks
+        the draft deletion.
+        """
+        deleted = 0
+        for attempt_path in self._staging_root.glob("attempt-*/attempt.json"):
+            try:
+                attempt = read_json_with_backup(attempt_path, _validate_attempt)
+            except (OSError, ValueError, TypeError):
+                continue
+            if attempt.draft_id == draft_id:
+                shutil.rmtree(attempt_path.parent, ignore_errors=True)
+                deleted += 1
+        return deleted
 
 
 class ArchiveRepository:

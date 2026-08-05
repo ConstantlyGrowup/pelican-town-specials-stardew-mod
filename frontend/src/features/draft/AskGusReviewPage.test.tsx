@@ -13,7 +13,10 @@ const copy = PRODUCT_COPY.zh;
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
 afterAll(() => server.close());
 
 const provenance = {
@@ -188,6 +191,38 @@ describe("ask gus review", () => {
     const request = archiveSpy.mock.calls[0]?.[0]?.request as Request;
     expect(request.headers.get("Idempotency-Key")).toBeTruthy();
     expect(await screen.findByText("cookbook page")).toBeVisible();
+  });
+
+  it("rejects the draft after confirmation and navigates home", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.rejectDraft }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(copy.discardDraftConfirm);
+    await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("home page")).toBeVisible();
+  });
+
+  it("does not reject when confirmation is cancelled", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.rejectDraft }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(copy.discardDraftConfirm);
+    expect(discardSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText("home page")).toBeNull();
   });
 
   it("starts an initial generation for a fresh DRAFT", async () => {

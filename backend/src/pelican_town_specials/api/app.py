@@ -101,11 +101,15 @@ def create_app(
     )
     resolved_catalog = vanilla_catalog or _load_default_catalog()
     resolved_asset_service = asset_service or AssetService(resolved_asset_store)
+    resolved_attempt_repository = attempt_repository or GenerationAttemptRepository(
+        resolved_workspace
+    )
     resolved_draft_service = draft_service or DraftService(
         draft_repository=resolved_draft_repository,
         archive_repository=resolved_archive_repository,
         asset_store=resolved_asset_store,
         catalog=resolved_catalog,
+        attempt_repository=resolved_attempt_repository,
     )
     resolved_cookbook_service = cookbook_service or CookbookService(
         resolved_archive_repository
@@ -119,9 +123,6 @@ def create_app(
 
     resolved_activity_tracker = activity_tracker or ActivityTracker()
 
-    resolved_attempt_repository = attempt_repository or GenerationAttemptRepository(
-        resolved_workspace
-    )
     attempt_registry = AttemptRegistry()
     resolved_generation_service = generation_service or GenerationService(
         orchestrator=GenerationOrchestrator(

@@ -22,10 +22,19 @@ from pelican_town_specials.application.drafts import (
     DraftService,
 )
 from pelican_town_specials.domain.assets import AssetKind
-from pelican_town_specials.domain.common import DraftMode, Language
+from pelican_town_specials.domain.common import DraftMode, Language, utc_now
 from pelican_town_specials.domain.dish import FieldAuthority, GenerationSource
-from pelican_town_specials.domain.draft import DraftStatus
+from pelican_town_specials.domain.draft import (
+    AttemptStatus,
+    DraftStatus,
+    GenerationAttempt,
+    GenerationAttemptKind,
+    GenerationStage,
+    StageAttempt,
+    StageStatus,
+)
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.persistence.asset_store import AssetNotFoundError
 
 from .conftest import AppServices, make_reviewable_draft, put_png
 
@@ -36,6 +45,7 @@ def _service(services: AppServices) -> DraftService:
         archive_repository=services.archive_repository,
         asset_store=services.asset_store,
         catalog=services.catalog,
+        attempt_repository=services.attempt_repository,
     )
 
 
@@ -77,6 +87,32 @@ def _create_blueprint(services: AppServices) -> tuple[DraftService, object, obje
         )
     )
     return service, record, asset_ref
+
+
+def _succeeded_attempt(draft_id: object) -> GenerationAttempt:
+    now = utc_now()
+    return GenerationAttempt(
+        attemptId=uuid4(),
+        draftId=draft_id,
+        kind=GenerationAttemptKind.INITIAL,
+        sourceRevision=1,
+        status=AttemptStatus.SUCCEEDED,
+        currentStage=GenerationStage.ATOMIC_PROMOTION,
+        stages=[
+            StageAttempt(
+                stage=GenerationStage.ATOMIC_PROMOTION,
+                status=StageStatus.SUCCEEDED,
+                retryCount=0,
+                startedAt=now,
+                finishedAt=now,
+                error=None,
+            )
+        ],
+        candidateRecordPath=None,
+        startedAt=now,
+        finishedAt=now,
+        error=None,
+    )
 
 
 def test_create_blueprint_draft_has_blueprint_template(services: AppServices) -> None:
@@ -342,12 +378,72 @@ def test_patch_requires_presentation_or_gameplay() -> None:
         DraftPatchRequest(expected_revision=1)
 
 
-def test_discard_draft_persists_discarded(services: AppServices) -> None:
+def test_discard_draft_deletes_record(services: AppServices) -> None:
     service, record, _ = _create_blueprint(services)
 
     service.discard_draft(record.draft_id)
 
-    assert services.draft_repository.get(record.draft_id).status is DraftStatus.DISCARDED
+    with pytest.raises(AppError) as excinfo:
+        service.get_draft(record.draft_id)
+    assert excinfo.value.code == "PTS_DRAFT_NOT_FOUND"
+    assert [item.draft_id for item in service.list_drafts().items] == []
+    assert not (services.workspace.drafts_dir / str(record.draft_id)).exists()
+
+
+def test_discard_draft_removes_attempt_directory(services: AppServices) -> None:
+    service, record, _ = _create_blueprint(services)
+    attempt = _succeeded_attempt(record.draft_id)
+    services.attempt_repository.save(attempt)
+
+    service.discard_draft(record.draft_id)
+
+    assert not (
+        services.workspace.staging_dir / f"attempt-{attempt.attempt_id}"
+    ).exists()
+
+
+def test_discard_draft_deletes_unshared_assets(services: AppServices) -> None:
+    service, record, asset_ref = _create_blueprint(services)
+
+    service.discard_draft(record.draft_id)
+
+    with pytest.raises(AssetNotFoundError):
+        services.asset_store.stat(asset_ref.asset_id)
+
+
+def test_discard_source_draft_keeps_shared_original_image(
+    services: AppServices,
+) -> None:
+    original_ref = put_png(
+        services.asset_store, kind=AssetKind.ORIGINAL_IMAGE, color="green"
+    )
+    preview_ref = put_png(
+        services.asset_store, kind=AssetKind.PREVIEW, color="purple"
+    )
+    icon_ref = put_png(services.asset_store, kind=AssetKind.ICON_16, color="gold")
+    draft = ask_gus_reviewable_fixture()
+    source = draft.source.model_copy(
+        update={"original_image_asset_id": original_ref.asset_id}
+    )
+    visuals = draft.visuals.model_copy(
+        update={
+            "preview_asset_id": preview_ref.asset_id,
+            "icon_16_asset_id": icon_ref.asset_id,
+        }
+    )
+    draft = draft.model_copy(update={"source": source, "visuals": visuals})
+    services.draft_repository.save(draft, expected_revision=None)
+    service = _service(services)
+    blueprint = service.convert_to_blueprint(draft.draft_id)
+    assert blueprint.source.original_image_asset_id == original_ref.asset_id
+
+    service.discard_draft(draft.draft_id)
+
+    assert services.asset_store.stat(original_ref.asset_id) is not None
+    with pytest.raises(AssetNotFoundError):
+        services.asset_store.stat(preview_ref.asset_id)
+    with pytest.raises(AssetNotFoundError):
+        services.asset_store.stat(icon_ref.asset_id)
 
 
 def test_discard_archived_draft_is_rejected(services: AppServices) -> None:

@@ -40,7 +40,10 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
 afterAll(() => server.close());
 
 function renderPage() {
@@ -106,7 +109,8 @@ describe("home page draft dashboard", () => {
     expect(await screen.findByText(copy.draftsLoadFailed)).toBeVisible();
   });
 
-  it("deletes a draft and refreshes the list", async () => {
+  it("deletes a draft after confirmation and refreshes the list", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
     const getSpy = vi
       .fn()
@@ -165,9 +169,55 @@ describe("home page draft dashboard", () => {
     });
     fireEvent.click(deleteButtons[0]);
 
+    expect(confirmSpy).toHaveBeenCalledWith(copy.deleteDraftConfirm);
     await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(copy.unnamedDraft)).toBeVisible();
     expect(screen.queryByRole("heading", { name: "南瓜汤" })).toBeNull();
     expect(getSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not delete when confirmation is cancelled", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    await screen.findByRole("heading", { name: "南瓜汤" });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: copy.discardDraft })[0],
+    );
+
+    expect(confirmSpy).toHaveBeenCalledWith(copy.deleteDraftConfirm);
+    expect(discardSpy).not.toHaveBeenCalled();
+  });
+
+  it("hides the delete entry for ARCHIVED drafts", async () => {
+    server.use(
+      http.get("/api/v1/drafts", () =>
+        HttpResponse.json({
+          items: [
+            {
+              draftId: "draft-archived",
+              mode: "BLUEPRINT",
+              status: "ARCHIVED",
+              revision: 2,
+              updatedAt: "2026-08-04T00:00:00Z",
+              displayName: "南瓜汤",
+              originalImageAssetId: "asset-1",
+            },
+          ],
+          nextCursor: null,
+          total: 1,
+        }),
+      ),
+    );
+    renderPage();
+
+    await screen.findByRole("heading", { name: "南瓜汤" });
+    expect(
+      screen.queryByRole("button", { name: copy.discardDraft }),
+    ).toBeNull();
   });
 });

@@ -26,6 +26,7 @@ from pelican_town_specials.persistence.asset_store import (
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+    GenerationAttemptRepository,
 )
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 
@@ -45,6 +46,7 @@ class ApiServices:
     asset_store: FileAssetStore
     draft_repository: DraftRepository
     archive_repository: ArchiveRepository
+    attempt_repository: GenerationAttemptRepository
     catalog: VanillaCatalog
     security: SecurityState
     client: TestClient
@@ -65,12 +67,14 @@ def services(tmp_path: Path) -> ApiServices:
     archive_repository = ArchiveRepository(workspace)
     catalog = VanillaCatalog.from_json(_CATALOG_PATH)
 
+    attempt_repository = GenerationAttemptRepository(workspace)
     asset_service = AssetService(asset_store)
     draft_service = DraftService(
         draft_repository=draft_repository,
         archive_repository=archive_repository,
         asset_store=asset_store,
         catalog=catalog,
+        attempt_repository=attempt_repository,
     )
     cookbook_service = CookbookService(archive_repository)
 
@@ -99,6 +103,7 @@ def services(tmp_path: Path) -> ApiServices:
         asset_store=asset_store,
         draft_repository=draft_repository,
         archive_repository=archive_repository,
+        attempt_repository=attempt_repository,
         catalog=catalog,
         security=security,
         client=client,

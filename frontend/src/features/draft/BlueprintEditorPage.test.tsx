@@ -47,6 +47,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   useGenerationOverride.current = null;
   server.resetHandlers();
+  vi.restoreAllMocks();
 });
 afterAll(() => server.close());
 
@@ -480,7 +481,8 @@ describe("blueprint editor", () => {
     expect(getSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("discards the draft and navigates home", async () => {
+  it("discards the draft after confirmation and navigates home", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
     server.use(
       http.get("/api/v1/drafts/:draft_id", () =>
@@ -492,8 +494,27 @@ describe("blueprint editor", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: copy.discardDraft }));
 
+    expect(confirmSpy).toHaveBeenCalledWith(copy.discardDraftConfirm);
     await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("home page")).toBeVisible();
+  });
+
+  it("does not discard when confirmation is cancelled", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "DRAFT", revision: 1 })),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.discardDraft }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(copy.discardDraftConfirm);
+    expect(discardSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText("home page")).toBeNull();
   });
 
   it("does not expose a retry entry for a REVIEWABLE blueprint on generation error", async () => {

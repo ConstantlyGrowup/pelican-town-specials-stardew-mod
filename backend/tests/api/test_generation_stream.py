@@ -58,10 +58,11 @@ def gen_services(tmp_path: Path) -> GenServices:
     archive_repository = ArchiveRepository(workspace)
     catalog = VanillaCatalog.from_json(_CATALOG_PATH)
     gateway = FakeGateway()
+    attempt_repository = GenerationAttemptRepository(workspace)
 
     orchestrator = GenerationOrchestrator(
         draft_repository=draft_repository,
-        attempt_repository=GenerationAttemptRepository(workspace),
+        attempt_repository=attempt_repository,
         asset_store=asset_store,
         catalog=catalog,
         gateway_factory=lambda: gateway,
@@ -89,6 +90,7 @@ def gen_services(tmp_path: Path) -> GenServices:
                 archive_repository=archive_repository,
                 asset_store=asset_store,
                 catalog=catalog,
+                attempt_repository=attempt_repository,
             ),
             cookbook_service=CookbookService(archive_repository),
             asset_store=asset_store,

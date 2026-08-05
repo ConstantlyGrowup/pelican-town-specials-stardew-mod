@@ -67,6 +67,9 @@ export function AskGusReviewPage() {
   }
 
   async function onDiscard() {
+    if (!window.confirm(copy.discardDraftConfirm)) {
+      return;
+    }
     setBusy(true);
     setActionError(null);
     const headers: Record<string, string> = {};
