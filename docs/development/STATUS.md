@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-preview-pipeline-r6 |
+| active_session_id | 2026-08-05-r7-edit-edge-alignment |
 | active_session_state | committed |
 | active_session_type | milestone-acceptance-fix |
-| current_task | Milestone 3 验收修复（R1–R6）已提交；等待用户重测 Ask Gus 完整流程、Blueprint 重试/删除与模型生成预览 |
+| current_task | Milestone 3 验收修复（R1–R7）已提交；等待用户重测 Ask Gus 完整流程、Blueprint 重试/删除与模型生成预览 |
 | blocker | 无（等待用户重测反馈；通过后进入 Milestone 3 全量验收与统一 push） |
-| next_action | 用户重测 Ask Gus 完整流程、Blueprint 重试/删除、首页草稿区、三页预览/图标渲染（预览现为模型双图 EDIT 生成）；通过后全量验收与 push |
+| next_action | 用户重测 Ask Gus 完整流程（R7 已修复 EDIT 尺寸 400）、Blueprint 重试/删除、首页草稿区、三页预览/图标渲染；通过后全量验收与 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | fb40992（feat: model-generated preview tooltips via two-image edit (R6)） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992）已本地提交，未推送（Milestone 门） |
+| 最新提交 | 90700b6（fix: align image-edit input edges to multiples of 16） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992/90700b6）已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
@@ -49,6 +49,11 @@
 - 验证：vitest 52 passed；Playwright E2E 7 passed；build/lint 通过；后端 428 passed/2 skipped（无后端改动）。
 - 已知限制：后端 FAILED 重试未接线（`RETRY_FAILED_GENERATION` 已存在于状态机），FAILED ask-gus 草稿无操作入口；延后为单独后端 Task。
 - **Milestone 3（Task 11–15）全部完成**：本地 commits（10aa141/9555a55/145e164、5949516/aca590b、daeacfd/5df2352、038635a）均已本地提交、未 push。
+
+## 当前 R7 Session（committed）
+
+- `2026-08-05-r7-edit-edge-alignment`：用户真实环境 Ask Gus 超时，Provider 报 `invalid image size: edges must be multiples of 16 (got "990x1051")`。根因：`downscale_for_vision` 只保证长边 ≤2048，未对齐 16 倍数（缩放与不缩放两条路径）。修复（commit `90700b6`）：新增 `_align_edge`（向下取整 16 倍数、min 16 保护），缩放/不缩放路径统一对齐；新增 2 个红→绿测试（4032x2689→2048x1360、990x1051→976x1040）。同一函数服务 DISH_ANALYSIS，对齐无害且更合规。
+- 验证：focused 9 passed、全量 backend **464 passed/2 skipped**、ruff/mypy/diff-check clean；Codex 审阅 **PASS**（round 0）；无契约变化。
 
 ## 当前 R6 Session（committed）
 
