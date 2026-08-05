@@ -72,7 +72,7 @@ from .blueprint import (
     blueprint_icon_prompt,
     blueprint_preview_prompt,
     build_blueprint_visual_brief,
-    clip_visual_brief,
+    build_full_tooltip_prompt,
     enforce_preview_prompt_budget,
 )
 from .events import (
@@ -230,47 +230,13 @@ def _icon_prompt(core: GeneratedDishCore) -> str:
     return f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
 
 
-def _buff_prompt(gameplay: GameplaySpec) -> str:
-    buff = gameplay.buff
-    if buff is None:
-        return "无增益行（不要虚构 Buff）"
-    attributes = buff.attributes.model_dump(exclude_defaults=True, by_alias=True)
-    attribute_text = "、".join(f"{key}={value}" for key, value in attributes.items())
-    return (
-        f"增益：{buff.id}，持续{buff.duration_minutes}分钟，"
-        f"属性：{attribute_text}。"
-    )
-
-
 def _preview_prompt(
     presentation: PresentationSpec,
     gameplay: GameplaySpec,
-    visual_brief: str,
 ) -> str:
-    """Build the model-owned full tooltip edit prompt from validated fields."""
-    recovery = gameplay.recovery
-    return (
-        "MULTI-IMAGE GENERATIVE EDIT。输入图1是必须保留的真实菜品原图，"
-        "输入图2是同一轮生成的菜品像素图标。以输入图1作为不可替换的摄影底图，"
-        "保持原始宽高比、裁切、食物、器皿、桌面、背景、光影、透视、景深和摄影质感；"
-        "词条卡放置位置由你根据照片构图自主判断：优先背景留白、墙面、桌面或窗景等"
-        "负空间；主体位于中下方时放上方或上侧，主体位于一侧时放相反一侧；不要固定在"
-        "食物正上方或居中，不得遮挡主体。UI 以外区域必须与原图视觉一致。准确复用输入图2"
-        "的轮廓、色板和像素特征，把它自然放在词条卡上方或轻压上边框。"
-        "由图像模型在这一次 EDIT 中生成完整的星露谷物语物品悬浮词条卡，"
-        "不要使用本地模板、Pillow、Canvas、HTML/CSS 或前端组件排版。"
-        "卡片使用饱和暖金橙/蜂蜜橙羊皮纸渐变，多层深棕与橙棕硬边像素框、"
-        "像素装饰角、游戏式分隔线和端点、轻微硬投影、紧凑内边距；标题居中醒目，"
-        "类别用紫色或紫红色强调，体力、生命、Buff、时钟和金币使用统一像素符号。"
-        f"所有可见文字和数字必须逐字逐数来自已验证结构化字段："
-        f"标题={presentation.display_name}；类别={presentation.category_label}；"
-        f"描述={presentation.description}；体力+{recovery.energy_restore}；"
-        f"生命+{recovery.health_restore}；售价={gameplay.sell_price}g；"
-        f"{_buff_prompt(gameplay)}"
-        f"视觉氛围参考（不可作为额外卡片文字）：{clip_visual_brief(visual_brief)}。"
-        "禁止重画、像素化、扩图、裁切或整体调色真实照片；禁止苍白米色网页卡、"
-        "PPT 文本框、餐厅菜单、左右分栏、大面积侧栏、黑色整图边框和额外无关文字。"
-    )
+    """Build the shared hard-anchor full tooltip edit prompt from validated
+    fields (Ask Gus consumes the same prompt language as Blueprint)."""
+    return build_full_tooltip_prompt(presentation, gameplay)
 
 
 def _to_summary(error: AppError) -> ErrorSummary:
@@ -711,25 +677,21 @@ class GenerationOrchestrator:
             if draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
                 assert draft.gameplay is not None
-                assert state.visual_brief is not None
                 snapshot_presentation = draft.presentation
                 snapshot_gameplay = draft.gameplay
                 prompt = blueprint_preview_prompt(
                     snapshot_presentation,
                     snapshot_gameplay,
-                    state.visual_brief,
                 )
             else:
                 assert state.core is not None
                 assert state.presentation is not None
                 assert state.gameplay is not None
-                assert state.visual_brief is not None
                 snapshot_presentation = state.presentation
                 snapshot_gameplay = state.gameplay
                 prompt = _preview_prompt(
                     snapshot_presentation,
                     snapshot_gameplay,
-                    state.visual_brief,
                 )
             # Shared final budget gate for both modes: business fields stay
             # verbatim; an over-limit prompt fails controlled, pre-provider.

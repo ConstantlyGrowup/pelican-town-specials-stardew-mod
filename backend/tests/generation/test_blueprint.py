@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 
+import pytest
+
 from pelican_town_specials.domain.common import GenerationStage
 from pelican_town_specials.domain.dish import FieldAuthority
 from pelican_town_specials.domain.draft import DraftStatus
@@ -83,15 +85,12 @@ async def test_blueprint_stage_order_and_image_only_calls(
         blueprint_stale.presentation.display_name,
         blueprint_stale.presentation.category_label,
         blueprint_stale.presentation.description,
-        f"体力+{blueprint_stale.gameplay.recovery.energy_restore}",
-        f"生命+{blueprint_stale.gameplay.recovery.health_restore}",
-        f"售价={blueprint_stale.gameplay.sell_price}g",
-        "饱和暖金橙",
-        "多层深棕与橙棕硬边像素框",
-        "游戏式分隔线",
-        "统一像素符号",
-        "自主判断",
-        "背景留白",
+        f"能量：+{blueprint_stale.gameplay.recovery.energy_restore}",
+        f"生命：+{blueprint_stale.gameplay.recovery.health_restore}",
+        f"售价：{blueprint_stale.gameplay.sell_price}g",
+        "item hover tooltip",
+        "不是海报",
+        "无 Buff：不要生成增益行",
     ):
         assert required_text in preview_request.prompt
     assert events[-1].type == "attempt.succeeded"
@@ -178,17 +177,16 @@ async def test_blueprint_cancel_keeps_stale_preview(
 
 def test_blueprint_preview_prompt_stays_within_provider_limit() -> None:
     """Blueprint prompt must fit the 1500-char provider contract even with
-    maximum-length user fields and the longest deterministic visual brief."""
+    maximum-length user fields and a maximum BuffSpec."""
     from pelican_town_specials.domain.dish import (
+        BuffAttributes,
+        BuffSpec,
         GameIngredient,
         GameplaySpec,
         PresentationSpec,
         RecoverySpec,
     )
-    from pelican_town_specials.generation.blueprint import (
-        blueprint_preview_prompt,
-        build_blueprint_visual_brief,
-    )
+    from pelican_town_specials.generation.blueprint import blueprint_preview_prompt
 
     presentation = PresentationSpec(
         displayName="名" * 60,
@@ -211,91 +209,45 @@ def test_blueprint_preview_prompt_stays_within_provider_limit() -> None:
         recovery=RecoverySpec(edibility=500),
         sellPrice=50000,
         isDrink=False,
+        buff=BuffSpec(
+            id="益" * 80,
+            durationMinutes=1440,
+            attributes=BuffAttributes(
+                farmingLevel=99999,
+                fishingLevel=99999,
+                miningLevel=99999,
+                foragingLevel=99999,
+                combatLevel=99999,
+                luckLevel=99999,
+                attack=99999,
+                defense=99999,
+                immunity=99999,
+                magneticRadius=99999,
+                maxStamina=99999,
+                speed=99999,
+            ),
+        ),
     )
-    brief = build_blueprint_visual_brief(presentation, gameplay)
-    prompt = blueprint_preview_prompt(presentation, gameplay, brief)
+    prompt = blueprint_preview_prompt(presentation, gameplay)
     assert len(prompt) <= 1500
 
 
-async def test_blueprint_preview_prompt_over_budget_fails_controlled(
-    harness: GenerationHarness, blueprint_stale
-) -> None:
-    """Maximum legal Blueprint fields (longest presentation, 8 max-length
-    ingredients, maximum BuffSpec) overflow the provider's 1500-char prompt
-    contract; the run must fail with a controlled non-retryable error before
-    any EDIT provider call and keep the STALE_PREVIEW semantics."""
-    from pelican_town_specials.domain.dish import (
-        BuffAttributes,
-        BuffSpec,
-        GameIngredient,
-        GameplaySpec,
-        PresentationSpec,
-        RecoverySpec,
+def test_blueprint_enforce_preview_prompt_budget_rejects_oversized_prompt() -> None:
+    """The shared budget gate rejects an oversized Blueprint prompt with a
+    controlled non-retryable error; the current builder stays within the
+    contract for maximum legal user fields and BuffSpec."""
+    from pelican_town_specials.domain.errors import AppError
+    from pelican_town_specials.generation.blueprint import (
+        enforce_preview_prompt_budget,
     )
 
-    maxed = blueprint_stale.model_copy(
-        update={
-            "presentation": PresentationSpec(
-                displayName="名" * 60,
-                internalName="MaxName",
-                categoryLabel="类" * 40,
-                description="描" * 400,
-                tags=[],
-            ),
-            "gameplay": GameplaySpec(
-                ingredients=[
-                    GameIngredient(
-                        itemId=str(index),
-                        displayName="材" * 80,
-                        quantity=1,
-                        mappingReason="catalog match",
-                        catalogVersion="stardew-1.6.15-v1",
-                    )
-                    for index in range(8)
-                ],
-                recovery=RecoverySpec(edibility=500),
-                sellPrice=50000,
-                isDrink=False,
-                buff=BuffSpec(
-                    id="益" * 80,
-                    durationMinutes=1440,
-                    attributes=BuffAttributes(
-                        farmingLevel=99999,
-                        fishingLevel=99999,
-                        miningLevel=99999,
-                        foragingLevel=99999,
-                        combatLevel=99999,
-                        luckLevel=99999,
-                        attack=99999,
-                        defense=99999,
-                        immunity=99999,
-                        magneticRadius=99999,
-                        maxStamina=99999,
-                        speed=99999,
-                    ),
-                ),
-            ),
-        }
-    )
-    saved = harness.orchestrator.drafts.save(
-        maxed, expected_revision=blueprint_stale.revision
-    )
-    events = await _collect(
-        harness.orchestrator.run(blueprint_preview_command(saved))
-    )
-    assert events[-1].type == "attempt.failed"
-    error = events[-1].error
-    assert error is not None
+    enforce_preview_prompt_budget("词条" * 700)  # within 1500 chars: no-op.
+    with pytest.raises(AppError) as raised:
+        enforce_preview_prompt_budget("词条" * 800)  # > 1500 chars.
+    error = raised.value
     assert error.code == "PTS_PREVIEW_PROMPT_TOO_LONG"
+    assert error.http_status == 422
     assert error.retryable is False
-    # Only the icon GENERATION ran; the EDIT request never reached the provider.
-    assert harness.gateway.calls == ["image"]
-    assert len(harness.gateway.image_requests) == 1
-    assert harness.gateway.image_requests[0].operation is ImageOperation.GENERATION
-    restored = harness.orchestrator.drafts.get(saved.draft_id)
-    assert restored.status is DraftStatus.STALE_PREVIEW
-    assert restored.presentation == maxed.presentation
-    assert restored.gameplay == maxed.gameplay
 
 
 async def test_blueprint_preserves_provenance_and_cache_eligibility(

@@ -26,17 +26,7 @@ BLUEPRINT_STAGE_ORDER: tuple[GenerationStage, ...] = (
     GenerationStage.ATOMIC_PROMOTION,
 )
 
-_VISUAL_BRIEF_CAP = 200
 _PROMPT_MAX_CHARS = 1500
-
-
-def clip_visual_brief(brief: str) -> str:
-    """Bound the non-business atmosphere reference so the edit prompt stays
-    within the provider contract (``prompt`` max 1500 chars). Business fields
-    are never compressed by this helper."""
-    if len(brief) <= _VISUAL_BRIEF_CAP:
-        return brief
-    return brief[:_VISUAL_BRIEF_CAP] + "…"
 
 
 def enforce_preview_prompt_budget(prompt: str) -> None:
@@ -79,12 +69,27 @@ def blueprint_icon_prompt(presentation: PresentationSpec) -> str:
 def blueprint_preview_prompt(
     presentation: PresentationSpec,
     gameplay: GameplaySpec,
-    visual_brief: str,
 ) -> str:
+    """Blueprint alias of the shared full-tooltip edit prompt."""
+    return build_full_tooltip_prompt(presentation, gameplay)
+
+
+def build_full_tooltip_prompt(
+    presentation: PresentationSpec,
+    gameplay: GameplaySpec,
+) -> str:
+    """Shared hard-anchor prompt for Ask Gus and Blueprint preview edits.
+
+    The prompt anchors on Stardew Valley's in-game item hover tooltip
+    language with only minimal layout constraints, then the verbatim
+    validated field content. No material/design adjectives (parchment,
+    gradients, corner ornaments) are used: the tooltip *type* is the
+    priority, not surface description.
+    """
     recovery = gameplay.recovery
     buff = gameplay.buff
     if buff is None:
-        buff_text = "无增益行（不要虚构 Buff）"
+        buff_text = "无 Buff：不要生成增益行"
     else:
         attributes = buff.attributes.model_dump(
             exclude_defaults=True, by_alias=True
@@ -93,31 +98,31 @@ def blueprint_preview_prompt(
             f"{key}={value}" for key, value in attributes.items()
         )
         buff_text = (
-            f"增益：{buff.id}，持续{buff.duration_minutes}分钟，"
-            f"属性：{attribute_text}。"
+            f"Buff：{buff.id}，持续{buff.duration_minutes}分钟，"
+            f"属性：{attribute_text}"
         )
     return (
-        "MULTI-IMAGE GENERATIVE EDIT。输入图1是必须保留的真实菜品原图，"
-        "输入图2是同一轮生成的菜品像素图标。以输入图1作为不可替换的摄影底图，"
-        "保持原始宽高比、裁切、食物、器皿、桌面、背景、光影、透视、景深和摄影质感；"
-        "词条卡放置位置由你根据照片构图自主判断：优先背景留白、墙面、桌面或窗景等"
-        "负空间；主体位于中下方时放上方或上侧，主体位于一侧时放相反一侧；不要固定在"
-        "食物正上方或居中，不得遮挡主体。UI 以外区域必须与原图视觉一致。准确复用输入图2"
-        "的轮廓、色板和像素特征，把它自然放在词条卡上方或轻压上边框。"
-        "由图像模型在这一次 EDIT 中生成完整的星露谷物语物品悬浮词条卡，"
-        "不要使用本地模板、Pillow、Canvas、HTML/CSS 或前端组件排版。"
-        "卡片使用饱和暖金橙/蜂蜜橙羊皮纸渐变，多层深棕与橙棕硬边像素框、"
-        "像素装饰角、游戏式分隔线和端点、轻微硬投影、紧凑内边距；标题居中醒目，"
-        "类别用紫色或紫红色强调，体力、生命、Buff、时钟和金币使用统一像素符号。"
-        f"所有可见文字和数字必须逐字逐数来自当前 Blueprint 字段："
-        f"标题={presentation.display_name}；类别={presentation.category_label}；"
-        f"描述={presentation.description}；体力+{recovery.energy_restore}；"
-        f"生命+{recovery.health_restore}；售价={gameplay.sell_price}g；"
+        "输入图1是真实菜品原图，必须作为不可替换的摄影底图保留。"
+        "输入图2是该菜品的像素图标，必须准确复用。"
+        "以输入图1为基础，保持原始宽高比、裁切、食物、器皿、桌面、背景、"
+        "光影、透视、景深和摄影质感不变。不要重画真实照片，不要整体调色，"
+        "不要扩图，不要像素化真实照片。"
+        "在画面留白区域添加一个《星露谷物语》风格的物品悬浮词条框。"
+        "这个词条框必须看起来像 Stardew Valley 游戏内的 item hover tooltip。"
+        "它应该是游戏内物品提示框，而不是海报、菜单、网页卡片、PPT 文本框、"
+        "说明书卡片或羊皮纸公告板。"
+        "词条框放在不遮挡主体的负空间区域。"
+        "像素图标放在词条框上方或轻压上边框。"
+        "除词条框和像素图标外，其余区域保持与原图一致。"
+        "所有文字必须严格来自以下结构化字段，不要增删改，"
+        "不要虚构额外 Buff：\n"
+        f"标题：{presentation.display_name}\n"
+        f"类别：{presentation.category_label}\n"
+        f"描述：{presentation.description}\n"
+        f"能量：+{recovery.energy_restore}\n"
+        f"生命：+{recovery.health_restore}\n"
+        f"售价：{gameplay.sell_price}g\n"
         f"{buff_text}"
-        f"视觉氛围参考（不可作为额外卡片文字）：{clip_visual_brief(visual_brief)}。"
-        "Blueprint 字段是唯一内容真源，模型不得改写名称、分类、描述、数值或 Draft。"
-        "禁止重画、像素化、扩图、裁切或整体调色真实照片；禁止苍白米色网页卡、"
-        "PPT 文本框、餐厅菜单、左右分栏、大面积侧栏、黑色整图边框和额外无关文字。"
     )
 
 

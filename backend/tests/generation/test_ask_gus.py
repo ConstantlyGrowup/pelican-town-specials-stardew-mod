@@ -62,15 +62,12 @@ async def test_ask_gus_stage_order(
         "春日面碗",
         "主菜",
         "一碗带着春天气息的热汤面。",
-        "体力+200",
-        "生命+90",
-        "售价=220g",
-        "饱和暖金橙",
-        "多层深棕与橙棕硬边像素框",
-        "游戏式分隔线",
-        "统一像素符号",
-        "自主判断",
-        "背景留白",
+        "能量：+200",
+        "生命：+90",
+        "售价：220g",
+        "item hover tooltip",
+        "不是海报",
+        "无 Buff：不要生成增益行",
     ):
         assert required_text in preview_request.prompt
     saved = harness.orchestrator.drafts.get(ready_draft.draft_id)
@@ -119,7 +116,7 @@ async def test_preview_stops_without_two_image_edit_capability(
 def test_preview_prompt_stays_within_provider_limit() -> None:
     """The full-tooltip prompt must fit the frozen provider contract
     (prompt <= 1500 chars) even with maximum-length structured fields and a
-    long visual brief; otherwise the EDIT request cannot be constructed."""
+    maximum BuffSpec; otherwise the EDIT request cannot be constructed."""
     from uuid import uuid4
 
     from pelican_town_specials.domain.dish import (
@@ -159,12 +156,25 @@ def test_preview_prompt_stays_within_provider_limit() -> None:
         sellPrice=50000,
         isDrink=False,
         buff=BuffSpec(
-            id="Speed",
-            durationMinutes=10,
-            attributes=BuffAttributes(speed=2),
+            id="益" * 80,
+            durationMinutes=1440,
+            attributes=BuffAttributes(
+                farmingLevel=99999,
+                fishingLevel=99999,
+                miningLevel=99999,
+                foragingLevel=99999,
+                combatLevel=99999,
+                luckLevel=99999,
+                attack=99999,
+                defense=99999,
+                immunity=99999,
+                magneticRadius=99999,
+                maxStamina=99999,
+                speed=99999,
+            ),
         ),
     )
-    prompt = _preview_prompt(presentation, gameplay, "氛" * 1500)
+    prompt = _preview_prompt(presentation, gameplay)
     assert len(prompt) <= 1500
     request = ImageGenerationRequest(
         operation=ImageOperation.EDIT,
@@ -179,81 +189,23 @@ def test_preview_prompt_stays_within_provider_limit() -> None:
     assert request.prompt == prompt
 
 
-async def test_preview_prompt_over_budget_fails_controlled(
-    harness: GenerationHarness, ready_draft
-) -> None:
-    """Maximum legal fields (including a maximum BuffSpec) overflow the
-    provider's 1500-char prompt contract even after the non-business brief is
-    compressed; the run must fail with a controlled non-retryable error before
-    any EDIT provider call, not a ValidationError wrapped as a 500."""
-
-    from pelican_town_specials.domain.dish import (
-        BuffAttributes,
-        BuffSpec,
-        PresentationSpec,
-        RecoverySpec,
+def test_enforce_preview_prompt_budget_rejects_oversized_prompt() -> None:
+    """The shared budget gate still rejects an oversized prompt with a
+    controlled non-retryable error, keeping the provider contract intact even
+    though the current prompt builder stays within it for maximum legal
+    fields."""
+    from pelican_town_specials.domain.errors import AppError
+    from pelican_town_specials.generation.blueprint import (
+        enforce_preview_prompt_budget,
     )
 
-    class MaxFieldsGateway(FakeGateway):
-        async def design_ask_gus(self, request, *, json_only: bool = False):
-            self.calls.append("design")
-            core = core_fixture()
-            return core.model_copy(
-                update={
-                    "presentation": PresentationSpec(
-                        displayName="名" * 60,
-                        internalName="MaxName",
-                        categoryLabel="类" * 40,
-                        description="描" * 400,
-                        tags=[],
-                    ),
-                    "recovery": RecoverySpec(edibility=500),
-                    "sell_price": 50000,
-                    "buff": BuffSpec(
-                        id="益" * 80,
-                        durationMinutes=1440,
-                        attributes=BuffAttributes(
-                            farmingLevel=99999,
-                            fishingLevel=99999,
-                            miningLevel=99999,
-                            foragingLevel=99999,
-                            combatLevel=99999,
-                            luckLevel=99999,
-                            attack=99999,
-                            defense=99999,
-                            immunity=99999,
-                            magneticRadius=99999,
-                            maxStamina=99999,
-                            speed=99999,
-                        ),
-                    ),
-                    "visual_brief": "氛" * 1500,
-                }
-            )
-
-    gateway = MaxFieldsGateway()
-    local_orchestrator = GenerationOrchestrator(
-        draft_repository=harness.draft_repository,
-        attempt_repository=harness.attempt_repository,
-        asset_store=harness.asset_store,
-        catalog=harness.catalog,
-        gateway_factory=lambda: gateway,
-        registry=AttemptRegistry(),
-        min_confidence=0.5,
-    )
-    events = [
-        event
-        async for event in local_orchestrator.run(initial_command(ready_draft))
-    ]
-    assert events[-1].type == "attempt.failed"
-    error = events[-1].error
-    assert error is not None
+    enforce_preview_prompt_budget("词条" * 700)  # within 1500 chars: no-op.
+    with pytest.raises(AppError) as raised:
+        enforce_preview_prompt_budget("词条" * 800)  # > 1500 chars.
+    error = raised.value
     assert error.code == "PTS_PREVIEW_PROMPT_TOO_LONG"
+    assert error.http_status == 422
     assert error.retryable is False
-    # The icon GENERATION ran; the EDIT request never reached the provider.
-    assert gateway.calls == ["analyze", "design", "image"]
-    assert len(gateway.image_requests) == 1
-    assert gateway.image_requests[0].operation is ImageOperation.GENERATION
 
 
 async def test_low_confidence_stops_after_dish_analysis(
