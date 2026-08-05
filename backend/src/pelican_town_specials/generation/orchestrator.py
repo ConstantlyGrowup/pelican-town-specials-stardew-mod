@@ -47,6 +47,7 @@ from pelican_town_specials.images import (
     build_icon_16,
     downscale_for_vision,
 )
+from pelican_town_specials.images.vision_input import VISION_MIN_PIXELS
 from pelican_town_specials.persistence.asset_store import AssetMetadata, FileAssetStore
 from pelican_town_specials.persistence.repositories import (
     AttemptMismatchError,
@@ -202,6 +203,27 @@ def _read_source_image(asset_store: FileAssetStore, draft: DraftRecord) -> bytes
     ref = asset_store.stat(draft.source.original_image_asset_id)
     with asset_store.open(ref) as handle:
         return handle.read()
+
+
+def _image_input_error() -> AppError:
+    return AppError(
+        code="PTS_IMAGE_INPUT_UNSUPPORTED",
+        message="图片无法被图像服务接受：分辨率过低或格式不受支持。请上传更高分辨率的照片。",
+        http_status=422,
+        details={"minPixels": VISION_MIN_PIXELS},
+        retryable=False,
+    )
+
+
+def _prepare_vision_input(data: bytes) -> tuple[bytes, ImageMediaType]:
+    """Shape source bytes for vision/EDIT providers; unsupported inputs (bad
+    format, or aspect ratio that cannot meet the provider minimum pixel count
+    within the max side) fail as a controlled non-retryable error instead of a
+    raw ValueError surfacing as a 500."""
+    try:
+        return downscale_for_vision(data)
+    except ValueError as exc:
+        raise _image_input_error() from exc
 
 
 def _domain_media_type(value: ImageMediaType) -> MediaType:
@@ -590,7 +612,7 @@ class GenerationOrchestrator:
         if stage is GenerationStage.INPUT_VALIDATION:
             self._assets.stat(draft.source.original_image_asset_id)
         elif stage is GenerationStage.DISH_ANALYSIS:
-            vision_data, vision_media = downscale_for_vision(
+            vision_data, vision_media = _prepare_vision_input(
                 _read_source_image(self._assets, draft)
             )
             state.analysis = await gateway.analyze_dish(
@@ -700,7 +722,7 @@ class GenerationOrchestrator:
             assert state.icon_source is not None
             _ensure_image_edit_capability(gateway)
             original_image = _read_source_image(self._assets, draft)
-            edit_image, edit_media_type = downscale_for_vision(original_image)
+            edit_image, edit_media_type = _prepare_vision_input(original_image)
             icon_source_ref = self._assets.stat(state.icon_source_asset_id)
             with self._assets.open(icon_source_ref) as handle:
                 icon_source = handle.read()

@@ -190,6 +190,25 @@ def test_preview_prompt_stays_within_provider_limit() -> None:
     assert request.prompt == prompt
 
 
+def test_prepare_vision_input_rejects_impossible_ratio_controlled() -> None:
+    """An input whose aspect ratio cannot meet the provider minimum pixel
+    count within the max side fails as a controlled non-retryable error, not
+    a raw ValueError surfacing as a 500."""
+    from pelican_town_specials.domain.errors import AppError
+    from pelican_town_specials.generation.orchestrator import (
+        _prepare_vision_input,
+    )
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (16, 2048), "seagreen").save(buffer, format="PNG")
+    with pytest.raises(AppError) as raised:
+        _prepare_vision_input(buffer.getvalue())
+    error = raised.value
+    assert error.code == "PTS_IMAGE_INPUT_UNSUPPORTED"
+    assert error.http_status == 422
+    assert error.retryable is False
+
+
 def test_enforce_preview_prompt_budget_rejects_oversized_prompt() -> None:
     """The shared budget gate still rejects an oversized prompt with a
     controlled non-retryable error, keeping the provider contract intact even

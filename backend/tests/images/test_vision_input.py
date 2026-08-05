@@ -48,14 +48,44 @@ def test_downscales_large_source_to_max_side(fmt: str) -> None:
     assert len(downscaled) * 2 < len(source)
 
 
-def test_small_image_is_not_upscaled_but_reencoded_jpeg() -> None:
+def test_small_image_is_upscaled_to_min_pixels() -> None:
+    # 640x480 (307,200 px) is below the provider floor of 655,360 px and is
+    # upscaled to the smallest aligned size that meets it.
     source = _noise_bytes(width=640, height=480, fmt="PNG")
 
     downscaled, media = downscale_for_vision(source)
 
     assert media is ImageMediaType.JPEG
     image = _assert_jpeg(downscaled)
-    assert image.size == (640, 480)
+    width, height = image.size
+    assert width * height >= 655_360
+    assert width % 16 == 0
+    assert height % 16 == 0
+    assert max(image.size) <= VISION_MAX_SIDE
+    assert width / height == pytest.approx(640 / 480, rel=0.01)
+
+
+def test_small_edit_input_upscaled_to_min_pixels() -> None:
+    # The observed real-world failure: 752x672 (505,344 px) below the floor.
+    source = _noise_bytes(width=752, height=672, fmt="PNG")
+
+    downscaled, _ = downscale_for_vision(source)
+
+    image = _assert_jpeg(downscaled)
+    width, height = image.size
+    assert width * height >= 655_360
+    assert width % 16 == 0
+    assert height % 16 == 0
+    assert max(image.size) <= VISION_MAX_SIDE
+
+
+def test_extreme_ratio_cannot_meet_min_pixels_raises() -> None:
+    # 16x2048 (32,768 px): any upscale that reaches the floor exceeds the
+    # max side, so the input is rejected instead of producing an invalid edit.
+    source = _noise_bytes(width=16, height=2048, fmt="PNG")
+
+    with pytest.raises(ValueError):
+        downscale_for_vision(source)
 
 
 def test_custom_max_side_is_honored() -> None:
