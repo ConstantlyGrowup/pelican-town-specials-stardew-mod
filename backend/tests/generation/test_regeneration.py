@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pelican_town_specials.domain.common import GenerationStage
 from pelican_town_specials.domain.draft import DraftStatus
+from pelican_town_specials.providers.contracts import ImageOperation
 
 from .conftest import (
     GenerationHarness,
@@ -69,3 +70,8 @@ async def test_successful_full_regeneration_replaces_all_fields(
     # The attempt is finished; no active attempt remains on the promoted draft.
     assert restored.active_attempt_id is None
     assert restored.last_attempt_id is not None
+    assert harness.gateway.calls == ["analyze", "design", "image", "image"]
+    assert [request.operation for request in harness.gateway.image_requests] == [
+        ImageOperation.GENERATION,
+        ImageOperation.EDIT,
+    ]

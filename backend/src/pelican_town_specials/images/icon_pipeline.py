@@ -7,7 +7,8 @@ import io
 from PIL import Image
 
 from .input_normalizer import normalize_upload
-from .preview_compositor import PNGBytes
+
+PNGBytes = bytes
 
 
 def build_icon_16(source: bytes) -> PNGBytes:

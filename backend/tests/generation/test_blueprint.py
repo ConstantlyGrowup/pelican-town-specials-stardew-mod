@@ -13,6 +13,8 @@ from pelican_town_specials.generation.blueprint import (
     build_blueprint_visual_brief,
 )
 from pelican_town_specials.generation.events import GenerationEvent
+from pelican_town_specials.images import downscale_for_vision
+from pelican_town_specials.providers.contracts import ImageOperation
 
 from .conftest import (
     GenerationHarness,
@@ -60,8 +62,35 @@ async def test_blueprint_stage_order_and_image_only_calls(
     assert succeeded == list(BLUEPRINT_STAGE_ORDER)
     for forbidden in BLUEPRINT_FORBIDDEN_STAGES:
         assert forbidden not in succeeded
-    # The model is only used for the icon; preview composition is local.
-    assert harness.gateway.calls == ["image"]
+    # The icon is generated first, then the model renders the complete preview
+    # with the original photograph and same-round icon source.
+    assert harness.gateway.calls == ["image", "image"]
+    assert len(harness.gateway.image_requests) == 2
+    icon_request, preview_request = harness.gateway.image_requests
+    assert icon_request.operation is ImageOperation.GENERATION
+    assert preview_request.operation is ImageOperation.EDIT
+    assert len(preview_request.source_images) == 2
+    original_ref = harness.asset_store.stat(
+        blueprint_stale.source.original_image_asset_id
+    )
+    with harness.asset_store.open(original_ref) as handle:
+        original_data = handle.read()
+    downscaled, media_type = downscale_for_vision(original_data)
+    assert preview_request.source_images[0].data == downscaled
+    assert preview_request.source_images[0].media_type is media_type
+    for required_text in (
+        blueprint_stale.presentation.display_name,
+        blueprint_stale.presentation.category_label,
+        blueprint_stale.presentation.description,
+        f"体力+{blueprint_stale.gameplay.recovery.energy_restore}",
+        f"生命+{blueprint_stale.gameplay.recovery.health_restore}",
+        f"售价={blueprint_stale.gameplay.sell_price}g",
+        "饱和暖金橙",
+        "多层深棕与橙棕硬边像素框",
+        "游戏式分隔线",
+        "统一像素符号",
+    ):
+        assert required_text in preview_request.prompt
     assert events[-1].type == "attempt.succeeded"
 
     restored = harness.orchestrator.drafts.get(blueprint_stale.draft_id)
@@ -77,7 +106,7 @@ async def test_blueprint_visual_brief_is_deterministic_and_model_free(
         harness.orchestrator.run(blueprint_preview_command(blueprint_stale))
     )
     # No analyze/design calls: VISUAL_BRIEF is a deterministic user-field function.
-    assert harness.gateway.calls == ["image"]
+    assert harness.gateway.calls == ["image", "image"]
     restored = harness.orchestrator.drafts.get(blueprint_stale.draft_id)
     assert restored.visuals is not None
     assert restored.visuals.visual_brief == build_blueprint_visual_brief(
@@ -142,6 +171,128 @@ async def test_blueprint_cancel_keeps_stale_preview(
     assert holder[-1].type == "attempt.failed"
     assert holder[-1].error is not None
     assert holder[-1].error.code == "PTS_GEN_CANCELLED"
+
+
+def test_blueprint_preview_prompt_stays_within_provider_limit() -> None:
+    """Blueprint prompt must fit the 1500-char provider contract even with
+    maximum-length user fields and the longest deterministic visual brief."""
+    from pelican_town_specials.domain.dish import (
+        GameIngredient,
+        GameplaySpec,
+        PresentationSpec,
+        RecoverySpec,
+    )
+    from pelican_town_specials.generation.blueprint import (
+        blueprint_preview_prompt,
+        build_blueprint_visual_brief,
+    )
+
+    presentation = PresentationSpec(
+        displayName="名" * 60,
+        internalName="MaxName",
+        categoryLabel="类" * 40,
+        description="描" * 400,
+        tags=[],
+    )
+    gameplay = GameplaySpec(
+        ingredients=[
+            GameIngredient(
+                itemId=str(index),
+                displayName="材" * 80,
+                quantity=1,
+                mappingReason="catalog match",
+                catalogVersion="stardew-1.6.15-v1",
+            )
+            for index in range(8)
+        ],
+        recovery=RecoverySpec(edibility=500),
+        sellPrice=50000,
+        isDrink=False,
+    )
+    brief = build_blueprint_visual_brief(presentation, gameplay)
+    prompt = blueprint_preview_prompt(presentation, gameplay, brief)
+    assert len(prompt) <= 1500
+
+
+async def test_blueprint_preview_prompt_over_budget_fails_controlled(
+    harness: GenerationHarness, blueprint_stale
+) -> None:
+    """Maximum legal Blueprint fields (longest presentation, 8 max-length
+    ingredients, maximum BuffSpec) overflow the provider's 1500-char prompt
+    contract; the run must fail with a controlled non-retryable error before
+    any EDIT provider call and keep the STALE_PREVIEW semantics."""
+    from pelican_town_specials.domain.dish import (
+        BuffAttributes,
+        BuffSpec,
+        GameIngredient,
+        GameplaySpec,
+        PresentationSpec,
+        RecoverySpec,
+    )
+
+    maxed = blueprint_stale.model_copy(
+        update={
+            "presentation": PresentationSpec(
+                displayName="名" * 60,
+                internalName="MaxName",
+                categoryLabel="类" * 40,
+                description="描" * 400,
+                tags=[],
+            ),
+            "gameplay": GameplaySpec(
+                ingredients=[
+                    GameIngredient(
+                        itemId=str(index),
+                        displayName="材" * 80,
+                        quantity=1,
+                        mappingReason="catalog match",
+                        catalogVersion="stardew-1.6.15-v1",
+                    )
+                    for index in range(8)
+                ],
+                recovery=RecoverySpec(edibility=500),
+                sellPrice=50000,
+                isDrink=False,
+                buff=BuffSpec(
+                    id="益" * 80,
+                    durationMinutes=1440,
+                    attributes=BuffAttributes(
+                        farmingLevel=99999,
+                        fishingLevel=99999,
+                        miningLevel=99999,
+                        foragingLevel=99999,
+                        combatLevel=99999,
+                        luckLevel=99999,
+                        attack=99999,
+                        defense=99999,
+                        immunity=99999,
+                        magneticRadius=99999,
+                        maxStamina=99999,
+                        speed=99999,
+                    ),
+                ),
+            ),
+        }
+    )
+    saved = harness.orchestrator.drafts.save(
+        maxed, expected_revision=blueprint_stale.revision
+    )
+    events = await _collect(
+        harness.orchestrator.run(blueprint_preview_command(saved))
+    )
+    assert events[-1].type == "attempt.failed"
+    error = events[-1].error
+    assert error is not None
+    assert error.code == "PTS_PREVIEW_PROMPT_TOO_LONG"
+    assert error.retryable is False
+    # Only the icon GENERATION ran; the EDIT request never reached the provider.
+    assert harness.gateway.calls == ["image"]
+    assert len(harness.gateway.image_requests) == 1
+    assert harness.gateway.image_requests[0].operation is ImageOperation.GENERATION
+    restored = harness.orchestrator.drafts.get(saved.draft_id)
+    assert restored.status is DraftStatus.STALE_PREVIEW
+    assert restored.presentation == maxed.presentation
+    assert restored.gameplay == maxed.gameplay
 
 
 async def test_blueprint_preserves_provenance_and_cache_eligibility(

@@ -44,9 +44,7 @@ from pelican_town_specials.domain.errors import AppError, ErrorPayload, ErrorSum
 from pelican_town_specials.domain.state_machine import DraftAction, transition
 from pelican_town_specials.domain.validation import ValidationSeverity, validate_draft
 from pelican_town_specials.images import (
-    PreviewSnapshot,
     build_icon_16,
-    compose_preview,
     downscale_for_vision,
 )
 from pelican_town_specials.persistence.asset_store import AssetMetadata, FileAssetStore
@@ -72,7 +70,10 @@ from .attempt_registry import AttemptRegistry
 from .blueprint import (
     BLUEPRINT_STAGE_ORDER,
     blueprint_icon_prompt,
+    blueprint_preview_prompt,
     build_blueprint_visual_brief,
+    clip_visual_brief,
+    enforce_preview_prompt_budget,
 )
 from .events import (
     GenerationEvent,
@@ -86,7 +87,7 @@ from .events import (
 STAGE_ORDER = tuple(GenerationStage)
 
 _ASK_GUS_PROMPT_VERSION = "ask-gus-v1"
-_VISUAL_PROMPT_VERSION = "visual-v2-local-composite"
+_VISUAL_PROMPT_VERSION = "visual-v3-multi-image-edit"
 _ICON_SIZE = "1024x1024"
 
 
@@ -220,8 +221,54 @@ def _image_dimensions(data: bytes) -> tuple[int, int]:
         return image.size
 
 
+def _preview_size(data: bytes) -> str:
+    width, height = _image_dimensions(data)
+    return f"{width}x{height}"
+
+
 def _icon_prompt(core: GeneratedDishCore) -> str:
     return f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
+
+
+def _buff_prompt(gameplay: GameplaySpec) -> str:
+    buff = gameplay.buff
+    if buff is None:
+        return "无增益行（不要虚构 Buff）"
+    attributes = buff.attributes.model_dump(exclude_defaults=True, by_alias=True)
+    attribute_text = "、".join(f"{key}={value}" for key, value in attributes.items())
+    return (
+        f"增益：{buff.id}，持续{buff.duration_minutes}分钟，"
+        f"属性：{attribute_text}。"
+    )
+
+
+def _preview_prompt(
+    presentation: PresentationSpec,
+    gameplay: GameplaySpec,
+    visual_brief: str,
+) -> str:
+    """Build the model-owned full tooltip edit prompt from validated fields."""
+    recovery = gameplay.recovery
+    return (
+        "MULTI-IMAGE GENERATIVE EDIT。输入图1是必须保留的真实菜品原图，"
+        "输入图2是同一轮生成的菜品像素图标。以输入图1作为不可替换的摄影底图，"
+        "保持原始宽高比、裁切、食物、器皿、桌面、背景、光影、透视、景深和摄影质感；"
+        "只在不遮挡主体的负空间叠加 UI，UI 以外区域必须与原图视觉一致。准确复用输入图2"
+        "的轮廓、色板和像素特征，把它自然放在词条卡上方或轻压上边框。"
+        "由图像模型在这一次 EDIT 中生成完整的星露谷物语物品悬浮词条卡，"
+        "不要使用本地模板、Pillow、Canvas、HTML/CSS 或前端组件排版。"
+        "卡片使用饱和暖金橙/蜂蜜橙羊皮纸渐变，多层深棕与橙棕硬边像素框、"
+        "像素装饰角、游戏式分隔线和端点、轻微硬投影、紧凑内边距；标题居中醒目，"
+        "类别用紫色或紫红色强调，体力、生命、Buff、时钟和金币使用统一像素符号。"
+        f"所有可见文字和数字必须逐字逐数来自已验证结构化字段："
+        f"标题={presentation.display_name}；类别={presentation.category_label}；"
+        f"描述={presentation.description}；体力+{recovery.energy_restore}；"
+        f"生命+{recovery.health_restore}；售价={gameplay.sell_price}g；"
+        f"{_buff_prompt(gameplay)}"
+        f"视觉氛围参考（不可作为额外卡片文字）：{clip_visual_brief(visual_brief)}。"
+        "禁止重画、像素化、扩图、裁切或整体调色真实照片；禁止苍白米色网页卡、"
+        "PPT 文本框、餐厅菜单、左右分栏、大面积侧栏、黑色整图边框和额外无关文字。"
+    )
 
 
 def _to_summary(error: AppError) -> ErrorSummary:
@@ -312,6 +359,32 @@ def _validation_error() -> AppError:
         details={},
         retryable=False,
     )
+
+
+def _image_edit_capability_error() -> AppError:
+    return AppError(
+        code="PTS_PROVIDER_IMAGE_EDIT_UNSUPPORTED",
+        message="当前图像服务不支持双图编辑，无法生成词条卡预览。",
+        http_status=502,
+        details={"requiredCapability": "multi-image-edit"},
+        retryable=False,
+    )
+
+
+def _ensure_image_edit_capability(gateway: ModelGateway) -> None:
+    """Honor an explicitly reported capability without changing the gateway API.
+
+    The current OpenAI-compatible gateway already exposes the EDIT transport
+    path, so it has no capability property to consult. Probe-aware gateways may
+    attach either ``image_edits_supported`` or ``capabilities.image_edits``;
+    an explicit false stops the stage and never enables a local fallback.
+    """
+    if getattr(gateway, "image_edits_supported", None) is False:
+        raise _image_edit_capability_error()
+    capabilities = getattr(gateway, "capabilities", None)
+    image_edits = getattr(capabilities, "image_edits", None)
+    if image_edits is not None and getattr(image_edits, "supported", True) is False:
+        raise _image_edit_capability_error()
 
 
 def _stale_error() -> AppError:
@@ -639,31 +712,61 @@ class GenerationOrchestrator:
                 assert state.visual_brief is not None
                 snapshot_presentation = draft.presentation
                 snapshot_gameplay = draft.gameplay
+                prompt = blueprint_preview_prompt(
+                    snapshot_presentation,
+                    snapshot_gameplay,
+                    state.visual_brief,
+                )
             else:
                 assert state.core is not None
                 assert state.presentation is not None
                 assert state.gameplay is not None
+                assert state.visual_brief is not None
                 snapshot_presentation = state.presentation
                 snapshot_gameplay = state.gameplay
-            assert state.icon_16 is not None
+                prompt = _preview_prompt(
+                    snapshot_presentation,
+                    snapshot_gameplay,
+                    state.visual_brief,
+                )
+            # Shared final budget gate for both modes: business fields stay
+            # verbatim; an over-limit prompt fails controlled, pre-provider.
+            enforce_preview_prompt_budget(prompt)
+            assert state.icon_source_asset_id is not None
+            assert state.icon_source is not None
+            _ensure_image_edit_capability(gateway)
             original_image = _read_source_image(self._assets, draft)
-            with self._assets.open(state.icon_16) as handle:
-                icon_16 = handle.read()
-            preview_bytes = compose_preview(
-                PreviewSnapshot(
-                    original_image=original_image,
-                    icon_16=icon_16,
-                    presentation=snapshot_presentation,
-                    gameplay=snapshot_gameplay,
+            edit_image, edit_media_type = downscale_for_vision(original_image)
+            icon_source_ref = self._assets.stat(state.icon_source_asset_id)
+            with self._assets.open(icon_source_ref) as handle:
+                icon_source = handle.read()
+            generated_preview = await gateway.generate_image(
+                ImageGenerationRequest(
+                    operation=ImageOperation.EDIT,
+                    prompt=prompt,
+                    source_images=[
+                        ProviderImageInput(
+                            data=edit_image,
+                            media_type=edit_media_type,
+                        ),
+                        ProviderImageInput(
+                            data=icon_source,
+                            media_type=state.icon_source.media_type,
+                        ),
+                    ],
+                    size=_preview_size(edit_image),
+                    request_id=state.command.request_id,
                 )
             )
-            preview_w, preview_h = _image_dimensions(preview_bytes)
+            preview_w, preview_h = _image_dimensions(generated_preview.data)
             state.preview = self._assets.put(
-                preview_bytes,
+                generated_preview.data,
                 AssetMetadata(
                     kind=AssetKind.PREVIEW,
-                    mediaType=MediaType.PNG,
-                    fileExtension=".png",
+                    mediaType=_domain_media_type(generated_preview.media_type),
+                    fileExtension=_extension_for_media_type(
+                        generated_preview.media_type
+                    ),
                     width=preview_w,
                     height=preview_h,
                 ),

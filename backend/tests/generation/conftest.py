@@ -48,7 +48,9 @@ from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import (
     GeneratedDishCore,
     GeneratedImage,
+    ImageGenerationRequest,
     ImageMediaType,
+    ImageOperation,
     SemanticRecipeIngredient,
 )
 
@@ -75,9 +77,12 @@ EXPECTED_ASK_GUS_STAGES = [
 ]
 
 
-def _png_bytes(*, size: int = 128, color: str = "tomato") -> bytes:
+def _png_bytes(
+    *, size: int | tuple[int, int] = 128, color: str = "tomato"
+) -> bytes:
     output = io.BytesIO()
-    Image.new("RGB", (size, size), color).save(output, format="PNG")
+    dimensions = (size, size) if isinstance(size, int) else size
+    Image.new("RGB", dimensions, color).save(output, format="PNG")
     return output.getvalue()
 
 
@@ -133,11 +138,14 @@ class FakeGateway:
         confidence: float = 0.9,
         fail_stage: GenerationStage | None = None,
         delay: float = 0.0,
+        image_edits_supported: bool | None = None,
     ) -> None:
         self.confidence = confidence
         self.fail_stage = fail_stage
         self.delay = delay
+        self.image_edits_supported = image_edits_supported
         self.calls: list[str] = []
+        self.image_requests: list[ImageGenerationRequest] = []
 
     async def analyze_dish(
         self, request, *, json_only: bool = False
@@ -161,16 +169,26 @@ class FakeGateway:
 
     async def generate_image(self, request) -> GeneratedImage:
         self.calls.append("image")
+        self.image_requests.append(request)
         if self.delay:
             await asyncio.sleep(self.delay)
-        if self.fail_stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION:
+        if (
+            self.fail_stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION
+            and request.operation is ImageOperation.GENERATION
+        ):
             raise RuntimeError("fake icon generation failure")
         if (
             self.fail_stage
             is GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION
+            and request.operation is ImageOperation.EDIT
         ):
             raise RuntimeError("fake preview generation failure")
-        return GeneratedImage(data=_png_bytes(), media_type=ImageMediaType.PNG)
+        output_size = (
+            128 if request.operation is ImageOperation.GENERATION else (96, 64)
+        )
+        return GeneratedImage(
+            data=_png_bytes(size=output_size), media_type=ImageMediaType.PNG
+        )
 
 
 @dataclass
