@@ -69,6 +69,7 @@ async def test_blueprint_stage_order_and_image_only_calls(
     icon_request, preview_request = harness.gateway.image_requests
     assert icon_request.operation is ImageOperation.GENERATION
     assert preview_request.operation is ImageOperation.EDIT
+    assert preview_request.quality == "high"
     assert len(preview_request.source_images) == 2
     original_ref = harness.asset_store.stat(
         blueprint_stale.source.original_image_asset_id
@@ -89,6 +90,8 @@ async def test_blueprint_stage_order_and_image_only_calls(
         "多层深棕与橙棕硬边像素框",
         "游戏式分隔线",
         "统一像素符号",
+        "自主判断",
+        "背景留白",
     ):
         assert required_text in preview_request.prompt
     assert events[-1].type == "attempt.succeeded"

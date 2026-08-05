@@ -56,6 +56,7 @@ async def test_ask_gus_stage_order(
     assert icon_request.operation is ImageOperation.GENERATION
     assert icon_request.source_images == []
     assert preview_request.operation is ImageOperation.EDIT
+    assert preview_request.quality == "high"
     assert len(preview_request.source_images) == 2
     for required_text in (
         "春日面碗",
@@ -68,6 +69,8 @@ async def test_ask_gus_stage_order(
         "多层深棕与橙棕硬边像素框",
         "游戏式分隔线",
         "统一像素符号",
+        "自主判断",
+        "背景留白",
     ):
         assert required_text in preview_request.prompt
     saved = harness.orchestrator.drafts.get(ready_draft.draft_id)
