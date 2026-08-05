@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-r9-prompt-anchor |
+| active_session_id | 2026-08-05-r10-buff-tooltip-prompt |
 | active_session_state | committed |
 | active_session_type | milestone-acceptance-fix |
-| current_task | Milestone 3 验收修复（R1–R9）已提交；等待用户重测 Ask Gus 完整流程、Blueprint 重试/删除与模型生成预览 |
+| current_task | Milestone 3 验收修复（R1–R10）已提交；等待用户重测模型生成预览 |
 | blocker | 无（等待用户重测反馈；通过后进入 Milestone 3 全量验收与统一 push） |
-| next_action | 用户重测 Ask Gus 完整流程（R7 尺寸 400 已修、R8 位置自适应 + quality=high、R9 prompt 精简为 Stardew tooltip 锚点）、Blueprint 重试/删除、首页草稿区、三页预览/图标渲染；通过后全量验收与 push |
+| next_action | 用户重测含 Buff 菜品的词条图：逐行中文 Buff、像素状态图标、分隔线、H:MM 持续时间与末行售价；同时确认无 Buff 菜品不生成持续时间行 |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | a727a8f（fix: anchor preview prompt on stardew tooltip language） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992/90700b6/787b82c/a727a8f）已本地提交，未推送（Milestone 门） |
-| 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
+| 最新提交 | 732b3ac（fix: format buff rows in stardew tooltip prompt） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992/90700b6/787b82c/a727a8f/732b3ac）已本地提交，未 push（Milestone 门） |
+| 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
 - `2026-08-04-task-13-generation-orchestrator` 已从上下文溢出后的部分工作树恢复，完成 Ask Gus 生成 Orchestrator、NDJSON 流式事件与完整重生成，独立只读 Review Subagent 首轮 `PASS`（无 MUST_FIX），auto_accepted 后创建本地 focused commit `5949516`（不 push）。
@@ -49,6 +49,13 @@
 - 验证：vitest 52 passed；Playwright E2E 7 passed；build/lint 通过；后端 428 passed/2 skipped（无后端改动）。
 - 已知限制：后端 FAILED 重试未接线（`RETRY_FAILED_GENERATION` 已存在于状态机），FAILED ask-gus 草稿无操作入口；延后为单独后端 Task。
 - **Milestone 3（Task 11–15）全部完成**：本地 commits（10aa141/9555a55/145e164、5949516/aca590b、daeacfd/5df2352、038635a）均已本地提交、未 push。
+
+## 当前 R10 Session（committed）
+
+- `2026-08-05-r10-buff-tooltip-prompt`：按用户参考图将 Buff 从内部摘要改为逐行中文展示，持续时间改为 `H:MM`，并补充状态/时钟/金币像素图标与分隔线的最小布局要求；保持 R9 的 Stardew item hover tooltip 硬锚点。
+- 实现（commit `732b3ac`）：12 个非零 Buff 属性固定中文映射与显式正负号；隐藏 Buff ID/内部键名；420→`7:00`、490→`8:10`；无 Buff 时省略 Buff 与持续时间；售价固定末行；Ask Gus/Blueprint 共用 builder。
+- 验证：TDD RED 2 failed→GREEN focused 20 passed；全量 backend 465 passed/2 skipped；Ruff、Mypy、diff-check clean；独立只读 Review PASS，无 MUST_FIX。
+- 实际 Review 为 `gpt-5.6-sol/max`；项目指定的 gpt-Luna 路由在当前工具面不可用，未静默冒充。真实模型视觉效果等待用户重测；未 push。
 
 ## 当前 R9 Session（committed）
 
