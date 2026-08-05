@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | committed |
-| project_phase | milestone-3-openai-compatible-generation |
+| overall_state | milestone-3-accepted |
+| project_phase | milestone-4-content-patcher-compiler |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-r11-min-pixels |
-| active_session_state | committed |
-| active_session_type | milestone-acceptance-fix |
-| current_task | Milestone 3 验收修复（R1–R11）已提交；等待用户重测模型生成预览 |
-| blocker | 无（等待用户重测反馈；通过后进入 Milestone 3 全量验收与统一 push） |
-| next_action | 用户重测 Ask Gus 完整流程：含 Buff 词条图（逐行中文 Buff、H:MM 持续时间、像素图标）、无 Buff 不生成持续时间行、预览渲染（R11 已修复最小像素 400）；通过后全量验收与 push |
+| active_session_id | 2026-08-05-task-16-mod-compiler |
+| active_session_state | active |
+| active_session_type | implementation |
+| current_task | Task 16：实现 deterministic Content Patcher 编译器（mod_compiler 包） |
+| blocker | 无（Milestone 3 验收已通过；本地 commits 待用户授权统一 push；Task 16 实施进行中） |
+| next_action | Task 16 实施子代理 TDD 实现 → Codex 审阅（gpt-5.6-luna/xhigh）→ PASS 后本地 focused commit；Milestone 3 push 待授权 |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -22,12 +22,22 @@
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
+| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 8f36b6d（fix: enforce provider minimum pixels for vision inputs） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992/90700b6/787b82c/a727a8f/732b3ac/8f36b6d）已本地提交，未 push（Milestone 门） |
+| 最新提交 | 916e3da（docs: record R11 min pixels fix session） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`（非本 Session 产物） |
+
+## 当前 Milestone 3 验收 Session（accepted）
+
+- `2026-08-05-milestone3-acceptance`：用户 2026-08-05 宣布 Milestone 3 验收通过（R1–R11 全部修复已本地提交）。验收范围：Task 11–15（OpenAI-compatible generation）+ 验收修复 R1–R11（含 provider 入参约束 16 倍数/最小像素、Stardew tooltip prompt 硬锚点、双图 EDIT 管线、Buff 逐行中文展示）。
+- 本地 commits 等待用户授权统一 push 至 origin/feat/mvp-implementation。
+
+## 当前 Task 16 Session（active）
+
+- `2026-08-05-task-16-mod-compiler`：Milestone 4 首个 Task（deterministic Content Patcher compiler）。Context Packet 已生成（`docs/plans/2026-08-05-task-16-mod-compiler-packet.md`，gitignored，`mvp-task-16-mod-compiler-v1`）；闭包检查完成（复用 `ValidationReport`/`validate_gameplay`/`WorkspacePaths.author_name`）。
+- 实施子代理 TDD 执行中，完成后桥接 Codex 审阅（gpt-5.6-luna/xhigh）。
 ## 当前 Task 13 Session（committed）
 
 - `2026-08-04-task-13-generation-orchestrator` 已从上下文溢出后的部分工作树恢复，完成 Ask Gus 生成 Orchestrator、NDJSON 流式事件与完整重生成，独立只读 Review Subagent 首轮 `PASS`（无 MUST_FIX），auto_accepted 后创建本地 focused commit `5949516`（不 push）。
