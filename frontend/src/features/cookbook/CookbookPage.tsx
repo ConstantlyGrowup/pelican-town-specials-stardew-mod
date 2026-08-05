@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
@@ -22,6 +22,7 @@ async function loadCookbook(): Promise<CookbookDishSummary[]> {
 
 export function CookbookPage() {
   const copy = PRODUCT_COPY.zh;
+  const navigate = useNavigate();
   const selectedIds = useSyncExternalStore(subscribeSelection, getSelectedDishIds);
   const query = useQuery({
     queryKey: ["cookbook"],
@@ -56,6 +57,14 @@ export function CookbookPage() {
           </li>
         ))}
       </ul>
+      <button
+        className="btn btn-primary"
+        type="button"
+        disabled={selectedIds.size === 0}
+        onClick={() => navigate("/pack-menu")}
+      >
+        {copy.packMenu}
+      </button>
     </main>
   );
 }

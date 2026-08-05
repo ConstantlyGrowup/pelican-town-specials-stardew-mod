@@ -10,6 +10,7 @@ from pelican_town_specials.application.assets import AssetService
 from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
+from pelican_town_specials.application.exports import ExportService
 from pelican_town_specials.application.generation import GenerationService
 from pelican_town_specials.application.meta import MetaService
 from pelican_town_specials.catalog.repository import VanillaCatalog
@@ -55,6 +56,10 @@ def draft_service(request: Request) -> DraftService:
 
 def cookbook_service(request: Request) -> CookbookService:
     return cast(CookbookService, request.app.state.cookbook_service)
+
+
+def export_service(request: Request) -> ExportService:
+    return cast(ExportService, request.app.state.export_service)
 
 
 def generation_service(request: Request) -> GenerationService:

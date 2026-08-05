@@ -7,6 +7,8 @@ import { CookbookDetailPage } from "../features/cookbook/CookbookDetailPage";
 import { CookbookPage } from "../features/cookbook/CookbookPage";
 import { AskGusReviewPage } from "../features/draft/AskGusReviewPage";
 import { BlueprintEditorPage } from "../features/draft/BlueprintEditorPage";
+import { BringInGamePage } from "../features/export/BringInGamePage";
+import { PackMenuPage } from "../features/export/PackMenuPage";
 import { HomePage } from "../features/home/HomePage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { PRODUCT_COPY } from "../i18n/copy";
@@ -68,6 +70,8 @@ export function AppRouter() {
         <Route path="drafts/:draftId" element={<DraftRoute />} />
         <Route path="cookbook" element={<CookbookPage />} />
         <Route path="cookbook/:dishId" element={<CookbookDetailPage />} />
+        <Route path="pack-menu" element={<PackMenuPage />} />
+        <Route path="bring-in-game/:exportId" element={<BringInGamePage />} />
         <Route
           path="*"
           element={

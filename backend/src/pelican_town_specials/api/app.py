@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -19,6 +20,7 @@ from pelican_town_specials.api.routes import (
     catalog,
     cookbook,
     drafts,
+    exports,
     generation,
     health,
     meta,
@@ -37,6 +39,7 @@ from pelican_town_specials.application.assets import AssetService
 from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
+from pelican_town_specials.application.exports import ExportService
 from pelican_town_specials.application.generation import GenerationService
 from pelican_town_specials.application.meta import MetaService
 from pelican_town_specials.application.settings import (
@@ -49,10 +52,12 @@ from pelican_town_specials.config import AppConfig
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
+from pelican_town_specials.mod_compiler.compiler import ContentPatcherCompiler
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+    ExportRepository,
     GenerationAttemptRepository,
 )
 from pelican_town_specials.persistence.secret_store import WindowsEnvironmentSecretStore
@@ -87,6 +92,7 @@ def create_app(
     cookbook_service: CookbookService | None = None,
     attempt_repository: GenerationAttemptRepository | None = None,
     generation_service: GenerationService | None = None,
+    export_service: ExportService | None = None,
 ) -> FastAPI:
     app_config = config if config is not None else AppConfig()
     resolved_workspace = workspace_paths or WorkspacePaths.create(
@@ -113,6 +119,20 @@ def create_app(
     )
     resolved_cookbook_service = cookbook_service or CookbookService(
         resolved_archive_repository
+    )
+    resolved_export_repository = ExportRepository(resolved_workspace)
+    resolved_compiler = ContentPatcherCompiler(
+        asset_store=resolved_asset_store,
+        author_name=resolved_workspace.author_name,
+    )
+    resolved_export_service = export_service or ExportService(
+        export_repository=resolved_export_repository,
+        archive_repository=resolved_archive_repository,
+        asset_store=resolved_asset_store,
+        catalog=resolved_catalog,
+        compiler=resolved_compiler,
+        workspace=resolved_workspace,
+        open_folder=_default_open_folder(),
     )
     resolved_catalog_service = CatalogService(resolved_catalog)
     resolved_meta_service = MetaService()
@@ -188,6 +208,8 @@ def create_app(
     app.state.attempt_repository = resolved_attempt_repository
     app.state.generation_service = resolved_generation_service
     app.state.attempt_registry = attempt_registry
+    app.state.export_repository = resolved_export_repository
+    app.state.export_service = resolved_export_service
     register_error_handlers(app)
     app.include_router(session.router)
     app.include_router(app_control.router)
@@ -199,6 +221,7 @@ def create_app(
     app.include_router(cookbook.router, prefix="/api/v1")
     app.include_router(catalog.router, prefix="/api/v1")
     app.include_router(meta.router, prefix="/api/v1")
+    app.include_router(exports.router, prefix="/api/v1")
 
     @app.middleware("http")
     async def enforce_local_session(
@@ -261,6 +284,17 @@ def create_app(
 def _load_default_catalog() -> VanillaCatalog:
     repo_root = Path(__file__).resolve().parents[4]
     return VanillaCatalog.from_json(repo_root / _CATALOG_RELATIVE_PATH)
+
+
+def _default_open_folder() -> Callable[[Path], None] | None:
+    """Return the OS file explorer opener on Windows; None elsewhere.
+
+    The export service always verifies the target stays inside the registered
+    exports directory before invoking this adapter (ruling R17-3).
+    """
+    if os.name == "nt":
+        return os.startfile  # type: ignore[return-value]
+    return None
 
 
 def _gateway_factory(

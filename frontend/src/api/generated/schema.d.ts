@@ -246,7 +246,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Discard Draft */
+        /**
+         * Discard Draft
+         * @description Permanently delete a draft.
+         *
+         *     Removes the draft record directory, its generation attempts, and asset
+         *     files exclusively owned by the draft. Assets shared with other drafts or
+         *     archived dishes are preserved. ARCHIVED drafts are rejected. The request
+         *     and response contract is unchanged.
+         */
         post: operations["discard_draft_api_v1_drafts__draft_id__discard_post"];
         delete?: never;
         options?: never;
@@ -374,6 +382,91 @@ export interface paths {
         get: operations["list_tags_api_v1_meta_tags_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Export Request */
+        post: operations["validate_export_request_api_v1_exports_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Export */
+        post: operations["create_export_api_v1_exports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/{export_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Export */
+        get: operations["get_export_api_v1_exports__export_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/{export_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Export */
+        get: operations["download_export_api_v1_exports__export_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/{export_id}/open-folder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open Export Folder */
+        post: operations["open_export_folder_api_v1_exports__export_id__open_folder_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -810,6 +903,63 @@ export interface components {
             stage?: components["schemas"]["GenerationStage"] | null;
         };
         /**
+         * ExportRecordView
+         * @description API DTO for an export record; never exposes internal provenance.
+         */
+        ExportRecordView: {
+            /**
+             * Exportid
+             * Format: uuid
+             */
+            exportId: string;
+            spec: components["schemas"]["ExportSpec"];
+            /** Authorname */
+            authorName: string;
+            /** Uniqueid */
+            uniqueId: string;
+            status: components["schemas"]["ExportStatus"];
+            /** Dishcontenthashes */
+            dishContentHashes: {
+                [key: string]: string;
+            };
+            /** Compilerversion */
+            compilerVersion: string;
+            /** Gameversion */
+            gameVersion: string;
+            /** Contentpatcherformat */
+            contentPatcherFormat: string;
+            validation: components["schemas"]["ValidationReport"];
+            /** Artifactassetid */
+            artifactAssetId?: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Finishedat */
+            finishedAt?: string | null;
+            error?: components["schemas"]["ErrorSummary"] | null;
+        };
+        /** ExportSpec */
+        ExportSpec: {
+            /** Dishids */
+            dishIds: string[];
+            /** Packdisplayname */
+            packDisplayName: string;
+            /** Packslug */
+            packSlug: string;
+            /** Version */
+            version: string;
+            /** Description */
+            description: string;
+            language: components["schemas"]["Language"];
+        };
+        /**
+         * ExportStatus
+         * @enum {string}
+         */
+        ExportStatus: "VALIDATING" | "BUILDING" | "SUCCEEDED" | "FAILED";
+        /**
          * FieldAuthority
          * @enum {string}
          */
@@ -1043,17 +1193,17 @@ export interface components {
             baseUrl: string;
             /**
              * Visionmodel
-             * @default
+             * @default gpt-5.6-luna
              */
             visionModel: string;
             /**
              * Textmodel
-             * @default
+             * @default gpt-5.6-luna
              */
             textModel: string;
             /**
              * Imagemodel
-             * @default
+             * @default gpt-image-2-max
              */
             imageModel: string;
             /**
@@ -1135,6 +1285,39 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** ValidationIssue */
+        ValidationIssue: {
+            /** Code */
+            code: string;
+            severity: components["schemas"]["ValidationSeverity"];
+            /** Path */
+            path?: string | null;
+            /** Message */
+            message: string;
+            /** Details */
+            details?: {
+                [key: string]: string | number | boolean | null;
+            };
+        };
+        /** ValidationReport */
+        ValidationReport: {
+            /** Valid */
+            valid: boolean;
+            /** Issues */
+            issues?: components["schemas"]["ValidationIssue"][];
+            /**
+             * Validatedat
+             * Format: date-time
+             */
+            validatedAt: string;
+            /** Validatorversion */
+            validatorVersion: string;
+        };
+        /**
+         * ValidationSeverity
+         * @enum {string}
+         */
+        ValidationSeverity: "WARNING" | "ERROR";
         /** VisualSpec */
         VisualSpec: {
             /** Visualbrief */
@@ -1881,6 +2064,165 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Page_MetaOption_"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_export_request_api_v1_exports_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportSpec"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_export_api_v1_exports_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportSpec"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportRecordView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_export_api_v1_exports__export_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportRecordView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_export_api_v1_exports__export_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_export_folder_api_v1_exports__export_id__open_folder_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

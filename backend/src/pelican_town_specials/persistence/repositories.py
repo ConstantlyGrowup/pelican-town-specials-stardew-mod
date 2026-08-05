@@ -26,6 +26,7 @@ from pelican_town_specials.domain.draft import (
     GenerationAttemptKind,
     StageStatus,
 )
+from pelican_town_specials.domain.export import ExportRecord, ExportStatus
 
 from .atomic import atomic_write_json, read_json_with_backup
 from .trash import CookbookTombstone, move_directory_to_trash
@@ -62,10 +63,12 @@ class ArchiveIdempotencyIndex(StrictModel):
 _UUID_FIELD_NAMES = {
     "activeAttemptId",
     "archivedDishId",
+    "artifactAssetId",
     "assetId",
     "attemptId",
     "dishId",
     "draftId",
+    "exportId",
     "generatedArtAssetId",
     "icon16AssetId",
     "iconSourceAssetId",
@@ -82,6 +85,7 @@ _DATETIME_FIELD_NAMES = {
     "occurredAt",
     "startedAt",
     "updatedAt",
+    "validatedAt",
 }
 _ENUM_FIELD_PARSERS = {
     "generationSource": GenerationSource,
@@ -549,6 +553,147 @@ class ArchiveRepository:
             and child.name != str(excluded_dish_id)
         )
         index = ArchiveIndex(dishIds=dish_ids)
+        atomic_write_json(
+            self._index_path, index.model_dump(by_alias=True, mode="json")
+        )
+        return index
+
+
+class ExportIndex(StrictModel):
+    schema_version: int = Field(default=1)
+    export_ids: list[str] = Field(default_factory=list, alias="exportIds")
+
+
+class ExportIdempotencyIndex(StrictModel):
+    schema_version: int = Field(default=1)
+    keys: dict[str, str] = Field(default_factory=dict)
+
+
+def _normalize_export_payload(payload: object) -> object:
+    """Normalize a persisted ExportRecord document for strict model parsing.
+
+    ExportRecord embeds ExportSpec (dishIds UUIDs, language enum),
+    ValidationReport (validatedAt datetime) and ErrorSummary; the shared
+    normalizer does not know the export status enum or the spec's dish id
+    list, so this export-specific pass handles those extra shapes.
+    """
+    if isinstance(payload, list):
+        return [_normalize_export_payload(item) for item in payload]
+    if not isinstance(payload, dict):
+        return payload
+
+    normalized: dict[object, object] = {}
+    for key, value in payload.items():
+        if key == "dishIds" and isinstance(value, list):
+            normalized[key] = [UUID(item) for item in value]
+            continue
+        if key in _UUID_FIELD_NAMES and isinstance(value, str):
+            normalized[key] = UUID(value)
+            continue
+        if key in _DATETIME_FIELD_NAMES and isinstance(value, str):
+            normalized[key] = datetime.fromisoformat(value)
+            continue
+        parser = _ENUM_FIELD_PARSERS.get(key)
+        if key == "status" and isinstance(value, str):
+            parser = ExportStatus
+        if parser is not None and isinstance(value, str):
+            normalized[key] = parser(value)
+            continue
+        normalized[key] = _normalize_export_payload(value)
+    return normalized
+
+
+def _validate_export_payload(payload: object) -> ExportRecord:
+    return ExportRecord.model_validate(_normalize_export_payload(payload))
+
+
+class ExportRepository:
+    """JSON directory + index persistence for export records.
+
+    Each record lives at ``exports/<exportId>/record.json``; an index.json and
+    an idempotency.json map keep the directory listable and replay-safe. The
+    same Idempotency-Key always returns the same exportId (ruling R17-2).
+    """
+
+    def __init__(self, workspace: WorkspacePaths) -> None:
+        self._workspace = workspace
+        self._index_path = workspace.exports_dir / "index.json"
+        self._idempotency_path = workspace.exports_dir / "idempotency.json"
+
+    def add_or_get_by_idempotency_key(
+        self,
+        record: ExportRecord,
+        *,
+        idempotency_key: str,
+    ) -> ExportRecord:
+        idempotency_index = self._load_idempotency_index()
+        mapped_export_id = idempotency_index.keys.get(idempotency_key)
+        if mapped_export_id is not None:
+            return self.get(UUID(mapped_export_id))
+
+        record_path = self._record_path(record.export_id)
+        if record_path.exists():
+            raise IdempotencyConflictError(
+                "export record already exists with a different idempotency key"
+            )
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(
+            record_path, record.model_dump(by_alias=True, mode="json")
+        )
+        idempotency_index.keys[idempotency_key] = str(record.export_id)
+        atomic_write_json(
+            self._idempotency_path,
+            idempotency_index.model_dump(by_alias=True, mode="json"),
+        )
+        self._write_index()
+        return record
+
+    def get(self, export_id: UUID) -> ExportRecord:
+        record_path = self._record_path(export_id)
+        if not record_path.exists():
+            raise FileNotFoundError(f"export record not found: {export_id}")
+        return read_json_with_backup(record_path, _validate_export_payload)
+
+    def save(self, record: ExportRecord) -> ExportRecord:
+        record_path = self._record_path(record.export_id)
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(
+            record_path, record.model_dump(by_alias=True, mode="json")
+        )
+        self._write_index()
+        return record
+
+    def list(self) -> list[ExportRecord]:
+        index = self._load_or_rebuild_index()
+        return [self.get(UUID(export_id)) for export_id in index.export_ids]
+
+    def _record_path(self, export_id: UUID) -> Path:
+        return self._workspace.exports_dir / str(export_id) / "record.json"
+
+    def _load_or_rebuild_index(self) -> ExportIndex:
+        try:
+            return ExportIndex.model_validate(
+                json.loads(self._index_path.read_text(encoding="utf-8"))
+            )
+        except (FileNotFoundError, ValueError, TypeError, json.JSONDecodeError):
+            return self._write_index()
+
+    def _load_idempotency_index(self) -> ExportIdempotencyIndex:
+        try:
+            return read_json_with_backup(
+                self._idempotency_path,
+                ExportIdempotencyIndex.model_validate,
+            )
+        except (FileNotFoundError, ValueError, TypeError, json.JSONDecodeError):
+            return ExportIdempotencyIndex()
+
+    def _write_index(self) -> ExportIndex:
+        export_ids = sorted(
+            child.name
+            for child in self._workspace.exports_dir.iterdir()
+            if child.is_dir() and (child / "record.json").exists()
+        )
+        index = ExportIndex(exportIds=export_ids)
         atomic_write_json(
             self._index_path, index.model_dump(by_alias=True, mode="json")
         )

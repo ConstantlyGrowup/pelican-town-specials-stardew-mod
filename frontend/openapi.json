@@ -516,6 +516,7 @@
     "/api/v1/drafts/{draft_id}/discard": {
       "post": {
         "summary": "Discard Draft",
+        "description": "Permanently delete a draft.\n\nRemoves the draft record directory, its generation attempts, and asset\nfiles exclusively owned by the draft. Assets shared with other drafts or\narchived dishes are preserved. ARCHIVED drafts are rejected. The request\nand response contract is unchanged.",
         "operationId": "discard_draft_api_v1_drafts__draft_id__discard_post",
         "parameters": [
           {
@@ -891,6 +892,211 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports/validate": {
+      "post": {
+        "summary": "Validate Export Request",
+        "operationId": "validate_export_request_api_v1_exports_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports": {
+      "post": {
+        "summary": "Create Export",
+        "operationId": "create_export_api_v1_exports_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportSpec"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportRecordView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports/{export_id}": {
+      "get": {
+        "summary": "Get Export",
+        "operationId": "get_export_api_v1_exports__export_id__get",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportRecordView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports/{export_id}/download": {
+      "get": {
+        "summary": "Download Export",
+        "operationId": "download_export_api_v1_exports__export_id__download_get",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports/{export_id}/open-folder": {
+      "post": {
+        "summary": "Open Export Folder",
+        "operationId": "open_export_folder_api_v1_exports__export_id__open_folder_post",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -1993,6 +2199,169 @@
         ],
         "title": "ErrorSummary"
       },
+      "ExportRecordView": {
+        "properties": {
+          "exportId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Exportid"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ExportSpec"
+          },
+          "authorName": {
+            "type": "string",
+            "title": "Authorname"
+          },
+          "uniqueId": {
+            "type": "string",
+            "title": "Uniqueid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExportStatus"
+          },
+          "dishContentHashes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Dishcontenthashes"
+          },
+          "compilerVersion": {
+            "type": "string",
+            "title": "Compilerversion"
+          },
+          "gameVersion": {
+            "type": "string",
+            "title": "Gameversion"
+          },
+          "contentPatcherFormat": {
+            "type": "string",
+            "title": "Contentpatcherformat"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationReport"
+          },
+          "artifactAssetId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifactassetid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "exportId",
+          "spec",
+          "authorName",
+          "uniqueId",
+          "status",
+          "dishContentHashes",
+          "compilerVersion",
+          "gameVersion",
+          "contentPatcherFormat",
+          "validation",
+          "createdAt"
+        ],
+        "title": "ExportRecordView",
+        "description": "API DTO for an export record; never exposes internal provenance."
+      },
+      "ExportSpec": {
+        "properties": {
+          "dishIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Dishids"
+          },
+          "packDisplayName": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Packdisplayname"
+          },
+          "packSlug": {
+            "type": "string",
+            "maxLength": 48,
+            "minLength": 3,
+            "title": "Packslug"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 5,
+            "title": "Version"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dishIds",
+          "packDisplayName",
+          "packSlug",
+          "version",
+          "description",
+          "language"
+        ],
+        "title": "ExportSpec"
+      },
+      "ExportStatus": {
+        "type": "string",
+        "enum": [
+          "VALIDATING",
+          "BUILDING",
+          "SUCCEEDED",
+          "FAILED"
+        ],
+        "title": "ExportStatus"
+      },
       "FieldAuthority": {
         "type": "string",
         "enum": [
@@ -2633,19 +3002,19 @@
             "type": "string",
             "maxLength": 120,
             "title": "Visionmodel",
-            "default": ""
+            "default": "gpt-5.6-luna"
           },
           "textModel": {
             "type": "string",
             "maxLength": 120,
             "title": "Textmodel",
-            "default": ""
+            "default": "gpt-5.6-luna"
           },
           "imageModel": {
             "type": "string",
             "maxLength": 120,
             "title": "Imagemodel",
-            "default": ""
+            "default": "gpt-image-2-max"
           },
           "chatTimeoutSeconds": {
             "type": "integer",
@@ -2833,6 +3202,103 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ValidationIssue": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/ValidationSeverity"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "severity",
+          "message"
+        ],
+        "title": "ValidationIssue"
+      },
+      "ValidationReport": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssue"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "validatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Validatedat"
+          },
+          "validatorVersion": {
+            "type": "string",
+            "title": "Validatorversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "valid",
+          "validatedAt",
+          "validatorVersion"
+        ],
+        "title": "ValidationReport"
+      },
+      "ValidationSeverity": {
+        "type": "string",
+        "enum": [
+          "WARNING",
+          "ERROR"
+        ],
+        "title": "ValidationSeverity"
       },
       "VisualSpec": {
         "properties": {
