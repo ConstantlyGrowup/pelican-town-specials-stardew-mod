@@ -9,12 +9,12 @@
 | overall_state | milestone-3-accepted |
 | project_phase | milestone-4-content-patcher-compiler |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-task-17-export |
-| active_session_state | active |
-| active_session_type | implementation |
-| current_task | Task 17：Export API、Pack the Menu 与 Bring It In-Game |
-| blocker | 无（Task 16 已完成并本地提交；Task 17 实施进行中） |
-| next_action | Task 17 实施子代理 TDD 实现 → Codex 审阅（gpt-5.6-luna/xhigh）→ PASS 后本地 focused commit |
+| active_session_id | 2026-08-05-task-18-game-validation |
+| active_session_state | awaiting_user_acceptance |
+| active_session_type | implementation + game-acceptance |
+| current_task | Task 18：真实 Stardew Valley 验证（代码部分已提交；等待用户配置 PTS_STARDEW_MODS_DIR 与游戏内人工验收） |
+| blocker | **需要用户介入**：配置真实游戏 Mods 目录 → 部署 → 游戏内 8 项人工验收 → Spike 回写设计 §18 |
+| next_action | 用户设置 `PTS_STARDEW_MODS_DIR`（如 F:\SteamLibrary\...\Mods）并授权部署；运行 `scripts/deploy_local_mod.ps1`；SMAPI 启动游戏按计划 Step 4 完成 8 项验收；证据存 `output/game-validation/<date>/`；包工回写 Spike 结论 |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | fa34d5e（docs: complete Task 16 session verification record） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–17（1730578/be6eb1b/fa34d5e + Task 17 commits）已本地提交未 push（Milestone 4 门） |
+| 最新提交 | 7623e43（docs: record Task 17 export flow session） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18（1730578/be6eb1b/fa34d5e + 2056658/7623e43 + Task 18 commits）已本地提交未 push（Milestone 4 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
 
 ## 当前 Milestone 3 验收 Session（accepted）
@@ -38,6 +38,12 @@
 
 - `2026-08-05-task-16-mod-compiler`：Milestone 4 首个 Task（deterministic Content Patcher compiler）。Context Packet：`mvp-task-16-mod-compiler-v1`。实施子代理 TDD（红→绿 60 passed、回归 208 passed、全量 528 passed/2 skipped），Codex 审阅 **PASS**（round 0，14/14 criterion），本地 focused commit `1730578`（feat）+ `be6eb1b`/`fa34d5e`（docs），未 push。
 - 闭包裁决 R16-1..6：author_name 注入编译器构造；`validate_export` 增 catalog 参数；Buff→Data/Objects.Buffs（Task 18 Spike 冻结）；i18n default/zh 一致；ExportArtifact/compile_to_bytes；staging 为调用方目录。
+
+## 当前 Task 18 Session（committed + 待用户游戏验收）
+
+- `2026-08-05-task-18-game-validation`：Milestone 4 第三个 Task（真实 Stardew Valley 验证与 Spike 冻结）。Context Packet：`mvp-task-18-game-validation-v1`（R18-1..5，gitignored）。自动范围完成：`scripts/validate_mod_zip.py`（拒绝 path traversal/根孤儿/重复/JSON/PNG 校验，`PTS_EXPORT_ZIP_*`）、`scripts/deploy_local_mod.ps1`（Resolve-Path 守卫、默认拒覆盖、`-Replace` 移 `_pts_backup/<timestamp>/`、`-WhatIf`）、`tests/integration/test_release_mod.py`（16 passed）、根级 `pytest.ini`（importlib 模式，Codex 验证接受的 scope_delta）。
+- Codex：round 0 REVISE（T18-VALIDATOR-002 根孤儿未拒）→ round 1 修复 → round 2 **PASS**。包工复跑：集成 16 passed、combined 76 passed、全量 backend 538 passed/2 skipped、ruff/mypy/diff-check clean。auto_accepted，本地 focused commit（未 push）。
+- **下一步（需用户介入）**：配置 `PTS_STARDEW_MODS_DIR` → 部署 → 游戏内 8 项人工验收（SMAPI patch summary、两道菜制作/食用、字段、SpriteIndex、语言回退）→ 证据存 `output/game-validation/<date>/` → 回写设计 §18 与项目索引。
 
 ## 当前 Task 17 Session（committed）
 
