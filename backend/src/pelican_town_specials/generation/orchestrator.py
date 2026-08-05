@@ -170,9 +170,16 @@ def _map_gameplay(
     catalog: VanillaCatalog,
 ) -> GameplaySpec:
     ingredients: list[GameIngredient] = []
+    used_item_ids: set[str] = set()
     for semantic in core.ingredients:
         candidates = _build_candidates(semantic, catalog)
-        mapped = map_ingredient(semantic, candidates, catalog)
+        mapped = map_ingredient(
+            semantic,
+            candidates,
+            catalog,
+            used_item_ids=frozenset(used_item_ids),
+        )
+        used_item_ids.add(mapped.item_id)
         ingredients.append(mapped)
     return GameplaySpec(
         ingredients=ingredients,

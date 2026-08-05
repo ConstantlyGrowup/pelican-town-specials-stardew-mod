@@ -55,6 +55,7 @@ DnsResolver = Callable[[str], list[str]]
 TModel = TypeVar("TModel", bound=BaseModel)
 
 _MAX_IMAGE_BYTES = 20 * 1024 * 1024
+MAX_REPAIRS = 2
 
 
 async def _default_sleep(delay: float) -> None:
@@ -146,7 +147,7 @@ class OpenAICompatibleGateway:
         json_only: bool = False,
     ) -> TModel:
         use_json_schema = not json_only
-        repaired = False
+        repairs = 0
         current_prompt = prompt
         while True:
             body = self._chat_body(
@@ -172,20 +173,20 @@ class OpenAICompatibleGateway:
             if response.status_code >= 400:
                 raise self._provider_error(response)
 
-            content = _extract_chat_text(response)
             try:
+                content = _extract_chat_text(response)
                 return validate_structured(target_type, content)
             except StructuredOutputValidationFailed as exc:
-                if repaired:
+                if repairs >= MAX_REPAIRS:
                     raise self._invalid_structured_output_error(exc.issues) from exc
-                repaired = True
+                repairs += 1
                 current_prompt = _repair_prompt(
                     prompt, json_instruction, exc.issues
                 )
             except StructuredOutputError as exc:
-                if repaired:
+                if repairs >= MAX_REPAIRS:
                     raise self._invalid_structured_output_error([]) from exc
-                repaired = True
+                repairs += 1
                 current_prompt = _repair_prompt_plain(prompt, json_instruction)
 
     async def _generate_edit(
@@ -572,6 +573,8 @@ def _extract_chat_text(response: httpx.Response) -> str:
         payload = response.json()
     except (ValueError, json.JSONDecodeError) as exc:
         raise StructuredOutputError("provider returned invalid JSON") from exc
+    if not isinstance(payload, dict):
+        raise StructuredOutputError("provider response JSON is not an object")
     choices = payload.get("choices")
     if not isinstance(choices, list) or not choices:
         raise StructuredOutputError("provider returned no choices")

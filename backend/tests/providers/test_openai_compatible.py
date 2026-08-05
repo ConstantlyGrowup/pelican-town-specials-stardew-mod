@@ -203,6 +203,134 @@ async def test_structured_output_repairs_once(gateway: OpenAICompatibleGateway) 
 
 
 @respx.mock
+async def test_structured_output_repairs_twice_before_success(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    invalid = json.dumps({**_ANALYSIS_JSON, "confidence": 2.5})
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        side_effect=[
+            _chat_response(invalid),
+            _chat_response(invalid),
+            _chat_response(json.dumps(_ANALYSIS_JSON)),
+        ]
+    )
+
+    result = await gateway.analyze_dish(_analysis_request())
+
+    assert route.call_count == 3
+    assert result.confidence == 0.9
+    repair_prompt = json.loads(route.calls[2].request.content.decode())["messages"][0][
+        "content"
+    ][0]["text"]
+    assert "confidence:less_than_equal" in repair_prompt
+
+
+@respx.mock
+async def test_structured_output_raises_after_three_attempts(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    invalid = json.dumps({**_ANALYSIS_JSON, "confidence": 2.5})
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(invalid)
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        await gateway.analyze_dish(_analysis_request())
+
+    assert excinfo.value.code == "PTS_PROVIDER_INVALID_STRUCTURED_OUTPUT"
+    assert route.call_count == 3
+
+
+@respx.mock
+async def test_structured_output_repairs_json_errors_twice(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    malformed = _chat_response("this is not a JSON object")
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        side_effect=[
+            malformed,
+            malformed,
+            _chat_response(json.dumps(_ANALYSIS_JSON)),
+        ]
+    )
+
+    result = await gateway.analyze_dish(_analysis_request())
+
+    assert route.call_count == 3
+    assert result.recognized_dish == "Spring Noodles"
+
+
+@respx.mock
+async def test_structured_output_raises_after_three_json_errors(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    malformed = _chat_response("this is not a JSON object")
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=malformed
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        await gateway.analyze_dish(_analysis_request())
+
+    assert excinfo.value.code == "PTS_PROVIDER_INVALID_STRUCTURED_OUTPUT"
+    assert route.call_count == 3
+
+
+@respx.mock
+async def test_structured_output_repairs_envelope_errors_twice(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    no_choices = httpx.Response(200, json={"choices": []})
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        side_effect=[
+            no_choices,
+            no_choices,
+            _chat_response(json.dumps(_ANALYSIS_JSON)),
+        ]
+    )
+
+    result = await gateway.analyze_dish(_analysis_request())
+
+    assert route.call_count == 3
+    assert result.recognized_dish == "Spring Noodles"
+
+
+@respx.mock
+async def test_structured_output_raises_after_three_envelope_errors(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    no_choices = httpx.Response(200, json={"choices": []})
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=no_choices
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        await gateway.analyze_dish(_analysis_request())
+
+    assert excinfo.value.code == "PTS_PROVIDER_INVALID_STRUCTURED_OUTPUT"
+    assert route.call_count == 3
+
+
+@respx.mock
+async def test_structured_output_repairs_non_object_json_twice(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    non_object = httpx.Response(200, json=["not", "an", "object"])
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        side_effect=[
+            non_object,
+            non_object,
+            _chat_response(json.dumps(_ANALYSIS_JSON)),
+        ]
+    )
+
+    result = await gateway.analyze_dish(_analysis_request())
+
+    assert route.call_count == 3
+    assert result.recognized_dish == "Spring Noodles"
+
+
+@respx.mock
 async def test_401_is_not_retried(gateway: OpenAICompatibleGateway) -> None:
     route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
         return_value=httpx.Response(401, json={"error": {"message": "bad key"}})

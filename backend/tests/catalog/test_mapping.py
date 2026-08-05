@@ -46,30 +46,66 @@ def test_mapping_cannot_return_id_outside_candidates(
     assert caught.value.details == {}
 
 
-def test_mapping_rejects_empty_candidates(
+def test_mapping_empty_candidates_returns_fallback(
     semantic: SemanticIngredient, catalog: VanillaCatalog
 ) -> None:
-    with pytest.raises(AppError) as caught:
-        map_ingredient(semantic, [], catalog)
+    mapped = map_ingredient(semantic, [], catalog)
 
-    assert caught.value.code == "PTS_VALIDATION_INGREDIENT_CANDIDATES_EMPTY"
-    assert caught.value.http_status == 422
-    assert caught.value.retryable is False
+    assert mapped.item_id == "176"
+    assert mapped.display_name == catalog.require("176").display_name_en
+    assert mapped.quantity == 1
+    assert mapped.catalog_version == catalog.version
+    assert "catalog fallback" in mapped.mapping_reason
 
 
-def test_mapping_rejects_existing_but_unusable_item(
+def test_mapping_unusable_candidate_returns_fallback(
     semantic: SemanticIngredient, catalog: VanillaCatalog
 ) -> None:
-    with pytest.raises(AppError) as caught:
-        map_ingredient(
-            semantic,
-            [CatalogCandidate(item_id="349", score=1.0)],
-            catalog,
-        )
+    mapped = map_ingredient(
+        semantic,
+        [CatalogCandidate(item_id="349", score=1.0)],
+        catalog,
+    )
 
-    assert caught.value.code == "PTS_VALIDATION_INGREDIENT_NOT_USABLE"
-    assert caught.value.http_status == 422
-    assert caught.value.retryable is False
+    assert mapped.item_id == "176"
+    assert mapped.display_name == catalog.require("176").display_name_en
+    assert mapped.quantity == 1
+    assert mapped.catalog_version == catalog.version
+    assert "catalog fallback" in mapped.mapping_reason
+
+
+def test_mapping_two_unmatched_candidates_get_distinct_fallbacks(
+    semantic: SemanticIngredient, catalog: VanillaCatalog
+) -> None:
+    first = map_ingredient(semantic, [], catalog)
+    second = map_ingredient(
+        semantic, [], catalog, used_item_ids=frozenset({first.item_id})
+    )
+
+    assert first.item_id == "176"
+    assert second.item_id != first.item_id
+    assert "catalog fallback" in first.mapping_reason
+    assert "catalog fallback" in second.mapping_reason
+    assert second.display_name == catalog.require(second.item_id).display_name_en
+
+
+def test_mapping_unmatched_after_egg_uses_non_egg_fallback(
+    semantic: SemanticIngredient, catalog: VanillaCatalog
+) -> None:
+    egg = map_ingredient(
+        semantic,
+        [CatalogCandidate(item_id="176", score=1.0)],
+        catalog,
+    )
+    assert egg.item_id == "176"
+    assert egg.mapping_reason == "selected validated vanilla candidate"
+
+    unmatched = map_ingredient(
+        semantic, [], catalog, used_item_ids=frozenset({egg.item_id})
+    )
+
+    assert unmatched.item_id != "176"
+    assert "catalog fallback" in unmatched.mapping_reason
 
 
 def test_mapping_selects_highest_score_and_catalog_facts(
@@ -143,17 +179,20 @@ def test_mapping_checks_all_candidates_before_selecting(
     assert caught.value.code == "PTS_VALIDATION_INGREDIENT_ID_UNKNOWN"
     assert "NotReal" not in caught.value.message
 
-def test_mapping_rejects_all_unusable_candidates(
+def test_mapping_all_unusable_candidates_return_fallback(
     semantic: SemanticIngredient, catalog: VanillaCatalog
 ) -> None:
-    with pytest.raises(AppError) as caught:
-        map_ingredient(
-            semantic,
-            [
-                CatalogCandidate(item_id="349", score=0.9),
-                CatalogCandidate(item_id="351", score=0.8),
-            ],
-            catalog,
-        )
+    mapped = map_ingredient(
+        semantic,
+        [
+            CatalogCandidate(item_id="349", score=0.9),
+            CatalogCandidate(item_id="351", score=0.8),
+        ],
+        catalog,
+    )
 
-    assert caught.value.code == "PTS_VALIDATION_INGREDIENT_NOT_USABLE"
+    assert mapped.item_id == "176"
+    assert mapped.display_name == catalog.require("176").display_name_en
+    assert mapped.quantity == 1
+    assert mapped.catalog_version == catalog.version
+    assert "catalog fallback" in mapped.mapping_reason

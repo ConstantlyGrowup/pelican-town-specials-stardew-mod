@@ -15,12 +15,16 @@ from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.persistence.asset_store import FileAssetStore
-from pelican_town_specials.providers.contracts import ImageMediaType
+from pelican_town_specials.providers.contracts import (
+    ImageMediaType,
+    SemanticRecipeIngredient,
+)
 
 from .conftest import (
     EXPECTED_ASK_GUS_STAGES,
     FakeGateway,
     GenerationHarness,
+    core_fixture,
     initial_command,
     put_original_image,
 )
@@ -75,6 +79,132 @@ async def test_initial_generation_rejects_reviewable_draft(
         ):
             pass
     assert excinfo.value.code == "PTS_STATE_ILLEGAL_TRANSITION"
+
+
+async def test_unmatched_ingredient_uses_catalog_fallback(
+    harness: GenerationHarness,
+) -> None:
+    """A semantic ingredient with no catalog match falls back instead of failing."""
+
+    class BeefGateway(FakeGateway):
+        async def design_ask_gus(self, request, *, json_only: bool = False):
+            self.calls.append("design")
+            core = core_fixture()
+            return core.model_copy(
+                update={
+                    "ingredients": [
+                        SemanticRecipeIngredient(
+                            name="Parsnip", normalizedName="parsnip"
+                        ),
+                        SemanticRecipeIngredient(
+                            name="Spring Onion", normalizedName="spring onion"
+                        ),
+                        SemanticRecipeIngredient(
+                            name="Beef", normalizedName="beef"
+                        ),
+                    ]
+                }
+            )
+
+    local_orchestrator = GenerationOrchestrator(
+        draft_repository=harness.draft_repository,
+        attempt_repository=harness.attempt_repository,
+        asset_store=harness.asset_store,
+        catalog=harness.catalog,
+        gateway_factory=lambda: BeefGateway(),
+        registry=AttemptRegistry(),
+        min_confidence=0.5,
+    )
+    ref = put_original_image(harness)
+    draft = make_domain_draft(
+        mode=DraftMode.ASK_GUS, status=DraftStatus.READY, revision=1
+    )
+    source = draft.source.model_copy(
+        update={"original_image_asset_id": ref.asset_id}
+    )
+    draft = draft.model_copy(update={"source": source})
+    saved = local_orchestrator.drafts.save(draft, expected_revision=None)
+
+    events = [
+        event async for event in local_orchestrator.run(initial_command(saved))
+    ]
+
+    assert events[-1].type == "attempt.succeeded"
+    reloaded = local_orchestrator.drafts.get(saved.draft_id)
+    assert reloaded.status is DraftStatus.REVIEWABLE
+    assert reloaded.gameplay is not None
+    beef = [
+        ingredient
+        for ingredient in reloaded.gameplay.ingredients
+        if ingredient.item_id == "176"
+    ]
+    assert beef
+    assert "catalog fallback" in beef[0].mapping_reason
+
+
+async def test_egg_plus_two_unmatched_ingredients_keep_unique_item_ids(
+    harness: GenerationHarness,
+) -> None:
+    """Egg (matched to item 176) plus two unmatched ingredients must not
+    collide on the fallback item, so GameplaySpec uniqueness still holds."""
+
+    class MultiUnmatchedGateway(FakeGateway):
+        async def design_ask_gus(self, request, *, json_only: bool = False):
+            self.calls.append("design")
+            core = core_fixture()
+            return core.model_copy(
+                update={
+                    "ingredients": [
+                        SemanticRecipeIngredient(
+                            name="Egg", normalizedName="egg"
+                        ),
+                        SemanticRecipeIngredient(
+                            name="Beef", normalizedName="beef"
+                        ),
+                        SemanticRecipeIngredient(
+                            name="Lamb", normalizedName="lamb"
+                        ),
+                    ]
+                }
+            )
+
+    local_orchestrator = GenerationOrchestrator(
+        draft_repository=harness.draft_repository,
+        attempt_repository=harness.attempt_repository,
+        asset_store=harness.asset_store,
+        catalog=harness.catalog,
+        gateway_factory=lambda: MultiUnmatchedGateway(),
+        registry=AttemptRegistry(),
+        min_confidence=0.5,
+    )
+    ref = put_original_image(harness)
+    draft = make_domain_draft(
+        mode=DraftMode.ASK_GUS, status=DraftStatus.READY, revision=1
+    )
+    source = draft.source.model_copy(
+        update={"original_image_asset_id": ref.asset_id}
+    )
+    draft = draft.model_copy(update={"source": source})
+    saved = local_orchestrator.drafts.save(draft, expected_revision=None)
+
+    events = [
+        event async for event in local_orchestrator.run(initial_command(saved))
+    ]
+
+    assert events[-1].type == "attempt.succeeded"
+    reloaded = local_orchestrator.drafts.get(saved.draft_id)
+    assert reloaded.status is DraftStatus.REVIEWABLE
+    assert reloaded.gameplay is not None
+    item_ids = [ingredient.item_id for ingredient in reloaded.gameplay.ingredients]
+    assert len(item_ids) == len(set(item_ids))
+    assert "176" in item_ids
+    fallbacks = [
+        ingredient
+        for ingredient in reloaded.gameplay.ingredients
+        if "catalog fallback" in ingredient.mapping_reason
+    ]
+    assert len(fallbacks) == 2
+    assert len({ingredient.item_id for ingredient in fallbacks}) == 2
 
 
 async def test_failed_draft_retry_reaches_reviewable(
