@@ -9,12 +9,12 @@
 | overall_state | milestone-3-accepted |
 | project_phase | milestone-4-content-patcher-compiler |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-task-16-mod-compiler |
+| active_session_id | 2026-08-05-task-17-export |
 | active_session_state | active |
 | active_session_type | implementation |
-| current_task | Task 16：实现 deterministic Content Patcher 编译器（mod_compiler 包） |
-| blocker | 无（Milestone 3 验收已通过；本地 commits 待用户授权统一 push；Task 16 实施进行中） |
-| next_action | Task 16 实施子代理 TDD 实现 → Codex 审阅（gpt-5.6-luna/xhigh）→ PASS 后本地 focused commit；Milestone 3 push 待授权 |
+| current_task | Task 17：Export API、Pack the Menu 与 Bring It In-Game |
+| blocker | 无（Task 16 已完成并本地提交；Task 17 实施进行中） |
+| next_action | Task 17 实施子代理 TDD 实现 → Codex 审阅（gpt-5.6-luna/xhigh）→ PASS 后本地 focused commit |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,19 +25,26 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 916e3da（docs: record R11 min pixels fix session） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation） |
-| 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`（非本 Session 产物） |
+| 最新提交 | fa34d5e（docs: complete Task 16 session verification record） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–17（1730578/be6eb1b/fa34d5e + Task 17 commits）已本地提交未 push（Milestone 4 门） |
+| 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
 
 ## 当前 Milestone 3 验收 Session（accepted）
 
 - `2026-08-05-milestone3-acceptance`：用户 2026-08-05 宣布 Milestone 3 验收通过（R1–R11 全部修复已本地提交）。验收范围：Task 11–15（OpenAI-compatible generation）+ 验收修复 R1–R11（含 provider 入参约束 16 倍数/最小像素、Stardew tooltip prompt 硬锚点、双图 EDIT 管线、Buff 逐行中文展示）。
 - 本地 commits 等待用户授权统一 push 至 origin/feat/mvp-implementation。
 
-## 当前 Task 16 Session（active）
+## 当前 Task 16 Session（committed）
 
-- `2026-08-05-task-16-mod-compiler`：Milestone 4 首个 Task（deterministic Content Patcher compiler）。Context Packet 已生成（`docs/plans/2026-08-05-task-16-mod-compiler-packet.md`，gitignored，`mvp-task-16-mod-compiler-v1`）；闭包检查完成（复用 `ValidationReport`/`validate_gameplay`/`WorkspacePaths.author_name`）。
-- 实施子代理 TDD 执行中，完成后桥接 Codex 审阅（gpt-5.6-luna/xhigh）。
+- `2026-08-05-task-16-mod-compiler`：Milestone 4 首个 Task（deterministic Content Patcher compiler）。Context Packet：`mvp-task-16-mod-compiler-v1`。实施子代理 TDD（红→绿 60 passed、回归 208 passed、全量 528 passed/2 skipped），Codex 审阅 **PASS**（round 0，14/14 criterion），本地 focused commit `1730578`（feat）+ `be6eb1b`/`fa34d5e`（docs），未 push。
+- 闭包裁决 R16-1..6：author_name 注入编译器构造；`validate_export` 增 catalog 参数；Buff→Data/Objects.Buffs（Task 18 Spike 冻结）；i18n default/zh 一致；ExportArtifact/compile_to_bytes；staging 为调用方目录。
+
+## 当前 Task 17 Session（committed）
+
+- `2026-08-05-task-17-export`：Milestone 4 第二个 Task（Export API、Pack the Menu 与 Bring It In-Game）。Context Packet：`mvp-task-17-export-v1`（R17-1..7）。实施子代理 TDD 完成；Codex round 0 REVISE（T17-OPENFOLDER-001 生产装配未注入 os.startfile）→ round 1 修复（app.py `_default_open_folder()` win32→os.startfile + 新测试）→ round 2 BLOCKED（环境性：只读环境无法跑 pytest，无 criterion 失败）。
+- 包工复跑闭合：全量 backend **538 passed/2 skipped**、前端 77 passed、E2E 8 passed、lint/build/ruff/mypy（79 源文件）/diff-check clean、契约已重生成。判定 auto_accepted。
+- 实现：`ExportRecord`/`ExportStatus`/`ExportRecordView` + `ExportRepository`（幂等 add_or_get）；`ExportService` 同步状态机 VALIDATING→BUILDING→SUCCEEDED/FAILED（staging ZIP 永不可下载）；5 端点；前端 PackMenuPage/ValidationIssues/BringInGamePage + CookbookPage 打包入口 + 路由 + E2E。
+- 非阻塞：download OpenAPI 声明 application/json（运行时 application/zip）、Idempotency-Key 标可选 —— 后续加固。
 ## 当前 Task 13 Session（committed）
 
 - `2026-08-04-task-13-generation-orchestrator` 已从上下文溢出后的部分工作树恢复，完成 Ask Gus 生成 Orchestrator、NDJSON 流式事件与完整重生成，独立只读 Review Subagent 首轮 `PASS`（无 MUST_FIX），auto_accepted 后创建本地 focused commit `5949516`（不 push）。
