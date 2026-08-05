@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 1996d85（fix: ingredient mapping unique fallback and structured output repair rounds 1->2） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85）已本地提交，未推送（Milestone 门） |
+| 最新提交 | 5676ebe（feat: permanently delete drafts and local files on discard） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe）已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 

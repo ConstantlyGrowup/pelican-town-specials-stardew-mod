@@ -56,7 +56,15 @@ actual_models:
 - round-1 修复：fallback 去重（Codex R3-ING-001/002）+ extract 入 repair（R3-REPAIR-001）。
 - 验证：backend **461 passed / 2 skipped**、frontend 64、E2E 7、ruff/mypy/build/lint/diff-check clean；无 OpenAPI/契约变化。
 
+## R4（commit `5676ebe`）：草稿真删除
+
+- 用户确认删除草稿应真删除本地文件。`POST /drafts/{id}/discard` 从软删除（DISCARDED tombstone）改为**真删除**：拒绝 ARCHIVED → 删除未被其它草稿/归档引用的素材（原图 + 生成视觉，共享原图保留）→ 删除 attempt 记录 → 删除草稿记录目录；`FileAssetStore.delete`/`DraftRepository.delete`/`GenerationAttemptRepository.delete_for_draft` 新增。
+- 前端删除/拒绝加 `window.confirm` 确认；首页删除后即时移除；ARCHIVED/DISCARDED 不显示删除。
+- scope delta：5 个测试 fixture 注入 DraftService 新增的 attempt_repository 依赖（DEL-001 要求，Codex validated）。
+- 验证：backend **464 passed / 2 skipped**、frontend **69 passed**、E2E 7 passed、ruff/mypy/build/lint/diff-check clean；/discard 路径与 OpenAPI 无变化。
+- 非阻塞（Codex）：并发生成期间删除需后续锁定协议；旧 attempt/历史视觉孤儿清理可加 GC；既有 DISCARDED tombstone 列表隐藏或迁移可另行处理。
+
 ## 当前状态
 
 - `state`: `committed`
-- `next_action`: 交还 Milestone 3 验收——用户重测 Ask Gus 完整流程（INGREDIENT_MAPPING 未匹配原料走 fallback 不再失败）、Blueprint 重试与删除、首页草稿区；通过后进入 Milestone 3 全量验收与统一 push。
+- `next_action`: 交还 Milestone 3 验收——用户重测 Ask Gus 完整流程（INGREDIENT_MAPPING 未匹配原料走 fallback）、Blueprint 重试与真删除、首页草稿区删除确认；通过后进入 Milestone 3 全量验收与统一 push。
