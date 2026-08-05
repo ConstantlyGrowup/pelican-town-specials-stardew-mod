@@ -9,12 +9,12 @@
 | overall_state | committed |
 | project_phase | milestone-3-openai-compatible-generation |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-preview-pipeline-refactor |
+| active_session_id | 2026-08-05-preview-pipeline-r6 |
 | active_session_state | committed |
 | active_session_type | milestone-acceptance-fix |
-| current_task | Milestone 3 验收修复（R1–R5）已提交；等待用户重测 Ask Gus 完整流程、Blueprint 重试/删除与预览渲染 |
+| current_task | Milestone 3 验收修复（R1–R6）已提交；等待用户重测 Ask Gus 完整流程、Blueprint 重试/删除与模型生成预览 |
 | blocker | 无（等待用户重测反馈；通过后进入 Milestone 3 全量验收与统一 push） |
-| next_action | 用户重测 Ask Gus 完整流程、Blueprint 重试/删除、首页草稿区、三页预览/图标渲染；通过后全量验收与 push |
+| next_action | 用户重测 Ask Gus 完整流程、Blueprint 重试/删除、首页草稿区、三页预览/图标渲染（预览现为模型双图 EDIT 生成）；通过后全量验收与 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；自治规则控制面与 Task 9 已本地提交，未推送；Task 10 实现未提交） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 8e5aaee（feat: compose previews from original photos） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee）已本地提交，未推送（Milestone 门） |
+| 最新提交 | fb40992（feat: model-generated preview tooltips via two-image edit (R6)） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0 到 origin/feat/mvp-implementation）；Task 11–15 与验收修复（07652f6/949b762/1996d85/5676ebe/8e5aaee/fb40992）已本地提交，未推送（Milestone 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `.pytest_tmp/` 与 `samples/牛肉0.jpg`（非本 Session 产物） |
 ## 当前 Task 13 Session（committed）
 
@@ -49,6 +49,15 @@
 - 验证：vitest 52 passed；Playwright E2E 7 passed；build/lint 通过；后端 428 passed/2 skipped（无后端改动）。
 - 已知限制：后端 FAILED 重试未接线（`RETRY_FAILED_GENERATION` 已存在于状态机），FAILED ask-gus 草稿无操作入口；延后为单独后端 Task。
 - **Milestone 3（Task 11–15）全部完成**：本地 commits（10aa141/9555a55/145e164、5949516/aca590b、daeacfd/5df2352、038635a）均已本地提交、未 push。
+
+## 当前 R6 Session（committed）
+
+- `2026-08-05-preview-pipeline-r6`：用户更新 SKILL——最终词条卡**必须由图像模型双图 EDIT 生成**（`source_images=[原图, 同一轮像素图标]`，图标优先 `iconSourceAssetId`），本地合成器/Pillow/Canvas/前端组件排版被明确列为错误做法；R5 本地合成方案推翻重做。同日用户澄清协作规则：codex-mcp 为通信桥接（非执行通道），codex 担任执行者仅限视觉/多模态 Task；审阅强度 GPT 5.6 Luna (xHigh)（`gpt-5.6-luna` + xhigh），memory 已同步。
+- Packet：`docs/plans/2026-08-05-preview-pipeline-r6-packet.md`（`preview-pipeline-r6-8e5aaee-20260805-v1`）。
+- 实现（commit `fb40992`，22 文件 +571/-767）：orchestrator PREVIEW 单次双图 EDIT（原图 `downscale_for_vision` ≤2048 + ICON_SOURCE，`size=原图尺寸`）；能力门 `_ensure_image_edit_capability`（不支持 → `PTS_PROVIDER_IMAGE_EDIT_UNSUPPORTED` 502 非重试，无回退）；prompt 重建（ask-gus `_preview_prompt` + `blueprint_preview_prompt` 含 gameplay 参数，字段逐字 + SKILL 视觉语言，`clip_visual_brief` 200 字符）；合成器及其独占资源/测试/golden/脚本/字体删除（scope_delta：`resources/provenance.json`、`THIRD_PARTY_NOTICES.txt` 一并清理）。
+- round-1 修复（Codex REVISE 2 项 MUST_FIX）：最大合法字段下 prompt 超 1500 冻结契约 → 共享 `enforce_preview_prompt_budget`（Provider 调用前统一执行，超限受控 `PTS_PREVIEW_PROMPT_TOO_LONG` 422 非重试），TDD 红→绿；round 2 审阅 **PASS**。
+- 验证：backend **462 passed/2 skipped**、frontend **71 passed**、E2E **7 passed**、ruff/mypy/build/lint/diff-check clean；无 OpenAPI/契约/前端变化。
+- 非阻塞：真实 Provider 双图 EDIT 端到端未验证（下次用户验收确认模型渲染词条卡效果）；`build_blueprint_visual_brief` 措辞「菜品插画」已降级为氛围参考，改存储文本会变 API 可见字段留作加固。
 
 ## 当前 Preview Pipeline Session（committed）
 
