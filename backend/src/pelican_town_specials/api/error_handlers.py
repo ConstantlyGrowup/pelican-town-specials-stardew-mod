@@ -15,6 +15,7 @@ from pelican_town_specials.domain.errors import (
     ErrorPayload,
     recommended_action,
 )
+from pelican_town_specials.observability.logging import log_event
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,11 @@ async def handle_app_error(request: Request, exc: Exception) -> JSONResponse:
     del request
     app_error = cast(AppError, exc)
     request_id = _request_id()
+    log_event(
+        logging.ERROR,
+        request_id=str(request_id),
+        error_code=app_error.code,
+    )
     envelope = ErrorEnvelope(
         error=ErrorPayload.from_app_error(app_error, request_id=request_id)
     )
@@ -94,6 +100,11 @@ async def handle_unexpected_error(request: Request, exc: Exception) -> JSONRespo
         "Unexpected exception requestId=%s exceptionType=%s",
         request_id,
         type(exc).__name__,
+    )
+    log_event(
+        logging.ERROR,
+        request_id=str(request_id),
+        error_code=_SYSTEM_UNEXPECTED_CODE,
     )
     return JSONResponse(
         status_code=500,

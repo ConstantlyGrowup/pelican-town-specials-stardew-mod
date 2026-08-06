@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -19,6 +20,7 @@ from pelican_town_specials.api.routes import (
     assets,
     catalog,
     cookbook,
+    diagnostics,
     drafts,
     exports,
     generation,
@@ -53,6 +55,8 @@ from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.mod_compiler.compiler import ContentPatcherCompiler
+from pelican_town_specials.observability.diagnostics import DiagnosticsBuilder
+from pelican_town_specials.observability.logging import configure_logging
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
@@ -99,6 +103,9 @@ def create_app(
         app_config.workspace_path
     )
     resolved_secret_store = secret_store or WindowsEnvironmentSecretStore()
+    logs_dir = resolved_workspace.app_state_dir / "logs"
+    configure_logging(logs_dir)
+    diagnostics_builder = DiagnosticsBuilder(workspace=resolved_workspace)
 
     resolved_asset_store = asset_store or FileAssetStore(resolved_workspace)
     resolved_draft_repository = draft_repository or DraftRepository(resolved_workspace)
@@ -210,6 +217,7 @@ def create_app(
     app.state.attempt_registry = attempt_registry
     app.state.export_repository = resolved_export_repository
     app.state.export_service = resolved_export_service
+    app.state.diagnostics_builder = diagnostics_builder
     register_error_handlers(app)
     app.include_router(session.router)
     app.include_router(app_control.router)
@@ -222,6 +230,7 @@ def create_app(
     app.include_router(catalog.router, prefix="/api/v1")
     app.include_router(meta.router, prefix="/api/v1")
     app.include_router(exports.router, prefix="/api/v1")
+    app.include_router(diagnostics.router, prefix="/api/v1")
 
     @app.middleware("http")
     async def enforce_local_session(
@@ -282,7 +291,13 @@ def create_app(
 
 
 def _load_default_catalog() -> VanillaCatalog:
-    repo_root = Path(__file__).resolve().parents[4]
+    if getattr(sys, "frozen", False):
+        # PyInstaller onedir (contents_directory disabled): application data
+        # lives next to the executable (sys._MEIPASS == exe directory).
+        meipass = getattr(sys, "_MEIPASS", None)
+        repo_root = Path(meipass) if meipass else Path(sys.executable).resolve().parent
+    else:
+        repo_root = Path(__file__).resolve().parents[4]
     return VanillaCatalog.from_json(repo_root / _CATALOG_RELATIVE_PATH)
 
 

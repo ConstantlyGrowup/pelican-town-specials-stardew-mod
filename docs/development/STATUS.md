@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | awaiting_user_verification |
-| project_phase | milestone-4-content-patcher-compiler |
+| overall_state | milestone-5-in-progress |
+| project_phase | milestone-5-pyinstaller-release |
 | product_implementation_started | true |
 | active_session_id | 无 |
 | active_session_state | 无 |
 | active_session_type | 无 |
-| current_task | Milestone 4 游戏内复验 R12–R17；随后 Task 19（PyInstaller 发布包） |
+| current_task | Task 19（PyInstaller 发布包）已 auto_accepted；Task 19*（5 个前端状态/草稿同步问题）实施中 |
 | blocker | 无 |
-| next_action | 用户重新生成菜品，验证 R16 Buff 分布与 R17 售价分布；之后进入 Task 19 |
+| next_action | Task 19* 实施与 Codex 审阅；随后 Milestone 5 全量验证与用户验收 |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -26,8 +26,16 @@
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | 5905360（fix: constrain ask gus gameplay pricing，R17） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41/5905360）已本地提交未 push（Milestone 4 门） |
-| 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41/5905360）已本地提交未 push（Milestone 4 门）；Task 19 本地 focused commit（未 push，Milestone 5 门） |
+| 当前工作树范围 | 工作树含 Task 19 未提交实现（observability/、tests/security/、packaging/、build/smoke 脚本、E2E）；另有预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
+
+## 当前 Task 19 Session（auto_accepted）
+
+- `2026-08-06-task-19-pyinstaller`：Milestone 5 首个 Task。Context Packet：`mvp-task-19-pyinstaller-v1`（`docs/plans/2026-08-06-task-19-pyinstaller-packet.md`，gitignored）。
+- 实现：`observability/`（redaction/logging/diagnostics）、只读诊断端点（会话门控）、PyInstaller onedir spec + build/smoke 脚本、安全回归（local API/SSRF/ZIP）、`frontend/e2e/full-journey.spec.ts` 全链路。
+- 审阅：round 0 REVISE（4 项 MUST_FIX）→ 修复；round 1 残留缺口（嵌套键语义）补齐；round 2 REVISE（launchToken 大小写成员泄漏 dict）→ 修复 → 闭包验证 **PASS**。
+- 验证：observability+security 57 passed、全量 backend 626 passed/2 skipped、前端 77 passed、E2E 1 passed、ruff/mypy/diff-check clean；build_windows.ps1 端到端通过（含发布文档门禁）；smoke 两阶段通过（Phase A 健康+首页、Phase B 自检退出 0 + 无残留 runtime.json）。
+- auto_accepted，本地 focused commit（未 push）。
 
 ## 当前 Milestone 3 验收 Session（accepted）
 

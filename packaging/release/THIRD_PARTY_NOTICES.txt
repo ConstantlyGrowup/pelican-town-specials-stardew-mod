@@ -1,0 +1,52 @@
+Pelican Town Specials — Third-Party Notices
+===========================================
+
+This product bundles or is built with the following open-source components.
+Each component remains under its own license. The full license texts are
+included in the corresponding Python package distributions (site-packages)
+or in the upstream repositories listed below.
+
+Runtime (bundled in the application):
+
+  Python                                  PSF License Agreement v2
+    https://www.python.org/psf/license/
+  FastAPI                                 MIT
+    https://github.com/fastapi/fastapi
+  Starlette                               BSD-3-Clause
+    https://github.com/encode/starlette
+  Pydantic / pydantic-settings            MIT
+    https://github.com/pydantic/pydantic
+  uvicorn                                 BSD-3-Clause
+    https://github.com/encode/uvicorn
+  httpx                                   BSD-3-Clause
+    https://github.com/encode/httpx
+  python-multipart                        Apache-2.0
+    https://github.com/andrew-d/python-multipart
+  platformdirs                            MIT
+    https://github.com/platformdirs/platformdirs
+  portalocker                             PSF License Agreement v2
+    https://github.com/wolph/python-portalocker
+  Pillow                                  HPND (Pillow license)
+    https://github.com/python-pillow/Pillow
+
+Build tooling (not part of the application runtime):
+
+  PyInstaller bootloader                  GPL-2.0-or-later WITH
+                                          Bootloader-exception
+    https://github.com/pyinstaller/pyinstaller
+
+Frontend (compiled into the local interface):
+
+  React                                   MIT
+    https://github.com/facebook/react
+  TanStack Query                          MIT
+    https://github.com/TanStack/query
+  openapi-fetch                           MIT
+    https://github.com/openapi-ts/openapi-typescript
+  zod                                     MIT
+    https://github.com/colinhacks/zod
+  Vite                                    MIT
+    https://github.com/vitejs/vite
+
+If you believe any required notice is missing, please open an issue in the
+Pelican Town Specials repository so it can be corrected.
