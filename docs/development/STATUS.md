@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone-4-in-progress |
+| overall_state | awaiting_user_verification |
 | project_phase | milestone-4-content-patcher-compiler |
 | product_implementation_started | true |
-| active_session_id | 2026-08-06-r16-gus-buff-latitude |
-| active_session_state | committed |
-| active_session_type | acceptance-fix |
-| current_task | R16 已完成并本地提交（9d06e41）：Ask Gus Buff 推荐标准适度放宽，生图 prompt 保持不变；等待用户重新生成并复验 Buff 出现频率及 R12–R15 游戏内效果 |
-| blocker | 无（等待用户下一轮重新生成与游戏内复验结论） |
-| next_action | 用户用多种普通但有鲜明特点的菜重新生成，确认 Buff 不再大面积缺失且仍合理；同时复验 R12–R15，随后继续 Task 19（PyInstaller 发布包） |
+| active_session_id | 无 |
+| active_session_state | 无 |
+| active_session_type | 无 |
+| current_task | Milestone 4 游戏内复验 R12–R17；随后 Task 19（PyInstaller 发布包） |
+| blocker | 无 |
+| next_action | 用户重新生成菜品，验证 R16 Buff 分布与 R17 售价分布；之后进入 Task 19 |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,14 +25,22 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 9d06e41（fix: relax ask gus buff recommendations，R16） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41）已本地提交未 push（Milestone 4 门） |
+| 最新提交 | 5905360（fix: constrain ask gus gameplay pricing，R17） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41/5905360）已本地提交未 push（Milestone 4 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
 
 ## 当前 Milestone 3 验收 Session（accepted）
 
 - `2026-08-05-milestone3-acceptance`：用户 2026-08-05 宣布 Milestone 3 验收通过（R1–R11 全部修复已本地提交）。验收范围：Task 11–15（OpenAI-compatible generation）+ 验收修复 R1–R11（含 provider 入参约束 16 倍数/最小像素、Stardew tooltip prompt 硬锚点、双图 EDIT 管线、Buff 逐行中文展示）。
 - 本地 commits 等待用户授权统一 push 至 origin/feat/mvp-implementation。
+
+## 当前 R17 Session（committed）
+
+- `2026-08-06-r17-gus-gameplay-pricing`：按 Stardew 1.6.15 原版烹饪物价格分布约束 Ask Gus gameplay prompt；生图 prompt 保持不变。
+- 实现（commit `5905360`）：新增版本化 `ask_gus_v3` 并保留 v1/v2；普通菜 80..250g、精致菜 250..400g、高档/复杂菜 400..500g，多数结果 100..400g；普通或无 Buff 菜不得超过 500g，不得用高价补偿无 Buff；超过 500g 仅限明确传奇/特殊功能性物品并须在 `gusComment` 解释玩法理由。
+- 价格依据覆盖原料价值/稀有度、制作复杂度、恢复量、Buff 强度/持续时间和定位；Oil of Garlic 1000g 与 Magic Rock Candy 5000g 只作极少数原版例外校准。
+- 验证：TDD RED→GREEN focused 49 passed；全量 backend 553 passed/2 skipped；Ruff、Mypy（15 源文件）、diff-check clean；独立只读 Review PASS，无 MUST_FIX。
+- 无 schema/validator/compiler/API/frontend/图像链路变化，未调用真实 Provider；已有草稿不自动改价，等待用户重新生成观察。
 
 ## 当前 Task 16 Session（committed）
 
