@@ -21,6 +21,38 @@
           "Type": "Cooking"
         },
         "{{ModId}}_TomatoStew": {
+          "Buffs": [
+            {
+              "BuffId": null,
+              "CustomAttributes": {
+                "Attack": 0.0,
+                "AttackMultiplier": 0.0,
+                "CombatLevel": 0.0,
+                "CriticalChanceMultiplier": 0.0,
+                "CriticalPowerMultiplier": 0.0,
+                "Defense": 0.0,
+                "FarmingLevel": 0.0,
+                "FishingLevel": 0.0,
+                "ForagingLevel": 0.0,
+                "Immunity": 0.0,
+                "KnockbackMultiplier": 0.0,
+                "LuckLevel": 0.0,
+                "MagneticRadius": 0.0,
+                "MaxStamina": 0.0,
+                "MiningLevel": 0.0,
+                "Speed": 1.0,
+                "WeaponPrecisionMultiplier": 0.0,
+                "WeaponSpeedMultiplier": 0.0
+              },
+              "CustomFields": null,
+              "Duration": 10,
+              "GlowColor": null,
+              "IconSpriteIndex": 0,
+              "IconTexture": null,
+              "Id": "Food",
+              "IsDebuff": false
+            }
+          ],
           "Category": -7,
           "Description": "{{i18n:item.TomatoStew.description}}",
           "DisplayName": "{{i18n:item.TomatoStew.name}}",
@@ -42,18 +74,6 @@
         "{{ModId}}_TomatoStew": "24 1 256 2/0 0/{{ModId}}_TomatoStew/default/{{i18n:recipe.TomatoStew.name}}"
       },
       "Target": "Data/CookingRecipes"
-    },
-    {
-      "Action": "EditData",
-      "Entries": {
-        "{{ModId}}_TomatoStew": {
-          "CustomAttributes": "Speed 1",
-          "Duration": 600000,
-          "Id": "{{ModId}}_TomatoStew_speed",
-          "IsDebuff": false
-        }
-      },
-      "Target": "Data/Objects.Buffs"
     }
   ],
   "Format": "2.9.0"

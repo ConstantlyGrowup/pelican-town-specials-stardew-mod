@@ -10,8 +10,9 @@ from collections.abc import Mapping
 from typing import Any
 
 from pelican_town_specials.domain.archive import ArchivedDish
+from pelican_town_specials.domain.dish import BuffSpec
 
-from .ids import build_mod_id, derive_ids, sanitize_token
+from .ids import build_mod_id, derive_ids
 from .recipes import build_recipe_value
 
 OBJECT_TYPE = "Cooking"
@@ -20,8 +21,7 @@ OBJECT_TEXTURE = "Mods/{{ModId}}/Objects"
 CONTENT_PATCHER_FORMAT = "2.9.0"
 MINIMUM_GAME_VERSION = "1.6.15"
 
-# Buff CustomAttributes in stable declaration order (Stardew 1.6 attribute
-# names mapped to their BuffAttributes fields).
+# Domain BuffAttributes fields mapped to Stardew 1.6 attribute names.
 BUFF_ATTRIBUTE_NAMES: tuple[tuple[str, str], ...] = (
     ("farming_level", "FarmingLevel"),
     ("fishing_level", "FishingLevel"),
@@ -35,6 +35,31 @@ BUFF_ATTRIBUTE_NAMES: tuple[tuple[str, str], ...] = (
     ("magnetic_radius", "MagneticRadius"),
     ("max_stamina", "MaxStamina"),
     ("speed", "Speed"),
+)
+
+# All CustomAttributes keys the vanilla game writes, in the exact order and
+# float shape observed in Data/Objects (stardew-1.6.15 Objects.json). The
+# game accepts omitted keys, but mirroring the vanilla document keeps the
+# compiled pack byte-comparable with official data.
+VANILLA_BUFF_ATTRIBUTE_KEYS: tuple[str, ...] = (
+    "CombatLevel",
+    "FarmingLevel",
+    "FishingLevel",
+    "MiningLevel",
+    "LuckLevel",
+    "ForagingLevel",
+    "MaxStamina",
+    "MagneticRadius",
+    "Speed",
+    "Defense",
+    "Attack",
+    "AttackMultiplier",
+    "Immunity",
+    "KnockbackMultiplier",
+    "WeaponSpeedMultiplier",
+    "CriticalChanceMultiplier",
+    "CriticalPowerMultiplier",
+    "WeaponPrecisionMultiplier",
 )
 
 README_TEXT = """Pelican Town Specials - Content Pack
@@ -85,13 +110,14 @@ def build_content(
     """Build the content.json document (design 14.5 with the Task 16 rulings).
 
     Change order is fixed: Load spritesheet, EditData Data/Objects,
-    EditData Data/CookingRecipes, then EditData Data/Objects.Buffs only
-    when at least one dish carries a buff (ruling R16-3).
+    EditData Data/CookingRecipes. Buffs are embedded in each Data/Objects
+    entry's ``Buffs`` array in the vanilla 1.6 shape (R13 fix: the game
+    ignores the previously emitted ``Data/Objects.Buffs`` patch because no
+    such asset exists).
     """
     ordered = sorted(dishes, key=_content_order_key)
     object_entries: dict[str, Any] = {}
     recipe_entries: dict[str, Any] = {}
-    buff_entries: dict[str, Any] = {}
 
     for dish in ordered:
         internal_name = dish.presentation.internal_name
@@ -106,9 +132,6 @@ def build_content(
             item_id=ids.item_id,
             display_token=f"{{{{i18n:recipe.{internal_name}.name}}}}",
         )
-        buff_entry = _buff_entry(dish, ids.item_id)
-        if buff_entry is not None:
-            buff_entries[ids.item_id] = buff_entry
 
     changes: list[dict[str, Any]] = [
         {
@@ -123,10 +146,6 @@ def build_content(
             "Entries": recipe_entries,
         },
     ]
-    if buff_entries:
-        changes.append(
-            {"Action": "EditData", "Target": "Data/Objects.Buffs", "Entries": buff_entries}
-        )
     return {"Format": CONTENT_PATCHER_FORMAT, "Changes": changes}
 
 
@@ -151,7 +170,7 @@ def _content_order_key(dish: ArchivedDish) -> tuple[str, str]:
 
 def _object_entry(dish: ArchivedDish, item_id: str, sprite_index: int) -> dict[str, Any]:
     internal_name = dish.presentation.internal_name
-    return {
+    entry: dict[str, Any] = {
         "Name": internal_name,
         "DisplayName": f"{{{{i18n:item.{internal_name}.name}}}}",
         "Description": f"{{{{i18n:item.{internal_name}.description}}}}",
@@ -163,20 +182,33 @@ def _object_entry(dish: ArchivedDish, item_id: str, sprite_index: int) -> dict[s
         "Edibility": dish.gameplay.recovery.edibility,
         "IsDrink": dish.gameplay.is_drink,
     }
+    if dish.gameplay.buff is not None:
+        entry["Buffs"] = [
+            _inline_buff(dish.gameplay.buff, is_drink=dish.gameplay.is_drink)
+        ]
+    return entry
 
 
-def _buff_entry(dish: ArchivedDish, item_id: str) -> dict[str, Any] | None:
-    buff = dish.gameplay.buff
-    if buff is None:
-        return None
-    custom_attributes = ", ".join(
-        f"{game_name} {getattr(buff.attributes, field_name)}"
-        for field_name, game_name in BUFF_ATTRIBUTE_NAMES
-        if getattr(buff.attributes, field_name) != 0
-    )
+def _inline_buff(buff: BuffSpec, *, is_drink: bool) -> dict[str, Any]:
+    """Build one vanilla-shaped Buffs entry embedded in a Data/Objects item.
+
+    Mirrors the Stardew 1.6.15 Data/Objects format: ``Id`` is the Food/Drink
+    category string, ``Duration`` is in game minutes (identical to the domain
+    ``duration_minutes``), and ``CustomAttributes`` is a full-key float object.
+    """
+    attributes = {key: 0.0 for key in VANILLA_BUFF_ATTRIBUTE_KEYS}
+    for field_name, game_name in BUFF_ATTRIBUTE_NAMES:
+        value = getattr(buff.attributes, field_name)
+        if value != 0:
+            attributes[game_name] = float(value)
     return {
-        "Id": f"{item_id}_{sanitize_token(buff.id)}",
-        "Duration": buff.duration_minutes * 60_000,
+        "Id": "Drink" if is_drink else "Food",
+        "BuffId": None,
+        "IconTexture": None,
+        "IconSpriteIndex": 0,
+        "Duration": buff.duration_minutes,
         "IsDebuff": buff.is_debuff,
-        "CustomAttributes": custom_attributes,
+        "GlowColor": None,
+        "CustomAttributes": attributes,
+        "CustomFields": None,
     }

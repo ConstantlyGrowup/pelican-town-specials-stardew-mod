@@ -138,7 +138,7 @@ def test_object_entries_frozen_fields(
     assert tomato["Edibility"] == 80
     assert tomato["IsDrink"] is False
     assert tomato["Price"] == 220
-    assert "Buffs" not in tomato
+    assert isinstance(tomato["Buffs"], list)
 
 
 def test_sprite_indices_stable_and_incremental(
@@ -168,26 +168,58 @@ def test_recipe_values_use_sorted_pairs_and_default_unlock(
     )
 
 
-def test_buff_maps_to_data_objects_buffs_entry(
+def test_buff_embedded_in_object_entry_in_vanilla_shape(
     compiler: ContentPatcherCompiler, export_fixture: CompileInput, tmp_path: Path
 ) -> None:
     document = _content_document(compiler, export_fixture, tmp_path)
 
     changes = document["Changes"]
-    buff_patch = changes[-1]
-    assert buff_patch["Action"] == "EditData"
-    assert buff_patch["Target"] == "Data/Objects.Buffs"
-    buffs = buff_patch["Entries"]
-    assert isinstance(buffs, dict)
-    entry = buffs["{{ModId}}_TomatoStew"]
-    assert entry["Id"] == "{{ModId}}_TomatoStew_speed"
-    assert entry["Duration"] == 600_000
-    assert entry["IsDebuff"] is False
-    assert entry["CustomAttributes"] == "Speed 1"
-    assert "{{ModId}}_ParsnipSoup" not in buffs
+    assert [patch["Target"] for patch in changes] == [
+        "Mods/{{ModId}}/Objects",
+        "Data/Objects",
+        "Data/CookingRecipes",
+    ]
+    objects = changes[1]["Entries"]
+    assert isinstance(objects, dict)
+
+    buffs = objects["{{ModId}}_TomatoStew"]["Buffs"]
+    assert isinstance(buffs, list)
+    assert len(buffs) == 1
+    entry = buffs[0]
+    assert entry == {
+        "Id": "Food",
+        "BuffId": None,
+        "IconTexture": None,
+        "IconSpriteIndex": 0,
+        "Duration": 10,
+        "IsDebuff": False,
+        "GlowColor": None,
+        "CustomAttributes": {
+            "CombatLevel": 0.0,
+            "FarmingLevel": 0.0,
+            "FishingLevel": 0.0,
+            "MiningLevel": 0.0,
+            "LuckLevel": 0.0,
+            "ForagingLevel": 0.0,
+            "MaxStamina": 0.0,
+            "MagneticRadius": 0.0,
+            "Speed": 1.0,
+            "Defense": 0.0,
+            "Attack": 0.0,
+            "AttackMultiplier": 0.0,
+            "Immunity": 0.0,
+            "KnockbackMultiplier": 0.0,
+            "WeaponSpeedMultiplier": 0.0,
+            "CriticalChanceMultiplier": 0.0,
+            "CriticalPowerMultiplier": 0.0,
+            "WeaponPrecisionMultiplier": 0.0,
+        },
+        "CustomFields": None,
+    }
+    assert "Buffs" not in objects["{{ModId}}_ParsnipSoup"]
 
 
-def test_no_buffs_patch_for_buffless_dishes(
+def test_no_buffs_key_for_buffless_dishes(
     compiler: ContentPatcherCompiler, export_fixture: CompileInput, tmp_path: Path
 ) -> None:
     source = export_fixture
@@ -203,6 +235,9 @@ def test_no_buffs_patch_for_buffless_dishes(
         "Data/Objects",
         "Data/CookingRecipes",
     ]
+    objects = changes[1]["Entries"]
+    assert isinstance(objects, dict)
+    assert "Buffs" not in objects["{{ModId}}_ParsnipSoup"]
 
 
 def test_i18n_uses_internal_name_keys_and_original_text(

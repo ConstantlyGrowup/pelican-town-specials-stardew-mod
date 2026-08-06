@@ -4,3 +4,5 @@
 *.png binary
 *.jpg binary
 *.jpeg binary
+# Golden fixtures are compared byte-for-byte with compiler output (LF).
+backend/tests/golden/**/*.json text eol=lf
