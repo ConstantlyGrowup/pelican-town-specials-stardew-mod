@@ -48,7 +48,10 @@ from pelican_town_specials.images import (
     downscale_for_vision,
 )
 from pelican_town_specials.images.background_keying import key_icon_background
-from pelican_town_specials.images.vision_input import VISION_MIN_PIXELS
+from pelican_town_specials.images.vision_input import (
+    EDIT_MIN_PIXELS,
+    VISION_MIN_PIXELS,
+)
 from pelican_town_specials.persistence.asset_store import AssetMetadata, FileAssetStore
 from pelican_town_specials.persistence.repositories import (
     AttemptMismatchError,
@@ -221,25 +224,27 @@ def _read_source_image(asset_store: FileAssetStore, draft: DraftRecord) -> bytes
         return handle.read()
 
 
-def _image_input_error() -> AppError:
+def _image_input_error(min_pixels: int = VISION_MIN_PIXELS) -> AppError:
     return AppError(
         code="PTS_IMAGE_INPUT_UNSUPPORTED",
         message="图片无法被图像服务接受：分辨率过低或格式不受支持。请上传更高分辨率的照片。",
         http_status=422,
-        details={"minPixels": VISION_MIN_PIXELS},
+        details={"minPixels": min_pixels},
         retryable=False,
     )
 
 
-def _prepare_vision_input(data: bytes) -> tuple[bytes, ImageMediaType]:
+def _prepare_vision_input(
+    data: bytes, *, min_pixels: int = VISION_MIN_PIXELS
+) -> tuple[bytes, ImageMediaType]:
     """Shape source bytes for vision/EDIT providers; unsupported inputs (bad
     format, or aspect ratio that cannot meet the provider minimum pixel count
     within the max side) fail as a controlled non-retryable error instead of a
     raw ValueError surfacing as a 500."""
     try:
-        return downscale_for_vision(data)
+        return downscale_for_vision(data, min_pixels=min_pixels)
     except ValueError as exc:
-        raise _image_input_error() from exc
+        raise _image_input_error(min_pixels=min_pixels) from exc
 
 
 def _domain_media_type(value: ImageMediaType) -> MediaType:
@@ -750,7 +755,9 @@ class GenerationOrchestrator:
             assert state.icon_source is not None
             _ensure_image_edit_capability(gateway)
             original_image = _read_source_image(self._assets, draft)
-            edit_image, edit_media_type = _prepare_vision_input(original_image)
+            edit_image, edit_media_type = _prepare_vision_input(
+                original_image, min_pixels=EDIT_MIN_PIXELS
+            )
             icon_source_ref = self._assets.stat(state.icon_source_asset_id)
             with self._assets.open(icon_source_ref) as handle:
                 icon_source = handle.read()

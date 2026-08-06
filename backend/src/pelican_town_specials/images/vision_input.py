@@ -22,6 +22,12 @@ VISION_EDGE_MULTIPLE = 16
 # Image providers reject inputs whose total pixels fall below this floor
 # (observed: "total pixels must not be less than 655360").
 VISION_MIN_PIXELS = 655_360
+# Image-edit providers additionally require the output `size` parameter to
+# cover at least this many pixels (observed: "The parameter `size` ... image
+# area must be at least 921600 pixels"). The edit input is shaped to this
+# higher floor so the requested size — which mirrors the input dimensions —
+# never falls below the floor.
+EDIT_MIN_PIXELS = 921_600
 
 _SOURCE_FORMATS = frozenset({"PNG", "JPEG", "WEBP"})
 

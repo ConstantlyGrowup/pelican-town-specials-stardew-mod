@@ -8,7 +8,10 @@ import pytest
 from PIL import Image
 
 from pelican_town_specials.images import downscale_for_vision
-from pelican_town_specials.images.vision_input import VISION_MAX_SIDE
+from pelican_town_specials.images.vision_input import (
+    EDIT_MIN_PIXELS,
+    VISION_MAX_SIDE,
+)
 from pelican_town_specials.providers.contracts import ImageMediaType
 
 
@@ -74,6 +77,22 @@ def test_small_edit_input_upscaled_to_min_pixels() -> None:
     image = _assert_jpeg(downscaled)
     width, height = image.size
     assert width * height >= 655_360
+    assert width % 16 == 0
+    assert height % 16 == 0
+    assert max(image.size) <= VISION_MAX_SIDE
+
+
+def test_edit_size_floor_upscales_to_at_least_921600() -> None:
+    # The image-edit provider requires the output `size` parameter to cover at
+    # least 921,600 px. The edit input is shaped to this higher floor so a
+    # small source (752x672, 505,344 px) is upscaled past the vision floor.
+    source = _noise_bytes(width=752, height=672, fmt="PNG")
+
+    downscaled, _ = downscale_for_vision(source, min_pixels=EDIT_MIN_PIXELS)
+
+    image = _assert_jpeg(downscaled)
+    width, height = image.size
+    assert width * height >= EDIT_MIN_PIXELS
     assert width % 16 == 0
     assert height % 16 == 0
     assert max(image.size) <= VISION_MAX_SIDE

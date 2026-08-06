@@ -15,6 +15,7 @@ from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.images import downscale_for_vision
+from pelican_town_specials.images.vision_input import EDIT_MIN_PIXELS
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.providers.contracts import (
     ImageMediaType,
@@ -58,6 +59,10 @@ async def test_ask_gus_stage_order(
     assert preview_request.operation is ImageOperation.EDIT
     assert preview_request.quality == "high"
     assert len(preview_request.source_images) == 2
+    # The edit `size` mirrors the shaped input and must never fall below the
+    # provider's 921,600 px floor (a small source is upscaled to meet it).
+    size_w, size_h = (int(part) for part in preview_request.size.split("x"))
+    assert size_w * size_h >= EDIT_MIN_PIXELS
     for required_text in (
         "春日面碗",
         "主菜",
@@ -82,7 +87,9 @@ async def test_ask_gus_stage_order(
     preview_ref = harness.asset_store.stat(saved.visuals.preview_asset_id)
     original_data = _read_asset(harness.asset_store, original_ref)
     icon_source_data = _read_asset(harness.asset_store, icon_source_ref)
-    downscaled, media_type = downscale_for_vision(original_data)
+    downscaled, media_type = downscale_for_vision(
+        original_data, min_pixels=EDIT_MIN_PIXELS
+    )
     assert preview_request.source_images[0].data == downscaled
     assert preview_request.source_images[0].media_type is media_type
     assert preview_request.source_images[1].data == icon_source_data

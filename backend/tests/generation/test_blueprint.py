@@ -17,6 +17,7 @@ from pelican_town_specials.generation.blueprint import (
 )
 from pelican_town_specials.generation.events import GenerationEvent
 from pelican_town_specials.images import downscale_for_vision
+from pelican_town_specials.images.vision_input import EDIT_MIN_PIXELS
 from pelican_town_specials.providers.contracts import ImageOperation
 
 from .conftest import (
@@ -79,7 +80,9 @@ async def test_blueprint_stage_order_and_image_only_calls(
     )
     with harness.asset_store.open(original_ref) as handle:
         original_data = handle.read()
-    downscaled, media_type = downscale_for_vision(original_data)
+    downscaled, media_type = downscale_for_vision(
+        original_data, min_pixels=EDIT_MIN_PIXELS
+    )
     assert preview_request.source_images[0].data == downscaled
     assert preview_request.source_images[0].media_type is media_type
     for required_text in (
