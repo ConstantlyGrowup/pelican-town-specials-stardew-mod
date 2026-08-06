@@ -9,12 +9,12 @@
 | overall_state | milestone-4-in-progress |
 | project_phase | milestone-4-content-patcher-compiler |
 | product_implementation_started | true |
-| active_session_id | 2026-08-06-r12-r15-game-acceptance-fixes |
+| active_session_id | 2026-08-06-r16-gus-buff-latitude |
 | active_session_state | committed |
 | active_session_type | acceptance-fix |
-| current_task | Task 18 游戏验收通过；R12–R15 四项游戏内细节修复已完成并本地提交（886de32/8589a3e/5761e92），等待用户重新生成菜品并游戏内复验 Buff 显示/图标透明底/Edibility 取值/材料准确性 |
-| blocker | 无（等待用户下一轮游戏内复验结论） |
-| next_action | 用户游戏内复验 R12–R15 效果 → 复验通过后继续 Task 19（PyInstaller 发布包）；Milestone 4 全量验证后统一验收与 push |
+| current_task | R16 已完成并本地提交（9d06e41）：Ask Gus Buff 推荐标准适度放宽，生图 prompt 保持不变；等待用户重新生成并复验 Buff 出现频率及 R12–R15 游戏内效果 |
+| blocker | 无（等待用户下一轮重新生成与游戏内复验结论） |
+| next_action | 用户用多种普通但有鲜明特点的菜重新生成，确认 Buff 不再大面积缺失且仍合理；同时复验 R12–R15，随后继续 Task 19（PyInstaller 发布包） |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 5761e92（fix: key opaque generated icon backgrounds for transparency，R12） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与 R12–R15（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92）已本地提交未 push（Milestone 4 门） |
+| 最新提交 | 9d06e41（fix: relax ask gus buff recommendations，R16） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41）已本地提交未 push（Milestone 4 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
 
 ## 当前 Milestone 3 验收 Session（accepted）
@@ -38,6 +38,13 @@
 
 - `2026-08-05-task-16-mod-compiler`：Milestone 4 首个 Task（deterministic Content Patcher compiler）。Context Packet：`mvp-task-16-mod-compiler-v1`。实施子代理 TDD（红→绿 60 passed、回归 208 passed、全量 528 passed/2 skipped），Codex 审阅 **PASS**（round 0，14/14 criterion），本地 focused commit `1730578`（feat）+ `be6eb1b`/`fa34d5e`（docs），未 push。
 - 闭包裁决 R16-1..6：author_name 注入编译器构造；`validate_export` 增 catalog 参数；Buff→Data/Objects.Buffs（Task 18 Spike 冻结）；i18n default/zh 一致；ExportArtifact/compile_to_bytes；staging 为调用方目录。
+
+## 当前 R16 Session（committed）
+
+- `2026-08-06-r16-gus-buff-latitude`：用户确认生图 prompt 已满意，仅要求适度放宽 Ask Gus gameplay prompt 的 Buff 推荐标准。
+- 实现（commit `9d06e41`）：新增版本化 `ask_gus_v2` 并保留 v1；普通但有可信玩法关联的菜通常可获得 1 个温和 Buff，特征明确时最多 2 个互补属性；仅非常朴素且无可信关联时为 null；禁止无关或夸张 Buff。新调用路由 v2，provenance 记录 `ask-gus-v2`。
+- 验证：TDD RED 2 个预期失败→GREEN focused 48 passed；全量 backend 552 passed/2 skipped；Ruff、Mypy（14 源文件）、diff-check clean；独立只读 Review PASS，无 MUST_FIX。
+- 生图 prompt、双图 EDIT、图标与预览管线均无改动；未调用真实 Provider。技术设计已更新至 v1.3；等待用户重新生成验证模型分布。
 
 ## 当前 R12–R15 Session（committed）
 
