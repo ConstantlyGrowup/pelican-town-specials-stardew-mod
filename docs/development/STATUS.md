@@ -12,9 +12,9 @@
 | active_session_id | 无 |
 | active_session_state | 无 |
 | active_session_type | 无 |
-| current_task | Milestone 5 全量验证完成（Task 19 与 Task 19* 构建/冒烟门禁通过）；等待用户一次性验收与统一 push 授权 |
+| current_task | Milestone 5 验收未通过 3 项已修复（根因：Starlette 断开不 aclose → 生成槽泄漏 → 永久「有一个任务在运行」）；等待用户交互复验 |
 | blocker | 无 |
-| next_action | 用户一次性验收 Milestone 5（Task 19 + Task 19*）并授权统一 push 至 origin/feat/mvp-implementation |
+| next_action | 用户重新打包后交互复验 3 项（生成中切页、删除草稿后重新生成、reload/重开 exe 自恢复）；复验通过后一次性验收 Milestone 5（Task 19 + Task 19* + 本修复）并授权统一 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 4b58f0f（chore: regenerate OpenAPI contract after cancel route docstring，Milestone 5 验证产物） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Milestone 4 全量（Task 16–18 + R12–R15）与 Milestone 5 全量（Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`）均已本地提交未 push，等待本次统一授权 push |
+| 最新提交 | af08da4（fix: release generation slot on disconnect and recover orphaned attempts，验收修复） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Milestone 4 全量（Task 16–18 + R12–R15）、Milestone 5 全量（Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`）与本验收修复均已本地提交未 push，等待本次统一授权 push |
 | 当前工作树范围 | 工作树干净（除预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与测试临时目录，均非本 Session 产物） |
 
 ## 当前 Task 19 Session（auto_accepted）
@@ -51,6 +51,13 @@
 - `scripts/smoke_windows_bundle.ps1` 两阶段通过：Phase A 正常启动 + HTTP health + 静态首页；Phase B `--exit-after-health-check` 退出 0 + 无残留 runtime lock。
 - 产物：`dist/PelicanTownSpecials-windows-x64/`（onedir 发布包，本机已验证可启动服务）。
 - Milestone 5 全部完成 → `awaiting_milestone_acceptance`：用户一次性验收（真实交互复验 5 项修复 + 发布包体验）并授权统一 push（Milestone 4 + Milestone 5 commits）。
+
+## 当前验收修复 Session（auto_accepted，待用户复验）
+
+- `2026-08-07-post-acceptance-slot-leak-fix`：Milestone 5 验收未通过 3 项的根因修复——Starlette 1.3.1 `StreamingResponse` 断开时不 `aclose` body iterator → 生成槽泄漏 → 永久 `PTS_GEN_BUSY`「当前已有一个生成任务在运行」。用户明确本修复由用户本人验收，不走 Codex 审阅。
+- 三层修复：① `_generate` finally + `_SlotGuardedAsyncIterator.__del__` 保证所有终止路径释放进程级单槽；② 路由级 `_ClosingStreamingResponse` 确定性 `aclose` body iterator；③ 孤儿 attempt 恢复（`recover_interrupted`，`/cancel` + startup sweep 清扫，重开 exe 自愈）。
+- 验证：定向回归 10 passed；全量 backend **620 passed/2 skipped**；Ruff clean；Mypy clean（5 个改动源文件，app.py:326 与 exports.py 为 HEAD 预存错误）。前端无改动。
+- 待用户重新打包后交互复验 3 项：生成中切页回到草稿不再误报「开始生成」/busy；删除草稿后生成新草稿不再 busy；reload/重开 exe 后系统自恢复。
 
 ## 当前 Milestone 3 验收 Session（accepted）
 
