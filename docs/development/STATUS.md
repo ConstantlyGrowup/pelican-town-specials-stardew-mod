@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone-5-in-progress |
-| project_phase | milestone-5-pyinstaller-release |
+| project_phase | milestone-5-release-and-frontend-state |
 | product_implementation_started | true |
 | active_session_id | 无 |
 | active_session_state | 无 |
 | active_session_type | 无 |
-| current_task | Task 19（PyInstaller 发布包）已 auto_accepted；Task 19*（5 个前端状态/草稿同步问题）实施中 |
+| current_task | Task 19 与 Task 19* 均已 auto_accepted；进入 Milestone 5 全量验证与用户验收 |
 | blocker | 无 |
-| next_action | Task 19* 实施与 Codex 审阅；随后 Milestone 5 全量验证与用户验收 |
+| next_action | Milestone 5 全量验证（PyInstaller 构建/冒烟复验、用户真实交互复验 5 项修复）与用户一次性验收 + 统一 push 授权 |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 5905360（fix: constrain ask gus gameplay pricing，R17） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41/5905360）已本地提交未 push（Milestone 4 门）；Task 19 本地 focused commit（未 push，Milestone 5 门） |
-| 当前工作树范围 | 工作树含 Task 19 未提交实现（observability/、tests/security/、packaging/、build/smoke 脚本、E2E）；另有预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
+| 最新提交 | ecfcf85（fix: sync generation cancel state, persist in-flight progress, and cascade archived drafts，Task 19*） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41/5905360）已本地提交未 push（Milestone 4 门）；Task 19 本地 focused commit 3492650（未 push，Milestone 5 门）；Task 19* 本地 focused commit ecfcf85（未 push，Milestone 5 门） |
+| 当前工作树范围 | 工作树干净（除预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与测试临时目录，均非本 Session 产物） |
 
 ## 当前 Task 19 Session（auto_accepted）
 
@@ -36,6 +36,14 @@
 - 审阅：round 0 REVISE（4 项 MUST_FIX）→ 修复；round 1 残留缺口（嵌套键语义）补齐；round 2 REVISE（launchToken 大小写成员泄漏 dict）→ 修复 → 闭包验证 **PASS**。
 - 验证：observability+security 57 passed、全量 backend 626 passed/2 skipped、前端 77 passed、E2E 1 passed、ruff/mypy/diff-check clean；build_windows.ps1 端到端通过（含发布文档门禁）；smoke 两阶段通过（Phase A 健康+首页、Phase B 自检退出 0 + 无残留 runtime.json）。
 - auto_accepted，本地 focused commit（未 push）。
+
+## 当前 Task 19* Session（auto_accepted）
+
+- `2026-08-06-task-19star-frontend-state`：Milestone 5 第二个 Task。Context Packet：`mvp-task-19star-frontend-state-v1`（`docs/plans/2026-08-06-task-19star-frontend-state-packet.md`，gitignored）。修复用户报告的 5 项问题。
+- 实现（commit `ecfcf85`，19 文件 +1102/−188）：F19-1 `/cancel` 改为等待回滚（`AttemptRegistry.await_task` shield+timeout、orchestrator `await_cancelled`、`GenerationService.cancel` async、路由 async 202 在回滚后返回；`_generate` finally `inner.aclose()` 使断流 GeneratorExit 同步触发 `_run` 的 `_rollback_cancelled`）；前端 `cancelStream` 先 await 后端再 abort + 单飞 + 捕获 controller 守卫。F19-2 模块级 `generationStore.ts`（per-draftId + `_snapshot`），切页不丢流、重挂载恢复。F19-3/F19-4 `AskGusReviewPage` 移除「进入料理蓝图」按钮/handler 与 `noGameplayYet` 块，copy 键同步移除。F19-5 `CookbookService.delete` 级联 `delete_archived_by_dish` + `list_drafts` 孤儿 ARCHIVED 过滤 + 共享 `_delete_draft_record`（资产引用保护）。`ndjson.ts` 新增结构化错误包络解析（`GenerationRequestError`/`GenerationCancelError`）。
+- 审阅：round 0 REVISE（2 项 MUST_FIX，均 F19-1-001——/cancel 202 未等回滚、cancelStream 过期 finally 杀新生成）→ 修复（round 1：async cancel 路由 + API 集成回归测试；前端单飞 + controller 守卫 + 竞态回归测试）→ round 1 闭包验证 **PASS**（无 MUST_FIX；实施期「send 边界」观察经核对由 GeneratorExit 回滚覆盖，判非缺陷）。
+- 验证：全量 backend 616 passed/2 skipped、前端 86 passed、E2E 9 passed（spec 未改，仅断言「进入料理蓝图」count 0）、ruff/mypy/lint/build/diff-check clean；无 OpenAPI/契约变化。
+- auto_accepted，本地 focused commit（未 push）。真实用户交互复验留待 Milestone 5 全量验收。
 
 ## 当前 Milestone 3 验收 Session（accepted）
 
