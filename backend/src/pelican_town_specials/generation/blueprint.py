@@ -78,7 +78,10 @@ def build_blueprint_visual_brief(
 
 
 def blueprint_icon_prompt(presentation: PresentationSpec) -> str:
-    return f"星露谷风格的 16×16 游戏图标：{presentation.display_name}"
+    return (
+        f"星露谷风格的 16×16 游戏图标：{presentation.display_name}"
+        "。单个物品居中，纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
+    )
 
 
 def blueprint_preview_prompt(

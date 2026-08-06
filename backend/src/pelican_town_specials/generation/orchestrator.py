@@ -47,6 +47,7 @@ from pelican_town_specials.images import (
     build_icon_16,
     downscale_for_vision,
 )
+from pelican_town_specials.images.background_keying import key_icon_background
 from pelican_town_specials.images.vision_input import VISION_MIN_PIXELS
 from pelican_town_specials.persistence.asset_store import AssetMetadata, FileAssetStore
 from pelican_town_specials.persistence.repositories import (
@@ -264,7 +265,10 @@ def _preview_size(data: bytes) -> str:
 
 
 def _icon_prompt(core: GeneratedDishCore) -> str:
-    return f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
+    return (
+        f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
+        "。单个物品居中，纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
+    )
 
 
 def _preview_prompt(
@@ -677,7 +681,7 @@ class GenerationOrchestrator:
             else:
                 assert state.core is not None
                 icon_prompt = _icon_prompt(state.core)
-            state.icon_source = await gateway.generate_image(
+            generated_icon = await gateway.generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.GENERATION,
                     prompt=icon_prompt,
@@ -685,15 +689,24 @@ class GenerationOrchestrator:
                     request_id=state.command.request_id,
                 )
             )
+            # R12: models often return an opaque solid backdrop despite the
+            # transparent-background instruction; key it out deterministically
+            # so the stored icon source and the 16x16 icon are truly
+            # transparent in game.
+            keyed = key_icon_background(generated_icon.data)
+            icon_media_type = (
+                ImageMediaType.PNG if keyed.changed else generated_icon.media_type
+            )
+            state.icon_source = GeneratedImage(
+                data=keyed.data, media_type=icon_media_type
+            )
             icon_w, icon_h = _image_dimensions(state.icon_source.data)
             icon_source_ref = self._assets.put(
                 state.icon_source.data,
                 AssetMetadata(
                     kind=AssetKind.ICON_SOURCE,
-                    mediaType=_domain_media_type(state.icon_source.media_type),
-                    fileExtension=_extension_for_media_type(
-                        state.icon_source.media_type
-                    ),
+                    mediaType=_domain_media_type(icon_media_type),
+                    fileExtension=_extension_for_media_type(icon_media_type),
                     width=icon_w,
                     height=icon_h,
                 ),
