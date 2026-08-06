@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-当前项目处于 Milestone 3（OpenAI-compatible generation）；Task 9/10/11/12/13 已本地提交（未 push，等待 Milestone 验收）；当前下一步为 Task 14（Blueprint 视觉更新与用户字段保护）。
+当前项目处于 Milestone 4（Content Patcher 编译与真实游戏验证）；Task 16/17/18 已完成并本地提交（未 push，Milestone 4 门）；Task 18 游戏验收核心通过，R12–R15 游戏内细节修复已本地提交；当前下一步为用户游戏内复验 R12–R15，随后 Task 19（PyInstaller 发布包）。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 
@@ -25,7 +25,7 @@
 - 普通 Task 的 `PASS` 自动进入 `auto_accepted` 并创建本地 focused commit（不 push）；Milestone 全量验证后统一用户验收与 push。
 - 不打断用户，除非：`BLOCKED`、需要人工介入，或当前 Milestone 开发完成。
 
-不重复执行已完成的 MVP Task 1–13；不把开发工具整理或控制面维护误记为产品功能完成。
+不重复执行已完成的 MVP Task 1–18；不把开发工具整理或控制面维护误记为产品功能完成。
 ## 开发工具与产品范围
 
 - `backend/pyproject.toml` 仅负责 Python 依赖、构建和检查工具声明；它不是产品功能。

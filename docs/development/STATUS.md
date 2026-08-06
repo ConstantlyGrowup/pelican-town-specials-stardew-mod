@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone-3-accepted |
+| overall_state | milestone-4-in-progress |
 | project_phase | milestone-4-content-patcher-compiler |
 | product_implementation_started | true |
-| active_session_id | 2026-08-05-task-18-game-validation |
-| active_session_state | awaiting_user_acceptance |
-| active_session_type | implementation + game-acceptance |
-| current_task | Task 18：真实 Stardew Valley 验证（代码部分已提交；等待用户配置 PTS_STARDEW_MODS_DIR 与游戏内人工验收） |
-| blocker | **需要用户介入**：配置真实游戏 Mods 目录 → 部署 → 游戏内 8 项人工验收 → Spike 回写设计 §18 |
-| next_action | 用户设置 `PTS_STARDEW_MODS_DIR`（如 F:\SteamLibrary\...\Mods）并授权部署；运行 `scripts/deploy_local_mod.ps1`；SMAPI 启动游戏按计划 Step 4 完成 8 项验收；证据存 `output/game-validation/<date>/`；包工回写 Spike 结论 |
+| active_session_id | 2026-08-06-r12-r15-game-acceptance-fixes |
+| active_session_state | committed |
+| active_session_type | acceptance-fix |
+| current_task | Task 18 游戏验收通过；R12–R15 四项游戏内细节修复已完成并本地提交（886de32/8589a3e/5761e92），等待用户重新生成菜品并游戏内复验 Buff 显示/图标透明底/Edibility 取值/材料准确性 |
+| blocker | 无（等待用户下一轮游戏内复验结论） |
+| next_action | 用户游戏内复验 R12–R15 效果 → 复验通过后继续 Task 19（PyInstaller 发布包）；Milestone 4 全量验证后统一验收与 push |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 7623e43（docs: record Task 17 export flow session） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18（1730578/be6eb1b/fa34d5e + 2056658/7623e43 + Task 18 commits）已本地提交未 push（Milestone 4 门） |
+| 最新提交 | 5761e92（fix: key opaque generated icon backgrounds for transparency，R12） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与 R12–R15（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92）已本地提交未 push（Milestone 4 门） |
 | 当前工作树范围 | 工作树核验干净；仅预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`（非本 Session 产物） |
 
 ## 当前 Milestone 3 验收 Session（accepted）
@@ -39,11 +39,18 @@
 - `2026-08-05-task-16-mod-compiler`：Milestone 4 首个 Task（deterministic Content Patcher compiler）。Context Packet：`mvp-task-16-mod-compiler-v1`。实施子代理 TDD（红→绿 60 passed、回归 208 passed、全量 528 passed/2 skipped），Codex 审阅 **PASS**（round 0，14/14 criterion），本地 focused commit `1730578`（feat）+ `be6eb1b`/`fa34d5e`（docs），未 push。
 - 闭包裁决 R16-1..6：author_name 注入编译器构造；`validate_export` 增 catalog 参数；Buff→Data/Objects.Buffs（Task 18 Spike 冻结）；i18n default/zh 一致；ExportArtifact/compile_to_bytes；staging 为调用方目录。
 
-## 当前 Task 18 Session（committed + 待用户游戏验收）
+## 当前 R12–R15 Session（committed）
 
-- `2026-08-05-task-18-game-validation`：Milestone 4 第三个 Task（真实 Stardew Valley 验证与 Spike 冻结）。Context Packet：`mvp-task-18-game-validation-v1`（R18-1..5，gitignored）。自动范围完成：`scripts/validate_mod_zip.py`（拒绝 path traversal/根孤儿/重复/JSON/PNG 校验，`PTS_EXPORT_ZIP_*`）、`scripts/deploy_local_mod.ps1`（Resolve-Path 守卫、默认拒覆盖、`-Replace` 移 `_pts_backup/<timestamp>/`、`-WhatIf`）、`tests/integration/test_release_mod.py`（16 passed）、根级 `pytest.ini`（importlib 模式，Codex 验证接受的 scope_delta）。
+- `2026-08-06-r12-r15-game-acceptance-fixes`：用户游戏内验收发现四项细节问题并授权修复——R12 图标黑底（确定性 Pillow 洪泛抠图 + 洋红背景 prompt，`5761e92`）、R13 Buff 游戏内不显示（Buff 内嵌 Data/Objects 条目、对齐官方 1.6.15 结构、Duration 游戏分钟，`886de32`）、R14 Edibility 偏高（prompt 原版取值带 + 官方换算公式 ceil/floor，`8589a3e`）、R15 材料不准（双 prompt 约束 + `ensure_main_protein` 主食材护栏，`8589a3e`）。
+- 验证：全量 backend + 集成 565 passed/2 skipped；Ruff clean；mypy 仅剩 3 处 HEAD 预存错误（exports.py/app.py，stash 基线确认与本次无关）；diff-check clean；无契约/前端变化。
+- 独立只读 Review Subagent **PASS**（无 MUST_FIX；本环境无 codex-mcp 通道，按回退路径执行，未冒充 Luna 路由）。auto_accepted，三个本地 focused commits（未 push）。
+- Spike 结论已回写设计 §18.3 与变更记录 v1.2；待用户重新生成菜品并游戏内复验四项效果。
+
+## 当前 Task 18 Session（game-acceptance-passed）
+
+- `2026-08-05-task-18-game-validation`：Milestone 4 第三个 Task（真实 Stardew Valley 验证与 Spike 冻结）。Context Packet：`mvp-task-18-game-validation-v1`（R18-1..5，gitignored）。自动范围完成：`scripts/validate_mod_zip.py`、`scripts/deploy_local_mod.ps1`、`tests/integration/test_release_mod.py`（16 passed）、根级 `pytest.ini`（importlib 模式，Codex 验证接受的 scope_delta）。
 - Codex：round 0 REVISE（T18-VALIDATOR-002 根孤儿未拒）→ round 1 修复 → round 2 **PASS**。包工复跑：集成 16 passed、combined 76 passed、全量 backend 538 passed/2 skipped、ruff/mypy/diff-check clean。auto_accepted，本地 focused commit（未 push）。
-- **下一步（需用户介入）**：配置 `PTS_STARDEW_MODS_DIR` → 部署 → 游戏内 8 项人工验收（SMAPI patch summary、两道菜制作/食用、字段、SpriteIndex、语言回退）→ 证据存 `output/game-validation/<date>/` → 回写设计 §18 与项目索引。
+- **游戏验收（用户 2026-08-06 确认）**：打包验收成功，解压后游戏内找到对应物品。核心验收通过；8 项细节中的四项 API 调用问题已由 R12–R15 修复（见上方 Session），Spike 结论已回写设计 §18.3。
 
 ## 当前 Task 17 Session（committed）
 

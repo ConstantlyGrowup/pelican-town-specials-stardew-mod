@@ -3,10 +3,10 @@
 | 字段 | 值 |
 |---|---|
 | `session_id` | `2026-08-05-task-18-game-validation` |
-| `session_type` | implementation |
-| `state` | committed（代码部分）；awaiting_user_acceptance（游戏验收部分） |
+| `session_type` | implementation + game-acceptance |
+| `state` | game-acceptance-passed（代码 committed；游戏验收核心通过；待统一提交收尾） |
 | `date` | 2026-08-05 |
-| `task` | Task 18：真实 Stardew Valley 验证与编译 Spike 冻结（代码部分已提交；游戏验收待用户） |
+| `task` | Task 18：真实 Stardew Valley 验证与编译 Spike 冻结 |
 | `acceptance_contract_id` | `mvp-task-18-game-validation-v1` |
 | `revise_round` | 1（round 0 REVISE 1 项 → round 1 修复 → round 2 PASS） |
 | `base_commit` | `7623e43` |
@@ -55,8 +55,13 @@ Milestone 4 第三个 Task。用户授权 Milestone 4 全自动开发，仅在�
 2. 备份时间戳冲突避免（`_pts_backup/<timestamp>/` 秒精度不足）。
 3. pytest.ini 与 backend/pyproject.toml 双配置源（backend 单目录命令用 pyproject.toml，跨目录 combined 用 pytest.ini）。
 
-## 待用户介入（游戏验收部分）
+## 游戏验收（用户 2026-08-06 确认）
 
-1. 配置 `PTS_STARDEW_MODS_DIR`（真实游戏 Mods 目录）并授权部署。
-2. 计划 Step 4 游戏内 8 项人工验收 + 证据存 `output/game-validation/<date>/`。
+- **打包验收成功**；解压后游戏内找到对应物品。核心验收通过。
+- 用户个人修复 API 调用细节进行中；结论到达后统一提交（用户修改 + 控制面收尾）并继续 Task 19。
+
+## 待收尾
+
+1. 用户 API 细节修复结论 → 统一提交。
+2. 剩余 8 项细节核对 + 证据存 `output/game-validation/<date>/`（可选）。
 3. Spike 回写设计 §18 与项目索引；若证伪 codec 另行裁决。
