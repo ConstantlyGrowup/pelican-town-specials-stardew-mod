@@ -613,6 +613,52 @@ def _ask_gus_design_request() -> AskGusDesignRequest:
     )
 
 
+def test_ask_gus_v2_prompt_relaxes_buff_eligibility_without_forcing_it() -> None:
+    from pelican_town_specials.providers.prompts.ask_gus_v2 import (
+        ASK_GUS_PROMPT_V2,
+    )
+
+    assert "不要因为菜品普通就默认将 buff 设为 null" in ASK_GUS_PROMPT_V2
+    assert "主食材、烹饪方式、风味、饮品特征或主题" in ASK_GUS_PROMPT_V2
+    assert "通常推荐一个温和的非零属性" in ASK_GUS_PROMPT_V2
+    assert "最多两个明确互补的非零属性" in ASK_GUS_PROMPT_V2
+    assert "不得添加无关属性" in ASK_GUS_PROMPT_V2
+    assert "不得给出夸张数值或夸张持续时间" in ASK_GUS_PROMPT_V2
+    assert "非常朴素且没有可信玩法关联" in ASK_GUS_PROMPT_V2
+    assert "buff 设为 null" in ASK_GUS_PROMPT_V2
+
+
+@respx.mock
+async def test_design_ask_gus_routes_new_calls_through_v2_prompt(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    payload = {
+        "presentation": {
+            "displayName": "春日面碗",
+            "internalName": "SpringNoodleBowl",
+            "categoryLabel": "主菜",
+            "description": "一碗带着春天气息的热汤面。",
+            "tags": ["春日", "面食"],
+        },
+        "ingredients": [{"name": "Egg", "normalizedName": "鸡蛋"}],
+        "recovery": {"edibility": 40},
+        "buff": None,
+        "sellPrice": 220,
+        "isDrink": False,
+        "visualBrief": "春日热汤面。",
+    }
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(payload, ensure_ascii=False))
+    )
+
+    await gateway.design_ask_gus(_ask_gus_design_request())
+
+    outbound = json.loads(route.calls[0].request.content.decode())
+    prompt = outbound["messages"][0]["content"][0]["text"]
+    assert "不要因为菜品普通就默认将 buff 设为 null" in prompt
+    assert "最多两个明确互补的非零属性" in prompt
+
+
 def _image_generation_request() -> ImageGenerationRequest:
     return ImageGenerationRequest(
         operation=ImageOperation.GENERATION,

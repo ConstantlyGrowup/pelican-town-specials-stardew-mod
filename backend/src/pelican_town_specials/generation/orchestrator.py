@@ -91,7 +91,7 @@ from .events import (
 
 STAGE_ORDER = tuple(GenerationStage)
 
-_ASK_GUS_PROMPT_VERSION = "ask-gus-v1"
+_ASK_GUS_PROMPT_VERSION = "ask-gus-v2"
 _VISUAL_PROMPT_VERSION = "visual-v3-multi-image-edit"
 _ICON_SIZE = "1024x1024"
 

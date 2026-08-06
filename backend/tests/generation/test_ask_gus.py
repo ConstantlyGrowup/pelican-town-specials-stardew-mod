@@ -77,6 +77,7 @@ async def test_ask_gus_stage_order(
         assert required_text in preview_request.prompt
     assert "持续时间：" not in preview_request.prompt
     saved = harness.orchestrator.drafts.get(ready_draft.draft_id)
+    assert saved.provenance.prompt_versions["ask-gus"] == "ask-gus-v2"
     assert saved.visuals is not None
     assert saved.visuals.generated_art_asset_id is None
     assert saved.visuals.preview_asset_id is not None
