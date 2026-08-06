@@ -315,3 +315,89 @@ async def test_cancel_awaits_rollback_then_immediate_regenerate_succeeds(
                 generate_task.cancel()
                 with suppress(BaseException):
                     await generate_task
+
+
+async def test_closing_streaming_response_closes_iterator_on_disconnect() -> None:
+    """Regression: Starlette 1.3 (ASGI spec >= 2.4) raises from stream_response
+    on client disconnect WITHOUT closing the body iterator. The generate route's
+    _ClosingStreamingResponse must close it, or the generation slot leaks and
+    every later generate request fails with PTS_GEN_BUSY."""
+    from pelican_town_specials.api.routes.generation import (
+        _ClosingStreamingResponse,
+    )
+
+    class ProbeIterator:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def __aiter__(self) -> ProbeIterator:
+            return self
+
+        async def __anext__(self) -> str:
+            return "line\n"
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    probe = ProbeIterator()
+    response = _ClosingStreamingResponse(probe, media_type="application/x-ndjson")
+
+    async def send(message: dict[str, object]) -> None:
+        if message["type"] == "http.response.body":
+            raise OSError("client disconnected")
+
+    with pytest.raises(OSError):
+        await response.stream_response(send)
+
+    assert probe.closed is True
+
+
+async def test_cancel_orphaned_attempt_rolls_back(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> None:
+    """Regression: /cancel must clear a draft stuck in GENERATING whose attempt
+    has no live in-process task (client disconnect / page reload). Previously the
+    cancel route returned 202 but did nothing, leaving the draft permanently
+    GENERATING and the generation unusable."""
+    from pelican_town_specials.domain.common import utc_now
+    from pelican_town_specials.domain.draft import DraftStatus
+
+    draft_id = _create_ask_gus_draft(gen_services, gen_auth_client)
+    attempt_id = uuid4()
+    saved = gen_services.draft_repository.get(draft_id)
+    staged = saved.model_copy(
+        update={
+            "status": DraftStatus.GENERATING,
+            "active_attempt_id": attempt_id,
+            "updated_at": utc_now(),
+        }
+    )
+    gen_services.draft_repository.control_write(
+        staged,
+        expected_revision=saved.revision,
+        expected_attempt_id=None,
+    )
+
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/cancel",
+        headers=gen_auth_client.mutation_headers,
+    )
+    assert response.status_code == 202
+
+    restored = gen_services.draft_repository.get(draft_id)
+    assert restored.status is DraftStatus.READY
+    assert restored.active_attempt_id is None
+
+    # The draft is recoverable and the slot is free: a fresh generation works.
+    gen_services.gateway.delay = 0.0
+    second = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+    )
+    assert second.status_code == 200
+    events = [
+        json.loads(line)
+        for line in second.text.strip().splitlines()
+        if line
+    ]
+    assert events[-1]["type"] == "attempt.succeeded"

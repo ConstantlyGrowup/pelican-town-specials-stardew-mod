@@ -51,6 +51,7 @@ from pelican_town_specials.application.settings import (
 )
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.config import AppConfig
+from pelican_town_specials.domain.draft import DraftStatus
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
@@ -173,6 +174,19 @@ def create_app(
         # Recover attempts interrupted by a previous process crash; never
         # resume provider calls automatically after a restart.
         resolved_attempt_repository.interrupt_running()
+        # Roll drafts left in a generating state back to a recoverable status so
+        # they are not permanently stuck after a crash or a hard exit.
+        for draft in resolved_draft_repository.list():
+            if (
+                draft.active_attempt_id is not None
+                and draft.status
+                in (
+                    DraftStatus.GENERATING,
+                    DraftStatus.REGENERATING,
+                    DraftStatus.STALE_PREVIEW,
+                )
+            ):
+                resolved_generation_service.recover_interrupted(draft.draft_id)
         monitor_task: asyncio.Task[None] | None = None
         if resolved_activity_tracker.has_shutdown_callback:
             monitor_task = asyncio.create_task(

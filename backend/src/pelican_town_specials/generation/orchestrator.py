@@ -421,6 +421,16 @@ def _cancelled_error() -> AppError:
     )
 
 
+def _interrupted_error() -> AppError:
+    return AppError(
+        code="PTS_GEN_INTERRUPTED",
+        message="生成任务已中断，请重新生成。",
+        http_status=202,
+        details={},
+        retryable=True,
+    )
+
+
 def _unexpected_error(exc: Exception) -> AppError:
     return AppError(
         code="PTS_GEN_UNEXPECTED",
@@ -460,6 +470,16 @@ class _SlotGuardedAsyncIterator:
 
     def __aiter__(self) -> _SlotGuardedAsyncIterator:
         return self
+
+    def __del__(self) -> None:
+        # Last-resort GC safety: Starlette does not always aclose the body
+        # iterator on client disconnect, and an iterator that is dropped before
+        # its body ever starts would otherwise keep the generation slot
+        # occupied forever. _release is idempotent and thread-safe.
+        try:
+            self._release()
+        except Exception:  # noqa: BLE001, S110 - __del__ must never raise
+            pass
 
     async def __anext__(self) -> GenerationEvent:
         try:
@@ -523,6 +543,62 @@ class GenerationOrchestrator:
         """
         await self._registry.await_task(attempt_id)
 
+    def recover_interrupted(self, draft_id: UUID) -> bool:
+        """Roll a draft back out of a generating state whose attempt is no
+        longer tracked in this process.
+
+        Applies when the client disconnected and the stream task was dropped,
+        or when the process restarted over a previously generating draft. The
+        draft returns to its pre-generation status (READY for INITIAL,
+        REVIEWABLE for regeneration, STALE_PREVIEW for a cancelled blueprint
+        preview), the active attempt is cleared, and the persisted attempt is
+        marked INTERRUPTED so a fresh generation can start. Returns whether a
+        recovery was applied.
+        """
+        try:
+            draft = self._drafts.get(draft_id)
+        except (FileNotFoundError, OSError):
+            return False
+        attempt_id = draft.active_attempt_id
+        if attempt_id is None:
+            return False
+        if draft.status is DraftStatus.GENERATING:
+            action = DraftAction.GENERATION_CANCELLED
+        elif draft.status is DraftStatus.REGENERATING:
+            action = DraftAction.REGENERATION_CANCELLED
+        elif draft.status is DraftStatus.STALE_PREVIEW:
+            rolled = draft
+        else:
+            return False
+        if draft.status in (DraftStatus.GENERATING, DraftStatus.REGENERATING):
+            rolled = transition(draft, action)
+        rolled = rolled.model_copy(
+            update={
+                "last_attempt_id": attempt_id,
+                "last_error": _to_summary(_interrupted_error()),
+                "active_attempt_id": None,
+                "updated_at": utc_now(),
+            }
+        )
+        try:
+            self._drafts.control_write(
+                rolled,
+                expected_revision=draft.revision,
+                expected_attempt_id=attempt_id,
+            )
+        except (RevisionConflictError, AttemptMismatchError):
+            # State changed concurrently; someone else owns the recovery.
+            return False
+        try:
+            attempt = self._attempts.get(attempt_id)
+        except (FileNotFoundError, OSError):
+            return True
+        interrupted = attempt.model_copy(
+            update={"status": AttemptStatus.INTERRUPTED, "finished_at": utc_now()}
+        )
+        self._attempts.save(interrupted)
+        return True
+
     @property
     def drafts(self) -> DraftRepository:
         return self._drafts
@@ -557,6 +633,13 @@ class GenerationOrchestrator:
                 try:
                     await inner.aclose()
                 finally:
+                    # The slot must be released on EVERY termination path
+                    # (success, failure, cancel, client disconnect, or generator
+                    # GC). Starlette does not aclose the body iterator on
+                    # disconnect, so the wrapper's release is not guaranteed to
+                    # run; releasing here makes the slot self-healing. Idempotent
+                    # with the wrapper's _release().
+                    self._registry.release_slot()
                     self._registry.unregister(attempt_id)
 
     async def _run(

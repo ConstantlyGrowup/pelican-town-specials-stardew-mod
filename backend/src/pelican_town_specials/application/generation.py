@@ -52,7 +52,11 @@ class GenerationService:
         """Request cancellation of the draft's active attempt, if any.
 
         Awaits the server-side rollback so the caller only proceeds once the
-        draft is no longer GENERATING and the generation slot is released.
+        draft is no longer GENERATING and the generation slot is released. If
+        the attempt is persisted but no longer tracked in this process (the
+        client disconnected, the stream was dropped, or the server restarted),
+        the draft is rolled back directly so /cancel always clears the
+        generating state and never leaves the slot busy.
         """
         draft = self._get_draft(draft_id)
         attempt_id = draft.active_attempt_id
@@ -61,7 +65,16 @@ class GenerationService:
         tracked = self._orchestrator.cancel(attempt_id)
         if tracked:
             await self._orchestrator.await_cancelled(attempt_id)
-        return True
+            return True
+        return self._orchestrator.recover_interrupted(draft_id)
+
+    def recover_interrupted(self, draft_id: UUID) -> bool:
+        """Roll a previously-generating draft back to a recoverable status.
+
+        Used at startup to sweep drafts left in a generating state by a
+        previous process crash or hard exit. Never resumes provider calls.
+        """
+        return self._orchestrator.recover_interrupted(draft_id)
 
     def _resolve_kind(self, draft_id: UUID) -> GenerationAttemptKind:
         draft = self._get_draft(draft_id)
