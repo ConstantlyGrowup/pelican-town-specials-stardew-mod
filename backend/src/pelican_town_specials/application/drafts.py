@@ -441,7 +441,16 @@ class DraftService:
 
     def list_drafts(self) -> Page[DraftSummary]:
         records = self._drafts.list()
-        items = [DraftSummary.from_draft(record) for record in records]
+        active_dish_ids = {
+            archive.dish_id for archive in self._archives.list_active()
+        }
+        visible = [
+            record
+            for record in records
+            if record.status is not DraftStatus.ARCHIVED
+            or record.archived_dish_id in active_dish_ids
+        ]
+        items = [DraftSummary.from_draft(record) for record in visible]
         return Page(items=items, nextCursor=None, total=len(items))
 
     def get_draft(self, draft_id: UUID) -> DraftRecord:
@@ -520,6 +529,31 @@ class DraftService:
         draft = self.get_draft(draft_id)
         if draft.status is DraftStatus.ARCHIVED:
             raise self._illegal_transition_error(draft)
+        self._delete_draft_record(draft)
+
+    def delete_archived_by_dish(self, dish_id: UUID) -> int:
+        """Delete every ARCHIVED draft linked to a (now deleted) dish.
+
+        Used by the cookbook tombstone cascade so a deleted dish does not leave
+        its source drafts lingering on the homepage. Reuses the same shared
+        asset protection as discard_draft. Returns the number of deleted drafts.
+        """
+        deleted = 0
+        for draft in self._drafts.list():
+            if (
+                draft.status is DraftStatus.ARCHIVED
+                and draft.archived_dish_id == dish_id
+            ):
+                self._delete_draft_record(draft)
+                deleted += 1
+        return deleted
+
+    def _delete_draft_record(self, draft: DraftRecord) -> None:
+        """Delete a draft record, its attempts, and exclusively-owned assets.
+
+        Assets referenced by other drafts or active archived dishes are kept.
+        """
+        draft_id = draft.draft_id
         shared = self._referenced_asset_ids(excluding=draft_id)
         for asset_id in self._draft_asset_ids(draft):
             if asset_id in shared:

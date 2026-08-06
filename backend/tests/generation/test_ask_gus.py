@@ -10,7 +10,7 @@ from PIL import Image
 
 from pelican_town_specials.domain.assets import AssetRef
 from pelican_town_specials.domain.common import DraftMode, GenerationStage
-from pelican_town_specials.domain.draft import DraftStatus
+from pelican_town_specials.domain.draft import AttemptStatus, DraftStatus
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
@@ -28,6 +28,7 @@ from .conftest import (
     FakeGateway,
     GenerationHarness,
     core_fixture,
+    full_regen_command,
     initial_command,
     put_original_image,
 )
@@ -492,3 +493,52 @@ async def test_dish_analysis_receives_downscaled_jpeg(
         assert max(image.size) <= 2048
     # The stored original image asset is untouched.
     assert _read_asset(harness.asset_store, ref) == stored_before
+
+
+async def test_client_disconnect_rolls_back_initial_generation(
+    harness: GenerationHarness, ready_draft
+) -> None:
+    """A client disconnect (GeneratorExit) equals cancel: the draft rolls back
+    to READY, active_attempt_id clears, and the attempt is marked CANCELLED."""
+    agen = harness.orchestrator.run(initial_command(ready_draft))
+    first = await anext(agen)
+    assert first.type == "attempt.started"
+    attempt_id = first.attempt_id
+    assert attempt_id is not None
+    second = await anext(agen)
+    assert second.type == "stage.started"
+
+    mid = harness.orchestrator.drafts.get(ready_draft.draft_id)
+    assert mid.status is DraftStatus.GENERATING
+    assert mid.active_attempt_id == attempt_id
+
+    await agen.aclose()
+
+    restored = harness.orchestrator.drafts.get(ready_draft.draft_id)
+    assert restored.status is DraftStatus.READY
+    assert restored.active_attempt_id is None
+    attempt = harness.orchestrator.attempts.get(attempt_id)
+    assert attempt.status is AttemptStatus.CANCELLED
+
+
+async def test_client_disconnect_rolls_back_regeneration(
+    harness: GenerationHarness, reviewable_draft
+) -> None:
+    agen = harness.orchestrator.run(full_regen_command(reviewable_draft))
+    first = await anext(agen)
+    assert first.type == "attempt.started"
+    attempt_id = first.attempt_id
+    assert attempt_id is not None
+    second = await anext(agen)
+    assert second.type == "stage.started"
+
+    mid = harness.orchestrator.drafts.get(reviewable_draft.draft_id)
+    assert mid.status is DraftStatus.REGENERATING
+
+    await agen.aclose()
+
+    restored = harness.orchestrator.drafts.get(reviewable_draft.draft_id)
+    assert restored.status is DraftStatus.REVIEWABLE
+    assert restored.active_attempt_id is None
+    attempt = harness.orchestrator.attempts.get(attempt_id)
+    assert attempt.status is AttemptStatus.CANCELLED

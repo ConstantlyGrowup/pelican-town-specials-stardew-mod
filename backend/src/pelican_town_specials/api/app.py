@@ -125,7 +125,8 @@ def create_app(
         attempt_repository=resolved_attempt_repository,
     )
     resolved_cookbook_service = cookbook_service or CookbookService(
-        resolved_archive_repository
+        resolved_archive_repository,
+        draft_service=resolved_draft_service,
     )
     resolved_export_repository = ExportRepository(resolved_workspace)
     resolved_compiler = ContentPatcherCompiler(

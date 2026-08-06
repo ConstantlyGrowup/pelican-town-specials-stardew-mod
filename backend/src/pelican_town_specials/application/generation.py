@@ -48,13 +48,20 @@ class GenerationService:
             events = self._orchestrator.run(command)
         return _ndjson_lines(events)
 
-    def cancel(self, draft_id: UUID) -> bool:
-        """Request cancellation of the draft's active attempt, if any."""
+    async def cancel(self, draft_id: UUID) -> bool:
+        """Request cancellation of the draft's active attempt, if any.
+
+        Awaits the server-side rollback so the caller only proceeds once the
+        draft is no longer GENERATING and the generation slot is released.
+        """
         draft = self._get_draft(draft_id)
         attempt_id = draft.active_attempt_id
         if attempt_id is None:
             return False
-        return self._orchestrator.cancel(attempt_id)
+        tracked = self._orchestrator.cancel(attempt_id)
+        if tracked:
+            await self._orchestrator.await_cancelled(attempt_id)
+        return True
 
     def _resolve_kind(self, draft_id: UUID) -> GenerationAttemptKind:
         draft = self._get_draft(draft_id)

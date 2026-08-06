@@ -49,6 +49,24 @@ class AttemptRegistry:
             task.cancel()
         return task is not None
 
+    async def await_task(
+        self, attempt_id: UUID, timeout: float = 5.0
+    ) -> None:
+        """Wait for a tracked attempt's task to finish (rollback complete).
+
+        Best-effort: returns without raising when the task is absent or
+        already finished, on timeout, or when the waiter itself is cancelled.
+        The cancel route uses this so a 202 is only returned after the draft
+        rollback and slot release have completed.
+        """
+        task = self._tasks.get(attempt_id)
+        if task is None:
+            return
+        try:
+            await asyncio.wait_for(asyncio.shield(task), timeout)
+        except (TimeoutError, asyncio.CancelledError):
+            pass
+
     def is_cancelled(self, attempt_id: UUID) -> bool:
         return attempt_id in self._cancellations
 

@@ -514,6 +514,15 @@ class GenerationOrchestrator:
         """Request cancellation of a running attempt; returns whether it was tracked."""
         return self._registry.request_cancel(attempt_id, "user requested cancellation")
 
+    async def await_cancelled(self, attempt_id: UUID) -> None:
+        """Wait for a cancelled attempt's rollback to finish (best-effort).
+
+        The synchronous ``cancel`` only fires the cancellation; this awaits the
+        tracked task so callers know the draft rollback and slot release have
+        completed before returning (e.g. a 202 from the cancel route).
+        """
+        await self._registry.await_task(attempt_id)
+
     @property
     def drafts(self) -> DraftRepository:
         return self._drafts
@@ -535,16 +544,24 @@ class GenerationOrchestrator:
             asyncio.current_task() if asyncio.current_task() is not None else None,
         )
         async with self._registry.semaphore():
+            inner = self._run(command, attempt_id)
             try:
                 yield attempt_started(attempt_id)
-                async for event in self._run(command, attempt_id):
+                async for event in inner:
                     yield event
             finally:
-                self._registry.unregister(attempt_id)
+                # Propagate closure to the inner generator so a client
+                # disconnect (aclose on this iterator) runs _run's GeneratorExit
+                # rollback synchronously instead of leaving the draft stuck in a
+                # generating state until the inner generator is GC'd.
+                try:
+                    await inner.aclose()
+                finally:
+                    self._registry.unregister(attempt_id)
 
     async def _run(
         self, command: GenerationCommand, attempt_id: UUID
-    ) -> AsyncIterator[GenerationEvent]:
+    ) -> AsyncGenerator[GenerationEvent]:
         try:
             draft = self._drafts.get(command.draft_id)
         except (FileNotFoundError, OSError) as exc:
@@ -592,26 +609,33 @@ class GenerationOrchestrator:
             if draft.mode is DraftMode.BLUEPRINT
             else STAGE_ORDER
         )
-        for ordinal, stage in enumerate(stage_order, start=1):
-            if self._registry.is_cancelled(attempt_id):
-                yield await self._finish_cancelled(state, staged)
-                return
-            yield stage_started(attempt_id, stage, ordinal, len(stage_order))
-            try:
-                await self._execute_stage(state, stage)
-            except AppError as exc:
-                yield await self._finish_failed(state, staged, exc, attempt_id)
-                return
-            except asyncio.CancelledError:
-                yield await self._finish_cancelled(state, staged)
-                return
-            except Exception as exc:  # noqa: BLE001
-                yield await self._finish_failed(
-                    state, staged, _unexpected_error(exc), attempt_id
-                )
-                return
-            self._attempts.save(self._advance_stage(state, stage))
-            yield stage_succeeded(attempt_id, stage, ordinal, len(stage_order))
+        try:
+            for ordinal, stage in enumerate(stage_order, start=1):
+                if self._registry.is_cancelled(attempt_id):
+                    yield await self._finish_cancelled(state, staged)
+                    return
+                yield stage_started(attempt_id, stage, ordinal, len(stage_order))
+                try:
+                    await self._execute_stage(state, stage)
+                except AppError as exc:
+                    yield await self._finish_failed(state, staged, exc, attempt_id)
+                    return
+                except asyncio.CancelledError:
+                    yield await self._finish_cancelled(state, staged)
+                    return
+                except Exception as exc:  # noqa: BLE001
+                    yield await self._finish_failed(
+                        state, staged, _unexpected_error(exc), attempt_id
+                    )
+                    return
+                self._attempts.save(self._advance_stage(state, stage))
+                yield stage_succeeded(attempt_id, stage, ordinal, len(stage_order))
+        except GeneratorExit:
+            # A client disconnect (abort / close / page nav) equals cancel: run
+            # the same side-effect rollback as CancelledError, then close
+            # normally. No event is yielded in this branch.
+            self._rollback_cancelled(state, staged)
+            raise
 
         try:
             promoted = self._drafts.promote(
@@ -950,11 +974,17 @@ class GenerationOrchestrator:
             ErrorPayload.from_app_error(error, request_id=state.command.request_id),
         )
 
-    async def _finish_cancelled(
+    def _rollback_cancelled(
         self,
         state: _RunState,
         staged: DraftRecord,
-    ) -> GenerationEvent:
+    ) -> None:
+        """Side-effect rollback shared by explicit /cancel and client disconnect.
+
+        Clears the active attempt and moves the draft back to its pre-generation
+        status. Synchronous so the GeneratorExit path can run it without
+        yielding an event.
+        """
         if state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
             # A cancelled preview keeps the draft in STALE_PREVIEW.
             rolled = staged.model_copy(
@@ -993,6 +1023,13 @@ class GenerationOrchestrator:
             }
         )
         self._attempts.save(cancelled)
+
+    async def _finish_cancelled(
+        self,
+        state: _RunState,
+        staged: DraftRecord,
+    ) -> GenerationEvent:
+        self._rollback_cancelled(state, staged)
         return attempt_failed(
             state.attempt_id,
             ErrorPayload.from_app_error(

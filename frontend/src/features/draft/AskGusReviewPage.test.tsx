@@ -6,6 +6,7 @@ import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { PRODUCT_COPY } from "../../i18n/copy";
+import { resetGenerationStore } from "../generation/generationStore";
 import { AskGusReviewPage } from "./AskGusReviewPage";
 
 const copy = PRODUCT_COPY.zh;
@@ -13,6 +14,9 @@ const copy = PRODUCT_COPY.zh;
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeEach(() => {
+  resetGenerationStore();
+});
 afterEach(() => {
   server.resetHandlers();
   vi.restoreAllMocks();
@@ -133,7 +137,8 @@ describe("ask gus review", () => {
     expect(
       screen.queryByRole("button", { name: /重新生成图标|重新生成预览/ }),
     ).toBeNull();
-    expect(screen.getByRole("button", { name: copy.convertToBlueprint })).toBeVisible();
+    // F19-3-001: the convert-to-blueprint entry was removed from this page.
+    expect(screen.queryByRole("button", { name: "进入料理蓝图" })).toBeNull();
     expect(screen.getByRole("button", { name: copy.archiveDish })).toBeVisible();
     expect(screen.getByRole("button", { name: copy.rejectDraft })).toBeVisible();
   });
@@ -366,5 +371,36 @@ describe("ask gus review", () => {
 
     expect(await screen.findByText("生成结果未通过校验。")).toBeVisible();
     expect(screen.getByRole("button", { name: copy.retryGeneration })).toBeVisible();
+  });
+
+  it("does not show the no-gameplay-yet hint on an empty ask-gus draft", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByRole("button", { name: copy.startGeneration });
+    // F19-4-001: the no-gameplay-yet hint was removed.
+    expect(screen.queryByText("尚未填写玩法字段。")).toBeNull();
+  });
+
+  it("offers a cancel entry in the running banner for a GENERATING draft", async () => {
+    const cancelSpy = vi.fn(() => new Response(null, { status: 202 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(askGusDraft({ status: "GENERATING", revision: 3 })),
+      ),
+      http.post("/api/v1/drafts/:draft_id/cancel", cancelSpy),
+    );
+    renderPage();
+
+    await screen.findByText(copy.generationInProgress);
+    fireEvent.click(screen.getByRole("button", { name: copy.cancelGeneration }));
+
+    await waitFor(() => expect(cancelSpy).toHaveBeenCalledTimes(1));
   });
 });

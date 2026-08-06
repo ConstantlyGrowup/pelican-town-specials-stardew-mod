@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import time
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
@@ -11,6 +14,7 @@ import pytest
 from backend.tests.api.conftest import ApiClient, put_png
 from backend.tests.generation.conftest import FakeGateway
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 from pelican_town_specials.api.app import create_app
 from pelican_town_specials.api.security import SecurityConfig, SecurityState
@@ -202,3 +206,112 @@ def test_cancel_without_active_attempt_returns_202(
         headers=gen_auth_client.mutation_headers,
     )
     assert response.status_code == 202
+
+
+async def test_cancel_awaits_rollback_then_immediate_regenerate_succeeds(
+    gen_services: GenServices,
+) -> None:
+    """Regression for F19-1-001: /cancel returns 202 only after rollback.
+
+    Uses an AsyncClient + ASGITransport so the generate and cancel requests
+    share one event loop, exactly like the real uvicorn server. Without the
+    ``await_cancelled`` rollback wait, the 202 would race the async rollback
+    and an immediate regenerate would hit PTS_GEN_BUSY /
+    PTS_STATE_ILLEGAL_TRANSITION.
+    """
+    from pelican_town_specials.domain.assets import AssetKind
+
+    app = gen_services.client.app
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        launch_token = gen_services.security.issue_launch_token()
+        bootstrap = await client.post(
+            "/session/bootstrap",
+            json={"launchToken": launch_token},
+            headers={"Host": "testserver"},
+        )
+        assert bootstrap.status_code == 204
+        csrf = bootstrap.headers["x-pts-csrf"]
+        assert bootstrap.cookies.get("PTS_SESSION")
+        mutation_headers = {
+            "Host": "testserver",
+            "Origin": "http://testserver",
+            "X-PTS-CSRF": csrf,
+        }
+
+        ref = put_png(gen_services.asset_store, kind=AssetKind.ORIGINAL_IMAGE)
+        create = await client.post(
+            "/api/v1/drafts",
+            json={
+                "mode": "ASK_GUS",
+                "language": "zh-CN",
+                "source": {"originalImageAssetId": str(ref.asset_id)},
+            },
+            headers=mutation_headers,
+        )
+        assert create.status_code == 201
+        draft_id = create.json()["draftId"]
+
+        gen_services.gateway.delay = 0.4
+
+        generate_task = asyncio.create_task(
+            client.post(
+                f"/api/v1/drafts/{draft_id}/generate",
+                headers=mutation_headers,
+            )
+        )
+        try:
+            # Wait until the attempt reaches the first provider call so the
+            # cancel is delivered inside _run's stage execution (deterministic
+            # CancelledError rollback rather than a transient stream send
+            # boundary).
+            deadline = time.monotonic() + 5.0
+            while time.monotonic() < deadline:
+                if gen_services.gateway.calls:
+                    break
+                await asyncio.sleep(0.01)
+            else:
+                pytest.fail("generation attempt never reached the provider")
+
+            cancel_response = await client.post(
+                f"/api/v1/drafts/{draft_id}/cancel",
+                headers=mutation_headers,
+            )
+            assert cancel_response.status_code == 202
+
+            # The generate stream completed before /cancel returned: rollback
+            # (active_attempt_id cleared, slot released) is synchronous with 202.
+            generate_response = await generate_task
+            assert generate_response.status_code == 200
+            events = [
+                json.loads(line)
+                for line in generate_response.text.strip().splitlines()
+                if line
+            ]
+            assert events[-1]["type"] == "attempt.failed"
+            assert events[-1]["error"]["code"] == "PTS_GEN_CANCELLED"
+
+            saved = gen_services.draft_repository.get(draft_id)
+            assert saved.active_attempt_id is None
+            assert saved.status.value == "READY"
+
+            # Immediate regenerate succeeds: no 409 busy / illegal state.
+            gen_services.gateway.delay = 0.0
+            second = await client.post(
+                f"/api/v1/drafts/{draft_id}/generate",
+                headers=mutation_headers,
+            )
+            assert second.status_code == 200
+            second_events = [
+                json.loads(line)
+                for line in second.text.strip().splitlines()
+                if line
+            ]
+            assert second_events[-1]["type"] == "attempt.succeeded"
+        finally:
+            if not generate_task.done():
+                generate_task.cancel()
+                with suppress(BaseException):
+                    await generate_task

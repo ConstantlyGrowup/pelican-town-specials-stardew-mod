@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pelican_town_specials.domain.archive import (
@@ -13,10 +14,19 @@ from pelican_town_specials.persistence.repositories import ArchiveRepository
 
 from .common import Page
 
+if TYPE_CHECKING:
+    from pelican_town_specials.application.drafts import DraftService
+
 
 class CookbookService:
-    def __init__(self, repository: ArchiveRepository) -> None:
+    def __init__(
+        self,
+        repository: ArchiveRepository,
+        *,
+        draft_service: DraftService | None = None,
+    ) -> None:
         self._repository = repository
+        self._drafts = draft_service
 
     def list(self) -> Page[CookbookDishSummary]:
         archives = self._repository.list_active()
@@ -35,6 +45,10 @@ class CookbookService:
             self._repository.delete(dish_id)
         except (FileNotFoundError, OSError) as exc:
             raise self._not_found_error() from exc
+        # Cascade: a tombstoned dish must not leave its source drafts lingering
+        # on the homepage. Reuses DraftService's shared-asset protection.
+        if self._drafts is not None:
+            self._drafts.delete_archived_by_dish(dish_id)
 
     @staticmethod
     def _not_found_error() -> AppError:

@@ -343,21 +343,19 @@ test.describe("generation experience", () => {
     await expect(page).toHaveURL(/\/cookbook\/dish-1/);
   });
 
-  test("converting to blueprint navigates to the blueprint editor", async ({ page }) => {
+  test("review page offers no convert-to-blueprint entry", async ({ page }) => {
     const state: RouteState = {
-      drafts: {
-        "ask-gus": askGusDraft(),
-        blueprint: blueprintDraft(),
-      },
+      drafts: { "ask-gus": askGusDraft() },
       generateBody: "",
     };
     await installApiRoutes(page, state);
 
     await page.goto("/drafts/ask-gus");
-    await expect(page.getByRole("button", { name: "进入料理蓝图" })).toBeVisible();
-    await page.getByRole("button", { name: "进入料理蓝图" }).click();
-
-    await expect(page.getByRole("heading", { name: "编辑料理蓝图" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "完整重新生成" })).toBeVisible();
+    // F19-3-001: the convert-to-blueprint entry was removed; the page stays on
+    // the ask-gus review route (blueprint create flow lives in the homepage).
+    await expect(page.getByRole("button", { name: "进入料理蓝图" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "编辑料理蓝图" })).toHaveCount(0);
   });
 
   test("blueprint update preview returns to REVIEWABLE", async ({ page }) => {

@@ -11,11 +11,11 @@ import { useGeneration } from "../generation/useGeneration";
 type DraftView = components["schemas"]["DraftView"];
 
 /**
- * Ask Gus review page. A REVIEWABLE draft offers exactly four operations:
- * accept (archive), full regeneration, reject (discard), and convert to
- * Blueprint. There are no partial visual regeneration actions. A full
- * regeneration keeps the previous REVIEWABLE result on screen; failure restores
- * it with an inline error and a retry entry.
+ * Ask Gus review page. A REVIEWABLE draft offers exactly three operations:
+ * accept (archive), full regeneration, and reject (discard). The blueprint
+ * entry lives in the homepage create flow only. There are no partial visual
+ * regeneration actions. A full regeneration keeps the previous REVIEWABLE
+ * result on screen; failure restores it with an inline error and a retry entry.
  */
 export function AskGusReviewPage() {
   const { draftId } = useParams<{ draftId: string }>();
@@ -89,21 +89,6 @@ export function AskGusReviewPage() {
     navigate("/");
   }
 
-  async function onConvertToBlueprint() {
-    setBusy(true);
-    setActionError(null);
-    const { data, error } = await apiClient.POST(
-      "/api/v1/drafts/{draft_id}/convert-to-blueprint",
-      { params: { path: { draft_id: draftId ?? "" } } },
-    );
-    setBusy(false);
-    if (error || !data) {
-      setActionError(copy.convertFailed);
-      return;
-    }
-    navigate(`/drafts/${data.draftId}`);
-  }
-
   if (query.isLoading) {
     return (
       <main>
@@ -164,7 +149,7 @@ export function AskGusReviewPage() {
       {generation.phase === "cancelled" && (
         <p className="status-banner status-warning">{copy.generationCancelled}</p>
       )}
-      {running && (
+      {running && generation.phase !== "streaming" && (
         <div className="status-banner status-warning">
           <p>{copy.generationInProgress}</p>
           <button
@@ -175,6 +160,9 @@ export function AskGusReviewPage() {
             }
           >
             {copy.refreshDraft}
+          </button>
+          <button className="btn" type="button" onClick={() => void generation.cancel()}>
+            {copy.cancelGeneration}
           </button>
         </div>
       )}
@@ -216,9 +204,6 @@ export function AskGusReviewPage() {
             ))}
           </ul>
         )}
-        {!draft.presentation && !draft.gameplay && (
-          <p>{copy.noGameplayYet}</p>
-        )}
       </section>
 
       {terminal && <p className="status-banner status-warning">{copy.draftTitle}：{draft.status}</p>}
@@ -246,14 +231,6 @@ export function AskGusReviewPage() {
           </button>
           <button className="btn" type="button" onClick={generation.begin} disabled={streaming}>
             {copy.fullRegenerate}
-          </button>
-          <button
-            className="btn"
-            type="button"
-            onClick={onConvertToBlueprint}
-            disabled={busy || streaming}
-          >
-            {copy.convertToBlueprint}
           </button>
           <button
             className="btn"

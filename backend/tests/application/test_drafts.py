@@ -542,3 +542,36 @@ def test_archive_retry_repairs_missing_draft_association(
     assert stored.status is DraftStatus.ARCHIVED
     assert stored.archived_dish_id == first.dish_id
     assert len(services.archive_repository.list_active()) == 1
+
+
+def test_list_drafts_filters_orphaned_archived(services: AppServices) -> None:
+    """ARCHIVED drafts whose dish was deleted (before the cascade fix) are
+    hidden from the homepage listing immediately."""
+    reviewable = make_reviewable_draft(services)
+    service = _service(services)
+    archive = service.archive_draft(reviewable.draft_id, "orphan-key")
+
+    # Simulate a pre-fix deletion: tombstone the dish without the cascade, so
+    # the source draft is left behind with a dangling archived_dish_id.
+    services.archive_repository.delete(archive.dish_id)
+
+    page = service.list_drafts()
+
+    assert page.total == 0
+
+
+def test_list_drafts_keeps_archived_when_dish_active(services: AppServices) -> None:
+    """An ARCHIVED draft with an active dish still shows as archived and remains
+    non-discardable (DEL-003 unchanged)."""
+    reviewable = make_reviewable_draft(services)
+    service = _service(services)
+    service.archive_draft(reviewable.draft_id, "active-key")
+
+    page = service.list_drafts()
+
+    assert page.total == 1
+    assert page.items[0].draft_id == reviewable.draft_id
+    assert page.items[0].status is DraftStatus.ARCHIVED
+    with pytest.raises(AppError) as excinfo:
+        service.discard_draft(reviewable.draft_id)
+    assert excinfo.value.code == "PTS_STATE_ILLEGAL_TRANSITION"

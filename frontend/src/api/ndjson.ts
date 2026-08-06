@@ -4,8 +4,9 @@ import { getCsrfToken } from "./client";
 export type GenerationStage = components["schemas"]["GenerationStage"];
 
 /**
- * Redacted error payload carried by `attempt.failed` NDJSON lines. Mirrors the
- * backend ErrorEnvelope shape: camelCase aliases, no secrets.
+ * Redacted error payload carried by `attempt.failed` NDJSON lines or a
+ * non-2xx generate/cancel response body. Mirrors the backend ErrorEnvelope
+ * shape: camelCase aliases, no secrets.
  */
 export type GenerationErrorEnvelope = {
   code: string;
@@ -15,6 +16,67 @@ export type GenerationErrorEnvelope = {
   recommendedAction: string;
   [key: string]: unknown;
 };
+
+/** Raised when the generate endpoint rejects before the NDJSON stream starts. */
+export class GenerationRequestError extends Error {
+  readonly envelope: GenerationErrorEnvelope;
+
+  constructor(envelope: GenerationErrorEnvelope) {
+    super(envelope.message);
+    this.name = "GenerationRequestError";
+    this.envelope = envelope;
+  }
+}
+
+/** Raised when the cancel endpoint rejects (e.g. 409 state transition). */
+export class GenerationCancelError extends Error {
+  readonly envelope: GenerationErrorEnvelope;
+
+  constructor(envelope: GenerationErrorEnvelope) {
+    super(envelope.message);
+    this.name = "GenerationCancelError";
+    this.envelope = envelope;
+  }
+}
+
+async function parseErrorEnvelope(
+  response: Response,
+): Promise<GenerationErrorEnvelope> {
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+  const candidate =
+    payload &&
+    typeof payload === "object" &&
+    "error" in (payload as Record<string, unknown>)
+      ? (payload as { error?: unknown }).error
+      : payload;
+  if (candidate && typeof candidate === "object") {
+    const record = candidate as Record<string, unknown>;
+    if (typeof record.code === "string" && typeof record.message === "string") {
+      return {
+        code: record.code,
+        message: record.message,
+        retryable: typeof record.retryable === "boolean" ? record.retryable : false,
+        requestId: typeof record.requestId === "string" ? record.requestId : "",
+        recommendedAction:
+          typeof record.recommendedAction === "string"
+            ? record.recommendedAction
+            : "",
+      };
+    }
+  }
+  return {
+    code: "PTS_UNKNOWN",
+    message: `request failed: ${response.status}`,
+    retryable: false,
+    requestId: "",
+    recommendedAction: "",
+  };
+}
 
 /**
  * Union of the strict NDJSON generation events produced by the backend
@@ -97,7 +159,7 @@ export async function streamGeneration(
     },
   );
   if (!response.ok || !response.body) {
-    throw new Error(`generation request failed: ${response.status}`);
+    throw new GenerationRequestError(await parseErrorEnvelope(response));
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -127,8 +189,10 @@ export async function streamGeneration(
 }
 
 /**
- * Cancel the draft's active generation attempt. Best-effort: the UI is already
- * back to a recoverable state by the time this resolves.
+ * Cancel the draft's active generation attempt. The server rolls the draft
+ * back before returning, so callers must await this before clearing local
+ * stream state. A non-2xx response throws {@link GenerationCancelError} with
+ * the backend's structured envelope.
  */
 export async function cancelGeneration(draftId: string): Promise<void> {
   const headers: Record<string, string> = {};
@@ -136,9 +200,15 @@ export async function cancelGeneration(draftId: string): Promise<void> {
   if (csrfToken) {
     headers["X-PTS-CSRF"] = csrfToken;
   }
-  await fetch(`/api/v1/drafts/${encodeURIComponent(draftId)}/cancel`, {
-    method: "POST",
-    credentials: "same-origin",
-    headers,
-  });
+  const response = await fetch(
+    `/api/v1/drafts/${encodeURIComponent(draftId)}/cancel`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers,
+    },
+  );
+  if (!response.ok) {
+    throw new GenerationCancelError(await parseErrorEnvelope(response));
+  }
 }
