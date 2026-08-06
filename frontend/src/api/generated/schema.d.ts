@@ -294,6 +294,10 @@ export interface paths {
         /**
          * Cancel Generation
          * @description Cancel the draft's active generation attempt, if any.
+         *
+         *     Awaits the server-side rollback so a 202 response guarantees the draft is
+         *     no longer GENERATING and the generation slot is free for an immediate
+         *     retry.
          */
         post: operations["cancel_generation_api_v1_drafts__draft_id__cancel_post"];
         delete?: never;

@@ -589,7 +589,7 @@
     "/api/v1/drafts/{draft_id}/cancel": {
       "post": {
         "summary": "Cancel Generation",
-        "description": "Cancel the draft's active generation attempt, if any.",
+        "description": "Cancel the draft's active generation attempt, if any.\n\nAwaits the server-side rollback so a 202 response guarantees the draft is\nno longer GENERATING and the generation slot is free for an immediate\nretry.",
         "operationId": "cancel_generation_api_v1_drafts__draft_id__cancel_post",
         "parameters": [
           {
