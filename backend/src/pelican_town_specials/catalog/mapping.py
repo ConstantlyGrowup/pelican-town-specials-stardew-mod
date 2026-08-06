@@ -13,12 +13,107 @@ from .models import CatalogCandidate, CatalogItem
 from .repository import VanillaCatalog
 
 _FALLBACK_INGREDIENT_ID = "176"
+_FALLBACK_REASON_PREFIX = "catalog fallback"
+
+# Vanilla category for fish (Data/Objects Category -4). Used by the
+# main-protein consistency guard (R15).
+_FISH_CATEGORY = "-4"
+
+# Chinese substrings that imply a fish/seafood main ingredient. Ordered from
+# specific to generic so the targeted catalog search tries the most precise
+# term first.
+_SEAFOOD_KEYWORDS: tuple[str, ...] = (
+    "金枪鱼",
+    "沙丁鱼",
+    "鲑鱼",
+    "鳕鱼",
+    "鲷鱼",
+    "鲈鱼",
+    "鳟鱼",
+    "鲤鱼",
+    "鲶鱼",
+    "鳗鱼",
+    "鲱鱼",
+    "鳀鱼",
+    "鲟鱼",
+    "龙虾",
+    "鱿鱼",
+    "章鱼",
+    "蛤蜊",
+    "牡蛎",
+    "扇贝",
+    "螃蟹",
+    "虾",
+    "蟹",
+    "鱼",
+)
 
 
 class _SemanticIngredientLike(Protocol):
     name: str
     normalized_name: str
     quantity_hint: str | None = None
+
+
+def ensure_main_protein(
+    dish_text: str,
+    ingredients: Sequence[GameIngredient],
+    catalog: VanillaCatalog,
+) -> list[GameIngredient]:
+    """Guarantee a seafood main ingredient when the dish text mentions one.
+
+    The LLM occasionally designs a fish dish whose ingredient list contains
+    no fish at all (R15). When any seafood keyword appears in ``dish_text``
+    but no mapped ingredient belongs to the vanilla fish category, insert the
+    best matching catalog fish: appended in front when there is room,
+    otherwise replacing the first fallback-mapped ingredient. If neither is
+    possible the list is returned unchanged.
+    """
+    mentioned = [keyword for keyword in _SEAFOOD_KEYWORDS if keyword in dish_text]
+    if not mentioned:
+        return list(ingredients)
+
+    used_item_ids: set[str] = set()
+    for ingredient in ingredients:
+        used_item_ids.add(ingredient.item_id)
+        try:
+            item = catalog.require(ingredient.item_id)
+        except AppError:
+            continue
+        if item.category == _FISH_CATEGORY:
+            return list(ingredients)
+
+    fish_item: CatalogItem | None = None
+    mentioned_keyword = ""
+    for keyword in mentioned:
+        for item in catalog.search_ingredients(keyword, limit=5):
+            if item.category == _FISH_CATEGORY and item.item_id not in used_item_ids:
+                fish_item = item
+                mentioned_keyword = keyword
+                break
+        if fish_item is not None:
+            break
+    if fish_item is None:
+        return list(ingredients)
+
+    inserted = GameIngredient(
+        itemId=fish_item.item_id,
+        displayName=fish_item.display_name_en,
+        quantity=1,
+        mappingReason=(
+            "main-protein consistency: dish mentions "
+            f"{mentioned_keyword} but no fish was mapped"
+        ),
+        catalogVersion=catalog.version,
+    )
+    result = list(ingredients)
+    if len(result) < 8:
+        return [inserted, *result]
+    for index, ingredient in enumerate(result):
+        if ingredient.mapping_reason.startswith(_FALLBACK_REASON_PREFIX):
+            result[index] = inserted
+            return result
+    return result
 
 
 def map_ingredient(

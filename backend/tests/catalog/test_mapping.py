@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from pelican_town_specials.catalog.mapping import map_ingredient
+from pelican_town_specials.catalog.mapping import ensure_main_protein, map_ingredient
 from pelican_town_specials.catalog.models import CatalogCandidate
 from pelican_town_specials.catalog.repository import VanillaCatalog
-from pelican_town_specials.domain.dish import SemanticIngredient
+from pelican_town_specials.domain.dish import GameIngredient, SemanticIngredient
 from pelican_town_specials.domain.errors import AppError
 
 ROOT = Path(__file__).parents[3]
@@ -196,3 +196,89 @@ def test_mapping_all_unusable_candidates_return_fallback(
     assert mapped.quantity == 1
     assert mapped.catalog_version == catalog.version
     assert "catalog fallback" in mapped.mapping_reason
+
+
+# --- R15: main-protein consistency guard --------------------------------------
+
+
+def _game_ingredient(
+    item_id: str, catalog: VanillaCatalog, reason: str = "selected validated vanilla candidate"
+) -> GameIngredient:
+    item = catalog.require(item_id)
+    return GameIngredient(
+        itemId=item.item_id,
+        displayName=item.display_name_en,
+        quantity=1,
+        mappingReason=reason,
+        catalogVersion=catalog.version,
+    )
+
+
+def test_fish_dish_without_fish_gets_fish_inserted(catalog: VanillaCatalog) -> None:
+    ingredients = [
+        _game_ingredient("24", catalog),
+        _game_ingredient("256", catalog),
+    ]
+
+    result = ensure_main_protein("香煎柠檬黄油鱼 白身鱼排煎至金黄", ingredients, catalog)
+
+    assert len(result) == 3
+    assert catalog.require(result[0].item_id).category == "-4"
+    assert result[0].mapping_reason.startswith("main-protein consistency")
+    assert [item.item_id for item in result[1:]] == ["24", "256"]
+
+
+def test_specific_fish_keyword_maps_to_specific_fish(catalog: VanillaCatalog) -> None:
+    result = ensure_main_protein(
+        "香煎鲑鱼排", [_game_ingredient("24", catalog)], catalog
+    )
+
+    assert result[0].item_id == "139"
+    assert catalog.require(result[0].item_id).display_name_en == "Salmon"
+
+
+def test_dish_without_seafood_keywords_is_unchanged(catalog: VanillaCatalog) -> None:
+    ingredients = [_game_ingredient("24", catalog), _game_ingredient("256", catalog)]
+
+    result = ensure_main_protein("番茄炖菜 慢炖番茄与欧防风", ingredients, catalog)
+
+    assert [item.item_id for item in result] == ["24", "256"]
+
+
+def test_dish_already_containing_fish_is_unchanged(catalog: VanillaCatalog) -> None:
+    ingredients = [
+        _game_ingredient("139", catalog),
+        _game_ingredient("24", catalog),
+    ]
+
+    result = ensure_main_protein("鲑鱼欧防风浓汤", ingredients, catalog)
+
+    assert [item.item_id for item in result] == ["139", "24"]
+
+
+def test_full_list_replaces_first_fallback_ingredient(catalog: VanillaCatalog) -> None:
+    ingredients = [
+        _game_ingredient(item_id, catalog)
+        for item_id in ("24", "256", "190", "192", "194", "196", "198")
+    ]
+    ingredients.append(
+        _game_ingredient("176", catalog, reason="catalog fallback: no candidate matched")
+    )
+
+    result = ensure_main_protein("红烧鱼", ingredients, catalog)
+
+    assert len(result) == 8
+    assert catalog.require(result[-1].item_id).category == "-4"
+    assert result[-1].mapping_reason.startswith("main-protein consistency")
+    assert "176" not in [item.item_id for item in result]
+
+
+def test_full_list_without_fallback_is_unchanged(catalog: VanillaCatalog) -> None:
+    ingredients = [
+        _game_ingredient(item_id, catalog)
+        for item_id in ("24", "256", "190", "192", "194", "196", "198", "200")
+    ]
+
+    result = ensure_main_protein("红烧鱼", ingredients, catalog)
+
+    assert [item.item_id for item in result] == [item.item_id for item in ingredients]

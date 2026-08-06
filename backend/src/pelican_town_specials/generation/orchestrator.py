@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 from PIL import Image
 from pydantic import Field
 
-from pelican_town_specials.catalog.mapping import map_ingredient
+from pelican_town_specials.catalog.mapping import ensure_main_protein, map_ingredient
 from pelican_town_specials.catalog.models import CatalogCandidate
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
@@ -174,6 +174,7 @@ def _map_gameplay(
         )
         used_item_ids.add(mapped.item_id)
         ingredients.append(mapped)
+    ingredients = ensure_main_protein(_dish_text(core), ingredients, catalog)
     return GameplaySpec(
         ingredients=ingredients,
         recovery=core.recovery,
@@ -182,6 +183,20 @@ def _map_gameplay(
         recipeUnlock=RecipeUnlock.DEFAULT,
         buff=core.buff,
     )
+
+
+def _dish_text(core: GeneratedDishCore) -> str:
+    """Concatenate the human-facing dish text used by consistency guards."""
+    presentation = core.presentation
+    parts = [
+        presentation.display_name,
+        presentation.category_label,
+        presentation.description,
+        *presentation.tags,
+    ]
+    if presentation.gus_comment:
+        parts.append(presentation.gus_comment)
+    return " ".join(parts)
 
 
 def _build_candidates(

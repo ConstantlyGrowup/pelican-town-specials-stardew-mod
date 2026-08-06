@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from enum import Enum
-from math import floor
+from math import ceil, floor
 from typing import Any
 from uuid import UUID
 
@@ -131,8 +131,12 @@ class RecoverySpec(_FrozenStrictModel):
 
     @model_validator(mode="after")
     def _derive_fields(self) -> RecoverySpec:
-        object.__setattr__(self, "energy_restore", floor(self.edibility * 2.5))
-        object.__setattr__(self, "health_restore", floor(self.edibility * 1.125))
+        # Vanilla Stardew formula: energy = ceil(edibility * 2.5),
+        # health = floor(energy * 0.45) (R14: replaces the previous
+        # floor-based approximation that drifted from the in-game values).
+        energy = ceil(self.edibility * 2.5)
+        object.__setattr__(self, "energy_restore", energy)
+        object.__setattr__(self, "health_restore", floor(energy * 0.45))
         object.__setattr__(self, "calculation_version", "stardew-1.6")
         return self
 
