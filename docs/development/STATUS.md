@@ -57,7 +57,8 @@
 - `2026-08-07-post-acceptance-slot-leak-fix`：Milestone 5 验收未通过 3 项的根因修复——Starlette 1.3.1 `StreamingResponse` 断开时不 `aclose` body iterator → 生成槽泄漏 → 永久 `PTS_GEN_BUSY`「当前已有一个生成任务在运行」。用户明确本修复由用户本人验收，不走 Codex 审阅。
 - 三层修复：① `_generate` finally + `_SlotGuardedAsyncIterator.__del__` 保证所有终止路径释放进程级单槽；② 路由级 `_ClosingStreamingResponse` 确定性 `aclose` body iterator；③ 孤儿 attempt 恢复（`recover_interrupted`，`/cancel` + startup sweep 清扫，重开 exe 自愈）。
 - 验证：定向回归 10 passed；全量 backend **620 passed/2 skipped**；Ruff clean；Mypy clean（5 个改动源文件，app.py:326 与 exports.py 为 HEAD 预存错误）。前端无改动。
-- 待用户重新打包后交互复验 3 项：生成中切页回到草稿不再误报「开始生成」/busy；删除草稿后生成新草稿不再 busy；reload/重开 exe 后系统自恢复。
+- 发布包已重建：`build_windows.ps1` 全门禁通过（backend 636 passed/2 skipped、frontend 86 passed、OpenAPI drift/ignore policy OK、PyInstaller、release content gate）+ `smoke_windows_bundle.ps1` 两阶段通过；bundle 位于 `dist/PelicanTownSpecials-windows-x64/`。
+- 待用户交互复验 3 项：生成中切页回到草稿不再误报「开始生成」/busy；删除草稿后生成新草稿不再 busy；reload/重开 exe 后系统自恢复。
 
 ## 当前 Milestone 3 验收 Session（accepted）
 

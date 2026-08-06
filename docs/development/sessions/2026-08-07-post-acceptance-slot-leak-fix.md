@@ -74,8 +74,11 @@ Starlette 1.3.1 的 `StreamingResponse.__call__`（ASGI spec >= 2.4）在客户�
 
 - 用户指令跳过 Codex 审阅，由用户本人交互复验：① 生成中切页→回到草稿后不再误报「开始生成」/busy；
   ② 删除草稿后生成新草稿不再 busy；③ reload/重开 exe 后系统可自恢复。
-- 已知限制：本修复后端已通过全量自动测试；真实 exe 交互复验需要重新执行
-  `scripts/build_windows.ps1` 生成新 bundle（本次未重新打包）；`api/app.py:326` 与
-  `application/exports.py:194/226` 为 HEAD 预存 mypy 错误（stash 基线确认与本次无关）。
+- 已知限制：`api/app.py:326` 与 `application/exports.py:194/226` 为 HEAD 预存 mypy 错误
+  （stash 基线确认与本次无关）；`is_tracked` 辅助方法在 Review 前移除（未使用）。
+- 发布包：`scripts/build_windows.ps1` 全门禁复跑通过（backend 636 passed/2 skipped → frontend
+  86 passed → build → OpenAPI drift OK → ignore policy OK → PyInstaller → release content gate），
+  `scripts/smoke_windows_bundle.ps1` 两阶段通过；bundle 位于
+  `dist/PelicanTownSpecials-windows-x64/`，可直接启动复验。
 - 非阻塞观察：`recover_interrupted` 对 STALE_PREVIEW 保持原状态（回滚语义与其他生成态不同，
   属既有设计）；断开路径回滚消息使用 `PTS_GEN_INTERRUPTED`（区别于主动取消 `PTS_GEN_CANCELLED`）。
