@@ -628,8 +628,28 @@ def test_ask_gus_v2_prompt_relaxes_buff_eligibility_without_forcing_it() -> None
     assert "buff 设为 null" in ASK_GUS_PROMPT_V2
 
 
+def test_ask_gus_v3_prompt_constrains_prices_to_vanilla_bands() -> None:
+    from pelican_town_specials.providers.prompts.ask_gus_v3 import (
+        ASK_GUS_PROMPT_V3,
+    )
+
+    for expected in (
+        "普通菜 80..250g",
+        "精致菜 250..400g",
+        "明确高档或复杂菜 400..500g",
+        "大多数菜应落在 100..400g",
+        "普通菜或无 Buff 菜不得超过 500g",
+        "不得用抬高售价来补偿没有 Buff",
+        "Oil of Garlic（蒜油）1000g",
+        "Magic Rock Candy（魔法糖冰棍）5000g",
+        "明确的传奇定位或特殊功能性消耗品",
+        "清楚说明高价对应的玩法理由",
+        "原料价值与稀有度、制作复杂度、恢复量、Buff 强度与持续时间、菜品定位",
+    ):
+        assert expected in ASK_GUS_PROMPT_V3
+
 @respx.mock
-async def test_design_ask_gus_routes_new_calls_through_v2_prompt(
+async def test_design_ask_gus_routes_new_calls_through_v3_prompt(
     gateway: OpenAICompatibleGateway,
 ) -> None:
     payload = {
@@ -657,6 +677,9 @@ async def test_design_ask_gus_routes_new_calls_through_v2_prompt(
     prompt = outbound["messages"][0]["content"][0]["text"]
     assert "不要因为菜品普通就默认将 buff 设为 null" in prompt
     assert "最多两个明确互补的非零属性" in prompt
+    assert "普通菜 80..250g" in prompt
+    assert "普通菜或无 Buff 菜不得超过 500g" in prompt
+    assert "不得用抬高售价来补偿没有 Buff" in prompt
 
 
 def _image_generation_request() -> ImageGenerationRequest:

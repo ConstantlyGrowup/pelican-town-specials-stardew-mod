@@ -33,10 +33,8 @@ from pelican_town_specials.providers.prompts.analysis_v1 import (
     ANALYSIS_JSON_INSTRUCTION,
     ANALYSIS_PROMPT_V1,
 )
-from pelican_town_specials.providers.prompts.ask_gus_v2 import (
-    ASK_GUS_JSON_INSTRUCTION,
-    ASK_GUS_PROMPT_V2,
-)
+from pelican_town_specials.providers.prompts.ask_gus_v2 import ASK_GUS_JSON_INSTRUCTION
+from pelican_town_specials.providers.prompts.ask_gus_v3 import ASK_GUS_PROMPT_V3
 from pelican_town_specials.providers.retry import RetryPolicy
 from pelican_town_specials.providers.safe_download import (
     SafeImageDownloader,
@@ -113,7 +111,7 @@ class OpenAICompatibleGateway:
         json_only: bool = False,
     ) -> GeneratedDishCore:
         self._require_model(self._settings.text_model, "text_model")
-        prompt = f"{ASK_GUS_PROMPT_V2}\n\n菜品分析：\n{request.analysis.model_dump_json(by_alias=True)}"
+        prompt = f"{ASK_GUS_PROMPT_V3}\n\n菜品分析：\n{request.analysis.model_dump_json(by_alias=True)}"
         content = await self._chat_structured(
             model=self._settings.text_model,
             request_id=request.request_id,
