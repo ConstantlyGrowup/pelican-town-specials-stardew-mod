@@ -32,7 +32,7 @@ Milestone 5 第二个 Task，修复用户报告的 5 项问题：1) 取消生成
 
 - 全量 backend：**616 passed / 2 skipped**（含新增 `test_cancel_awaits_rollback_then_immediate_regenerate_succeeds`）；前端：**86 passed**（84 + 2 新用例）；E2E：**9 passed**（spec 未改，新增断言仅「进入料理蓝图」count 0）。
 - Ruff、Mypy（87 源文件）、前端 lint、`tsc --noEmit`+vite build、`git diff --check` 全 clean。
-- 无 OpenAPI/契约变化。
+- 无 OpenAPI/契约变化（API 形状不变）。Milestone 5 全量验证时 build 门禁的 OpenAPI drift 检查捕获到 round-1 cancel 路由 docstring 进入导出契约 description（仅描述文本、无接口形状变化）；已重新生成 `frontend/openapi.json` 与 `frontend/src/api/generated/schema.d.ts` 并提交 `4b58f0f`（chore），非功能变更。
 
 ## 验收与遗留
 

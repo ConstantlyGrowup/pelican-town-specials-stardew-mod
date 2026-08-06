@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone-5-in-progress |
+| overall_state | awaiting_milestone_acceptance |
 | project_phase | milestone-5-release-and-frontend-state |
 | product_implementation_started | true |
 | active_session_id | 无 |
 | active_session_state | 无 |
 | active_session_type | 无 |
-| current_task | Task 19 与 Task 19* 均已 auto_accepted；进入 Milestone 5 全量验证与用户验收 |
+| current_task | Milestone 5 全量验证完成（Task 19 与 Task 19* 构建/冒烟门禁通过）；等待用户一次性验收与统一 push 授权 |
 | blocker | 无 |
-| next_action | Milestone 5 全量验证（PyInstaller 构建/冒烟复验、用户真实交互复验 5 项修复）与用户一次性验收 + 统一 push 授权 |
+| next_action | 用户一次性验收 Milestone 5（Task 19 + Task 19*）并授权统一 push 至 origin/feat/mvp-implementation |
 | collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | ecfcf85（fix: sync generation cancel state, persist in-flight progress, and cascade archived drafts，Task 19*） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Task 16–18 与后续验收修复（1730578/be6eb1b/fa34d5e、2056658/7623e43、fa64a91/e426b2c、886de32/8589a3e/5761e92/b7fa672/9d06e41/5905360）已本地提交未 push（Milestone 4 门）；Task 19 本地 focused commit 3492650（未 push，Milestone 5 门）；Task 19* 本地 focused commit ecfcf85（未 push，Milestone 5 门） |
+| 最新提交 | 4b58f0f（chore: regenerate OpenAPI contract after cancel route docstring，Milestone 5 验证产物） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Milestone 4 全量（Task 16–18 + R12–R15）与 Milestone 5 全量（Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`）均已本地提交未 push，等待本次统一授权 push |
 | 当前工作树范围 | 工作树干净（除预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与测试临时目录，均非本 Session 产物） |
 
 ## 当前 Task 19 Session（auto_accepted）
@@ -44,6 +44,13 @@
 - 审阅：round 0 REVISE（2 项 MUST_FIX，均 F19-1-001——/cancel 202 未等回滚、cancelStream 过期 finally 杀新生成）→ 修复（round 1：async cancel 路由 + API 集成回归测试；前端单飞 + controller 守卫 + 竞态回归测试）→ round 1 闭包验证 **PASS**（无 MUST_FIX；实施期「send 边界」观察经核对由 GeneratorExit 回滚覆盖，判非缺陷）。
 - 验证：全量 backend 616 passed/2 skipped、前端 86 passed、E2E 9 passed（spec 未改，仅断言「进入料理蓝图」count 0）、ruff/mypy/lint/build/diff-check clean；无 OpenAPI/契约变化。
 - auto_accepted，本地 focused commit（未 push）。真实用户交互复验留待 Milestone 5 全量验收。
+
+## Milestone 5 全量验证（2026-08-06）
+
+- `scripts/build_windows.ps1` 全门禁复跑通过（exit 0）：backend 632 passed/2 skipped → frontend 86 passed → frontend build → **OpenAPI drift**（捕获 round-1 cancel docstring 描述变化，已再生成 `4b58f0f`）→ repo ignore policy → PyInstaller（PYZ/PKG/EXE/COLLECT）→ 发布文档复制 → bundle 结构与 release content gate。
+- `scripts/smoke_windows_bundle.ps1` 两阶段通过：Phase A 正常启动 + HTTP health + 静态首页；Phase B `--exit-after-health-check` 退出 0 + 无残留 runtime lock。
+- 产物：`dist/PelicanTownSpecials-windows-x64/`（onedir 发布包，本机已验证可启动服务）。
+- Milestone 5 全部完成 → `awaiting_milestone_acceptance`：用户一次性验收（真实交互复验 5 项修复 + 发布包体验）并授权统一 push（Milestone 4 + Milestone 5 commits）。
 
 ## 当前 Milestone 3 验收 Session（accepted）
 
