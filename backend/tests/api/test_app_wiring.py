@@ -155,7 +155,123 @@ def test_create_app_wires_task9_services_and_routes(tmp_path: Path) -> None:
         "/api/v1/drafts/{draft_id}/convert-to-blueprint",
         "/api/v1/drafts/{draft_id}/archive",
         "/api/v1/drafts/{draft_id}/discard",
+        "/api/v1/drafts/{draft_id}/generation",
         "/api/v1/cookbook",
         "/api/v1/cookbook/{dish_id}",
     ):
         assert path in paths
+
+
+def test_startup_sweep_recovers_orphaned_generating_draft(
+    tmp_path: Path,
+) -> None:
+    """Task 19.6: the startup sweep recovers a draft a previous process left in
+    a generating state (a genuine cross-process orphan), so the app is not stuck
+    on restart. It is scoped to orphans only — a live in-process generation is
+    never swept."""
+    from datetime import UTC, datetime
+    from uuid import uuid4
+
+    from backend.tests.domain.factories import make_draft as make_domain_draft
+
+    from pelican_town_specials.domain.assets import AssetKind, MediaType
+    from pelican_town_specials.domain.common import DraftMode
+    from pelican_town_specials.domain.draft import (
+        AttemptStatus,
+        DraftStatus,
+        GenerationAttempt,
+        GenerationAttemptKind,
+        GenerationStage,
+        StageAttempt,
+        StageStatus,
+    )
+    from pelican_town_specials.persistence.asset_store import (
+        AssetMetadata,
+        FileAssetStore,
+    )
+    from pelican_town_specials.persistence.repositories import (
+        DraftRepository,
+        GenerationAttemptRepository,
+    )
+
+    workspace = WorkspacePaths.create(tmp_path / "workspace")
+    asset_store = FileAssetStore(workspace)
+    draft_repository = DraftRepository(workspace)
+    attempt_repository = GenerationAttemptRepository(workspace)
+
+    import io
+
+    from PIL import Image
+
+    png_bytes = io.BytesIO()
+    Image.new("RGB", (16, 16), "blue").save(png_bytes, format="PNG")
+    ref = asset_store.put(
+        png_bytes.getvalue(),
+        AssetMetadata(
+            kind=AssetKind.ORIGINAL_IMAGE,
+            mediaType=MediaType.PNG,
+            fileExtension=".png",
+            width=16,
+            height=16,
+        ),
+    )
+    draft = make_domain_draft(
+        mode=DraftMode.ASK_GUS, status=DraftStatus.GENERATING, revision=1
+    )
+    source = draft.source.model_copy(
+        update={"original_image_asset_id": ref.asset_id}
+    )
+    draft = draft.model_copy(
+        update={"source": source, "active_attempt_id": uuid4()}
+    )
+    draft = draft_repository.save(draft, expected_revision=None)
+    now = datetime.now(UTC)
+    attempt_id = draft.active_attempt_id
+    assert attempt_id is not None
+    attempt_repository.save(
+        GenerationAttempt(
+            attempt_id=attempt_id,
+            draft_id=draft.draft_id,
+            kind=GenerationAttemptKind.INITIAL,
+            source_revision=draft.revision,
+            status=AttemptStatus.RUNNING,
+            current_stage=GenerationStage.DISH_ANALYSIS,
+            stages=[
+                StageAttempt(
+                    stage=GenerationStage.DISH_ANALYSIS,
+                    status=StageStatus.RUNNING,
+                    retry_count=0,
+                    started_at=now,
+                    finished_at=None,
+                )
+            ],
+            candidate_record_path=None,
+            started_at=now,
+            finished_at=None,
+            error=None,
+        )
+    )
+
+    security = SecurityState(
+        config=SecurityConfig(
+            allowed_hosts=frozenset({"testserver"}),
+            expected_port=None,
+            allowed_origins=frozenset({"http://testserver"}),
+        )
+    )
+    client = TestClient(
+        create_app(
+            workspace_paths=workspace,
+            security_state=security,
+            enable_docs=False,
+        )
+    )
+    with client:
+        pass  # lifespan startup runs the sweep
+
+    restored = draft_repository.get(draft.draft_id)
+    assert restored.status is DraftStatus.READY
+    assert restored.active_attempt_id is None
+    assert restored.last_attempt_id == attempt_id
+    persisted = attempt_repository.get(attempt_id)
+    assert persisted.status is AttemptStatus.INTERRUPTED

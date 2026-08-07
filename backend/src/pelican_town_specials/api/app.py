@@ -97,6 +97,7 @@ def create_app(
     draft_service: DraftService | None = None,
     cookbook_service: CookbookService | None = None,
     attempt_repository: GenerationAttemptRepository | None = None,
+    attempt_registry: AttemptRegistry | None = None,
     generation_service: GenerationService | None = None,
     export_service: ExportService | None = None,
 ) -> FastAPI:
@@ -119,7 +120,7 @@ def create_app(
     resolved_attempt_repository = attempt_repository or GenerationAttemptRepository(
         resolved_workspace
     )
-    attempt_registry = AttemptRegistry(
+    attempt_registry = attempt_registry or AttemptRegistry(
         attempt_status_resolver=_attempt_status_resolver(resolved_attempt_repository)
     )
     resolved_draft_service = draft_service or DraftService(
@@ -178,8 +179,13 @@ def create_app(
         # Recover attempts interrupted by a previous process crash; never
         # resume provider calls automatically after a restart.
         resolved_attempt_repository.interrupt_running()
-        # Roll drafts left in a generating state back to a recoverable status so
-        # they are not permanently stuck after a crash or a hard exit.
+        # Task 19.6 (startup sweep narrowing): this sweep only handles truly
+        # cross-process leftovers — drafts a previous process left in a
+        # generating state when it died. It is deliberately NOT the cleanup
+        # path for client disconnects (Task 19.2 server ownership keeps the
+        # generation running) or for deleted drafts (Task 19.4 reclaims the
+        # slot). Within a live process the attributable slot reconciles itself
+        # (Task 19.1), so a fresh generation started here is never swept.
         for draft in resolved_draft_repository.list():
             if (
                 draft.active_attempt_id is not None
@@ -194,7 +200,7 @@ def create_app(
         monitor_task: asyncio.Task[None] | None = None
         if resolved_activity_tracker.has_shutdown_callback:
             monitor_task = asyncio.create_task(
-                _monitor_activity(resolved_activity_tracker)
+                _monitor_activity(resolved_activity_tracker, attempt_registry)
             )
         try:
             yield
@@ -391,8 +397,14 @@ def _accepts_html(request: Request) -> bool:
     return "text/html" in request.headers.get("accept", "").lower()
 
 
-async def _monitor_activity(tracker: ActivityTracker) -> None:
+async def _monitor_activity(
+    tracker: ActivityTracker, attempt_registry: AttemptRegistry
+) -> None:
     while not tracker.shutdown_requested:
+        # Task 19.6 (D5.1-3): an occupied generation slot counts as activity, so
+        # the app never idle-shuts-down mid-generation. The server owns the
+        # generation task independently of any browser heartbeat.
+        tracker.set_busy(attempt_registry.owner() is not None)
         if tracker.should_shutdown():
             tracker.request_shutdown()
             return

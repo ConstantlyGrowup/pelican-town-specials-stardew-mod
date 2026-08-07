@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
 from pathlib import Path
 from threading import Event
@@ -200,6 +201,50 @@ def test_idle_monitor_requests_injected_graceful_shutdown_callback(
         clock.now += 600
         assert shutdown_event.wait(timeout=1)
     assert tracker.shutdown_requested is True
+
+
+async def test_idle_monitor_keeps_alive_during_generation(
+    tmp_path: Path,
+) -> None:
+    """Task 19.6 (D5.1-3): while the generation slot is occupied the app is
+    treated as active and the idle monitor must not request shutdown, even past
+    the idle threshold."""
+    from pelican_town_specials.generation.attempt_registry import AttemptRegistry
+
+    clock = FakeClock()
+    shutdown_event = Event()
+    registry = AttemptRegistry()
+    tracker = ActivityTracker(
+        clock=clock,
+        poll_interval_seconds=0.001,
+        shutdown_callback=shutdown_event.set,
+    )
+    security = SecurityState(
+        config=SecurityConfig(
+            allowed_hosts=frozenset({"testserver"}), expected_port=None
+        ),
+        clock=clock,
+    )
+    application = create_app(
+        workspace_paths=WorkspacePaths.create(tmp_path / "workspace"),
+        security_state=security,
+        activity_tracker=tracker,
+        attempt_registry=registry,
+    )
+
+    from uuid import uuid4
+
+    draft_id = uuid4()
+    attempt_id = uuid4()
+    assert registry.reserve_slot(draft_id, attempt_id) is True
+
+    with TestClient(application, raise_server_exceptions=False):
+        clock.now += 600
+        await asyncio.sleep(0.05)
+        assert shutdown_event.is_set() is False
+
+    assert tracker.shutdown_requested is False
+    registry.release_slot(attempt_id)
 
 
 def test_missing_index_returns_stable_safe_error_for_static_requests(
