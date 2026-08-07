@@ -37,8 +37,25 @@ export function BlueprintEditorPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const query = useQuery({
+    queryKey: ["draft", draftId],
+    queryFn: async (): Promise<DraftView> => {
+      const { data, error } = await apiClient.GET("/api/v1/drafts/{draft_id}", {
+        params: { path: { draft_id: draftId ?? "" } },
+      });
+      if (error || !data) {
+        throw new Error("load failed");
+      }
+      return data;
+    },
+    enabled: Boolean(draftId),
+  });
+
   const generation = useGeneration({
     draftId: draftId ?? "",
+    running:
+      query.data?.status === "GENERATING" ||
+      query.data?.status === "REGENERATING",
     onSuccess: () => {
       setStale(false);
       void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
@@ -60,20 +77,6 @@ export function BlueprintEditorPage() {
   });
   const { setError, clearErrors } = form;
   const formState = useFormState({ control: form.control });
-
-  const query = useQuery({
-    queryKey: ["draft", draftId],
-    queryFn: async (): Promise<DraftView> => {
-      const { data, error } = await apiClient.GET("/api/v1/drafts/{draft_id}", {
-        params: { path: { draft_id: draftId ?? "" } },
-      });
-      if (error || !data) {
-        throw new Error("load failed");
-      }
-      return data;
-    },
-    enabled: Boolean(draftId),
-  });
 
   useEffect(() => {
     if (!query.data) {

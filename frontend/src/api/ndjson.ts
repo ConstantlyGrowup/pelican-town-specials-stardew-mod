@@ -1,7 +1,10 @@
 import type { components } from "./generated/schema";
-import { getCsrfToken } from "./client";
+import { apiClient, getCsrfToken } from "./client";
 
 export type GenerationStage = components["schemas"]["GenerationStage"];
+export type GenerationProgress = components["schemas"]["GenerationProgressPublic"];
+export type GenerationAttemptPublic =
+  components["schemas"]["GenerationAttemptPublic"];
 
 /**
  * Redacted error payload carried by `attempt.failed` NDJSON lines or a
@@ -186,6 +189,36 @@ export async function streamGeneration(
   } finally {
     reader.releaseLock();
   }
+}
+
+/**
+ * Fetch the draft's current (or most recent) generation attempt as a read-only
+ * snapshot. Task 19.5: the frontend hydrates from this after a refresh / page
+ * nav / reopened tab so it can re-show the server-owned generation's progress
+ * instead of a blank "start generation" state.
+ */
+export async function fetchGenerationProgress(
+  draftId: string,
+): Promise<GenerationProgress> {
+  const { data, error } = await apiClient.GET(
+    "/api/v1/drafts/{draft_id}/generation",
+    { params: { path: { draft_id: draftId } } },
+  );
+  if (error || !data) {
+    const candidate = error as Partial<GenerationErrorEnvelope> | undefined;
+    throw new GenerationRequestError(
+      candidate?.code && candidate?.message
+        ? (candidate as GenerationErrorEnvelope)
+        : {
+            code: "PTS_GEN_PROGRESS_FAILED",
+            message: "无法获取生成进度。",
+            retryable: true,
+            requestId: "",
+            recommendedAction: "",
+          },
+    );
+  }
+  return data;
 }
 
 /**

@@ -3,8 +3,10 @@ import {
   streamGeneration,
   GenerationCancelError,
   GenerationRequestError,
+  type GenerationAttemptPublic,
   type GenerationErrorEnvelope,
   type GenerationEvent,
+  type GenerationProgress,
   type GenerationStage,
 } from "../../api/ndjson";
 
@@ -85,6 +87,107 @@ function setState(draftId: string, patch: Partial<GenerationState>) {
 
 export function getGenerationState(draftId: string): GenerationState {
   return getState(draftId)._snapshot;
+}
+
+/** True while a live NDJSON stream is attached for this draft. */
+export function hasLiveStream(draftId: string): boolean {
+  const state = getState(draftId);
+  return state.controller !== null && state.phase === "streaming";
+}
+
+/**
+ * Hydrate a draft's generation state from a read-only server snapshot.
+ *
+ * Task 19.5: on refresh / page nav / reopened tab there is no live NDJSON
+ * stream, so the persisted attempt (single source of truth) restores the
+ * progress UI. A live stream that is still running for this draft is never
+ * overwritten — the streaming path owns the state until it terminates.
+ */
+export function hydrateGeneration(
+  draftId: string,
+  progress: GenerationProgress,
+): void {
+  const current = getState(draftId);
+  if (current.controller !== null && current.phase === "streaming") {
+    // A live stream is attached and authoritative; do not clobber it.
+    return;
+  }
+  if (
+    current.phase === "success" ||
+    current.phase === "error" ||
+    current.phase === "cancelled"
+  ) {
+    // A terminal state is sticky; a stale in-flight poll must not roll the
+    // UI back to streaming.
+    return;
+  }
+  const attempt = progress.attempt;
+  if (!progress.active || !attempt) {
+    if (current.phase !== "idle") {
+      setState(draftId, { phase: "idle", error: null });
+    }
+    return;
+  }
+  const succeededStages = attempt.stages
+    .filter((stage) => stage.status === "SUCCEEDED")
+    .map((stage) => stage.stage);
+  const totalStages = attempt.stages.length || null;
+  const streaming: GenerationState = {
+    phase: "streaming",
+    currentStage: attempt.currentStage ?? null,
+    succeededStages,
+    totalStages,
+    error: null,
+  };
+  states.set(draftId, { ...streaming, controller: null, _snapshot: streaming });
+  emit();
+}
+
+/**
+ * Reflect a terminal server snapshot in the store (the persisted attempt is the
+ * single source of truth). Called by the progress poll when a generation ends
+ * server-side while no live stream is attached (e.g. after a refresh).
+ */
+export function applyTerminalSnapshot(
+  draftId: string,
+  attempt: GenerationAttemptPublic,
+): void {
+  const current = getState(draftId);
+  if (current.controller !== null && current.phase === "streaming") {
+    return;
+  }
+  let phase: GenerationPhase;
+  let error: GenerationErrorEnvelope | null = null;
+  switch (attempt.status) {
+    case "SUCCEEDED":
+      phase = "success";
+      break;
+    case "FAILED":
+      phase = "error";
+      error = attempt.error
+        ? {
+            code: attempt.error.code,
+            message: attempt.error.message,
+            retryable: attempt.error.retryable,
+            requestId: attempt.error.requestId,
+            recommendedAction: "",
+          }
+        : null;
+      break;
+    default:
+      // CANCELLED / INTERRUPTED
+      phase = "cancelled";
+      break;
+  }
+  const terminal: GenerationState = {
+    phase,
+    currentStage: null,
+    succeededStages: current.succeededStages,
+    totalStages: current.totalStages,
+    error,
+  };
+  states.set(draftId, { ...terminal, controller: null, _snapshot: terminal });
+  emit();
 }
 
 export function subscribeGeneration(listener: Listener): () => void {

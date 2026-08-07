@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient, getCsrfToken } from "../../api/client";
 import type { components } from "../../api/generated/schema";
@@ -39,6 +39,24 @@ export function HomePage() {
     queryKey: ["drafts"],
     queryFn: loadDrafts,
   });
+
+  // Task 19.5: while any listed draft is generating server-side, keep the
+  // dashboard fresh so a just-finished generation is reflected without a manual
+  // reload. The interval is torn down when nothing is generating or on unmount.
+  const hasRunningGeneration =
+    query.data?.some(
+      (draft) =>
+        draft.status === "GENERATING" || draft.status === "REGENERATING",
+    ) ?? false;
+  useEffect(() => {
+    if (!hasRunningGeneration) {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      void queryClient.invalidateQueries({ queryKey: ["drafts"] });
+    }, 2000);
+    return () => window.clearInterval(interval);
+  }, [hasRunningGeneration, queryClient]);
 
   async function onDiscard(draftId: string) {
     if (!window.confirm(copy.deleteDraftConfirm)) {

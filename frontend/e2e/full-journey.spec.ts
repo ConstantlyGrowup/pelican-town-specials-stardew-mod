@@ -302,6 +302,7 @@ type JourneyState = {
   dishes: Record<string, Dish>;
   generateCount: Record<string, number>;
   assetSeq: number;
+  generationProgress?: Record<string, unknown>;
 };
 
 function nextAskGusDraft(current: Draft | undefined, count: number): Draft {
@@ -421,6 +422,16 @@ async function installApiRoutes(page: Page, state: JourneyState): Promise<void> 
     const method = route.request().method();
 
     if (method === "GET") {
+      if (action === "generation") {
+        // Task 19.5: read-only progress snapshot; idle unless overridden.
+        const progress = state.generationProgress?.[draftId] ?? {
+          draftId,
+          active: false,
+          attempt: null,
+        };
+        void route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(progress) });
+        return;
+      }
       const draft = state.drafts[draftId];
       if (!draft) {
         void route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "PTS_DRAFT_NOT_FOUND", message: "草稿不存在" } }) });

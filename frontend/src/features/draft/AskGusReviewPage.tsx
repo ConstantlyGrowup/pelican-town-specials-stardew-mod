@@ -41,6 +41,9 @@ export function AskGusReviewPage() {
 
   const generation = useGeneration({
     draftId: draftId ?? "",
+    running:
+      query.data?.status === "GENERATING" ||
+      query.data?.status === "REGENERATING",
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
     },

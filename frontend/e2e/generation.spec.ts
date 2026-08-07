@@ -13,6 +13,7 @@ type RouteState = {
   drafts: Record<string, Draft>;
   generateBody: string;
   onGenerate?: (draftId: string) => void;
+  generationProgress?: Record<string, unknown>;
 };
 
 const source = { originalImageAssetId: "asset-1", contextText: null, language: "zh-CN" };
@@ -182,6 +183,17 @@ async function installApiRoutes(page: Page, state: RouteState): Promise<void> {
       return;
     }
     if (route.request().method() === "GET") {
+      if (action === "generation") {
+        // Task 19.5: read-only progress snapshot. Default to idle unless the
+        // test overrides state.generationProgress.
+        const progress = state.generationProgress?.[draftId] ?? {
+          draftId,
+          active: false,
+          attempt: null,
+        };
+        void route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(progress) });
+        return;
+      }
       void route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(draft) });
       return;
     }
@@ -356,6 +368,47 @@ test.describe("generation experience", () => {
     // the ask-gus review route (blueprint create flow lives in the homepage).
     await expect(page.getByRole("button", { name: "进入料理蓝图" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "编辑料理蓝图" })).toHaveCount(0);
+  });
+
+  test("refresh rehydrates the running generation stage", async ({ page }) => {
+    // A draft the server is currently generating (GENERATING) with a progress
+    // snapshot must re-show its stage after a reload instead of a blank
+    // "start generation" state (Task 19.5, R5.1-1).
+    const drafts: Record<string, Draft> = {
+      "ask-gus": askGusDraft({ status: "GENERATING", revision: 1, presentation: null, gameplay: null }),
+    };
+    const state: RouteState = {
+      drafts,
+      generateBody: "",
+      generationProgress: {
+        "ask-gus": {
+          draftId: "ask-gus",
+          active: true,
+          attempt: {
+            attemptId: "a-1",
+            draftId: "ask-gus",
+            kind: "INITIAL",
+            sourceRevision: 1,
+            status: "RUNNING",
+            currentStage: "DISH_ANALYSIS",
+            stages: [
+              { stage: "INPUT_VALIDATION", status: "SUCCEEDED", retryCount: 0, startedAt: "2026-08-04T00:00:00Z", finishedAt: "2026-08-04T00:00:00Z", error: null },
+              { stage: "DISH_ANALYSIS", status: "RUNNING", retryCount: 0, startedAt: "2026-08-04T00:00:00Z", finishedAt: null, error: null },
+            ],
+            startedAt: "2026-08-04T00:00:00Z",
+            finishedAt: null,
+            error: null,
+          },
+        },
+      },
+    };
+    await installApiRoutes(page, state);
+
+    await page.goto("/drafts/ask-gus");
+    // The hydrated progress shows the current stage, not a "start" button.
+    await expect(page.getByRole("button", { name: "开始生成" })).toHaveCount(0);
+    await expect(page.getByText("菜品分析")).toBeVisible();
+    await expect(page.getByRole("button", { name: "取消生成" })).toBeVisible();
   });
 
   test("blueprint update preview returns to REVIEWABLE", async ({ page }) => {
