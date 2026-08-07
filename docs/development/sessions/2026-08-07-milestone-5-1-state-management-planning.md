@@ -4,7 +4,7 @@
 |---|---|
 | `session_id` | `2026-08-07-milestone-5-1-state-management-planning` |
 | `session_type` | planning（只产出需求定义与规划，不实施） |
-| `state` | planned（2026-08-07 用户授权后转为 development：按 19.1→19.6 连续开发，用户本人统一验收，不走 Codex；控制面改动未提交） |
+| `state` | planned→development→awaiting_milestone_acceptance（2026-08-07 用户授权连续开发；6 个 Task 全部实施并本地提交，用户本人统一验收，不走 Codex；控制面改动未提交） |
 | `date` | 2026-08-07 |
 | `task` | 定义 Milestone 5.1：生成状态管理（前后端）重构 |
 | `acceptance_contract_id` | 未生成（各 Task 的 Context Packet 在开发授权后逐个生成） |
@@ -144,4 +144,6 @@ except GeneratorExit:
 
 ## 9. 下一步
 
-用户已授权（2026-08-07）连续开发 Milestone 5.1 全部 6 个 Task，仅需明确介入时停止；所有子任务完成后由用户本人统一测试验收（D5.1-4），不桥接 Codex 审阅。包工已生成 Task 19.1 Context Packet（`m5.1-task-19.1-slot-attribution-v1`，`docs/plans/2026-08-07-task-19-1-slot-attribution-packet.md`）。技术设计文档的契约回写建议与 Task 19.2 / 19.3 同期完成。
+用户已授权（2026-08-07）连续开发 Milestone 5.1 全部 6 个 Task，仅需明确介入时停止；所有子任务完成后由用户本人统一测试验收（D5.1-4），不桥接 Codex 审阅。包工已生成 Task 19.1 Context Packet（`m5.1-task-19.1-slot-attribution-v1`，`docs/plans/2026-08-07-task-19-1-slot-attribution-packet.md`）。
+
+**实施完成（2026-08-07）**：Task 19.1–19.6 已按依赖顺序全部实施并创建本地 focused commit（`8bf2d8f`/`8f8ac3c`/`2a8f304`/`24c9918`/`e1c9349`/`57b155f` + OpenAPI 契约再生成 `fec69a4`）。验证：全量 backend 642 passed、前端 92 passed、E2E 10 passed、build_windows.ps1 + smoke_windows_bundle.ps1 全部通过，发布包已重建于 `dist/PelicanTownSpecials-windows-x64/`。当前等待用户在本机交互验收（① 生成中刷新/切页/关标签回显同一任务；② 删除生成中草稿立即可新建生成；③ 生成中不退出；④ 重开 exe 无残留）。验收通过后与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push。技术设计文档的契约回写建议与 Task 19.2 / 19.3 同期完成。

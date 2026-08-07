@@ -6,16 +6,16 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_5_1_development |
+| overall_state | milestone_5_1_implemented |
 | project_phase | milestone-5.1-generation-state-management |
 | product_implementation_started | true |
 | active_session_id | `2026-08-07-milestone-5-1-state-management-planning` |
-| active_session_state | planned→development（2026-08-07 用户授权连续开发，用户本人统一验收，不走 Codex） |
+| active_session_state | development→awaiting_milestone_acceptance（6 个 Task 全部实施并本地提交，等待用户统一交互验收，不走 Codex） |
 | active_session_type | planning→development |
-| current_task | Milestone 5.1 开发中：Task 19.1（槽归属化）实施（Context Packet `m5.1-task-19.1-slot-attribution-v1`） |
+| current_task | Milestone 5.1 全部 6 个 Task（19.1–19.6）已实施并本地提交；发布包已重建，等待用户交互复验 |
 | blocker | 无 |
-| next_action | 完成 Task 19.1（AttemptRegistry 槽归属化 + 持久化对账自愈）→ 本地 focused commit → 依 19.1→19.6 顺序连续推进；本里程碑由用户本人统一验收，不走 Codex 审阅 |
-| collaboration_model | 包工-子代理（每 Task 新实施子代理）+ 用户本人统一验收（D5.1-4，本里程碑不桥接 Codex 审阅） |
+| next_action | 用户在本机对重建的发布包交互验收（R5.1-1 继承同一任务、R5.1-2 删除即清除、D5.1-3 生成中不退出）；验收通过后与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push |
+| collaboration_model | 包工-子代理 + 用户本人统一验收（D5.1-4，本里程碑不桥接 Codex 审阅） |
 
 ## 当前 Git 状态事实
 
@@ -46,6 +46,33 @@
 - **范围外**：可重连 NDJSON 流、多并发生成、数据库/队列/事务日志、生成阶段与 prompt/图像/编译导出逻辑、已完成 Task 的回退。
 - **`af08da4` 处理**：不回退。其「槽必被释放」目标由 Task 19.1 正式实现，其「断开即取消」语义由 Task 19.2 反转。
 - **文档权威缺口**：本 Session 按用户指令只同步开发状态文档；`docs/plans/MVP_IMPLEMENTATION_PLAN.md`（gitignored，Task/里程碑边界权威源）尚未写入 Milestone 5.1，开发授权时须补齐。
+
+## Milestone 5.1 实施完成（2026-08-07，awaiting_milestone_acceptance）
+
+用户授权连续开发（D5.1-4 用户本人验收，不走 Codex）。6 个 Task 已按依赖顺序全部实施并创建本地 focused commit（不 push）：
+
+| Task | commit | 内容 |
+|---|---|---|
+| 19.1 | `8bf2d8f` | 生成槽归属化与持久化对账自愈（`AttemptRegistry` 持有者记录 + 槽占用对账；`PTS_GEN_BUSY` 携带 `draftId`） |
+| 19.2 | `8f8ac3c` | 服务端拥有生成任务，断开改为 detach（`_ServerOwnedStream` + 后台任务 + 队列；`GeneratorExit` 不再回滚） |
+| 19.3 | `2a8f304` | 只读进度端点 `GET /api/v1/drafts/{draft_id}/generation`（复用 `GenerationAttemptPublic`）+ OpenAPI/前端类型再生成 |
+| 19.4 | `24c9918` | 删除/级联删除前取消并回收在跑 attempt；`_rollback_cancelled`/`_finish_failed` 对已删记录容错 |
+| 19.5 | `e1c9349` | 前端挂载从服务端 hydrate + 生成中轮询进度端点；`generationStore` 降级为缓存（终态 sticky） |
+| 19.6 | `57b155f` | 生成中计入活动（空闲监控感知槽占用）；startup sweep 收窄为仅跨进程遗留孤儿 |
+
+验证证据：
+- 全量 backend：**642 passed / 2 skipped**（ruff、mypy clean；mypy 仅剩 HEAD 预存 `app.py:326`/`exports.py` 错误，非本里程碑引入）。
+- 前端：**92 passed**；lint/build clean；E2E **10 passed**（新增「刷新重挂载生成阶段」用例）。
+- 发布包：`scripts/build_windows.ps1` 全门禁通过（backend 642 → frontend build → OpenAPI drift → PyInstaller → release content gate）；`scripts/smoke_windows_bundle.ps1` 两阶段通过（Phase A health + 静态首页；Phase B `--exit-after-health-check` 退出 0 + 无残留 runtime lock）。bundle 位于 `dist/PelicanTownSpecials-windows-x64/`，可直接启动复验。
+- 环境性阻塞一次：构建时旧 bundle 的 `VCRUNTIME140.dll` 被外部进程（疑为 Windows Defender 扫描）锁住，`COLLECT` 清理失败；停止残留 `PelicanTownSpecials.exe` 并重命名锁定目录后重建成功。已锁定目录 `dist/PelicanTownSpecials-windows-x64.locked` 为 gitignored 残留，可待锁定释放后删除。
+- OpenAPI 契约再生成（`fec69a4`）：Task 19.4 的 discard 路由 docstring 变更触发 drift 检查，已同步 `frontend/openapi.json` 与 `schema.d.ts`。
+
+**待用户交互验收（本里程碑唯一剩余门）**：在本机重建的发布包中复验——
+1. 生成中刷新 / 切页 / 关标签重开，返回草稿回显同一生成任务当前阶段（继承，非重启）；
+2. 删除生成中的草稿后立即可新建生成（不再 `PTS_GEN_BUSY`）；
+3. 生成期间无浏览器连接时应用不退出；
+4. 重开 exe 后无残留卡死。
+验收通过后与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push。
 
 ## 当前 Task 19 Session（auto_accepted）
 
