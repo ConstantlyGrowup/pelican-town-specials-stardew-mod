@@ -12,7 +12,7 @@
 | active_session_id | `2026-08-07-milestone-5-1-state-management-planning` |
 | active_session_state | development→awaiting_milestone_acceptance（6 个 Task 全部实施并本地提交，等待用户统一交互验收，不走 Codex） |
 | active_session_type | planning→development |
-| current_task | Milestone 5.1 全部 6 个 Task（19.1–19.6）已实施并本地提交；发布包已重建，等待用户交互复验 |
+| current_task | Milestone 5.1 全部 6 个 Task（19.1–19.6）已实施并本地提交；用户交互验收 ①②③④ 已通过（④刷新阶段总数显示问题已修复并重建发布包）；待用户确认修复 |
 | blocker | 无 |
 | next_action | 用户在本机对重建的发布包交互验收（R5.1-1 继承同一任务、R5.1-2 删除即清除、D5.1-3 生成中不退出）；验收通过后与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push |
 | collaboration_model | 包工-子代理 + 用户本人统一验收（D5.1-4，本里程碑不桥接 Codex 审阅） |
@@ -67,12 +67,9 @@
 - 环境性阻塞一次：构建时旧 bundle 的 `VCRUNTIME140.dll` 被外部进程（疑为 Windows Defender 扫描）锁住，`COLLECT` 清理失败；停止残留 `PelicanTownSpecials.exe` 并重命名锁定目录后重建成功。已锁定目录 `dist/PelicanTownSpecials-windows-x64.locked` 为 gitignored 残留，可待锁定释放后删除。
 - OpenAPI 契约再生成（`fec69a4`）：Task 19.4 的 discard 路由 docstring 变更触发 drift 检查，已同步 `frontend/openapi.json` 与 `schema.d.ts`。
 
-**待用户交互验收（本里程碑唯一剩余门）**：在本机重建的发布包中复验——
-1. 生成中刷新 / 切页 / 关标签重开，返回草稿回显同一生成任务当前阶段（继承，非重启）；
-2. 删除生成中的草稿后立即可新建生成（不再 `PTS_GEN_BUSY`）；
-3. 生成期间无浏览器连接时应用不退出；
-4. 重开 exe 后无残留卡死。
-验收通过后与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push。
+**用户交互验收（2026-08-07，四项全部通过）**：① 生成中刷新/切页回显同一生成任务进度 ✅；② 删除生成中的草稿后立即可新建生成 ✅；③ 生成期间无浏览器连接应用不退出 ✅；④ 重开 exe 无残留卡死 ✅。
+
+**验收发现并已修复**（commit `d6aa3b4`）：刷新后阶段总数显示错误——"已完成 2/2 个阶段"应为"2/总阶段数"。根因：`attempt.stages` 是渐进式记录（只含已推进到的阶段），hydrate 路径误用 `stages.length` 当总数。修复：`GenerationAttempt`/`GenerationAttemptPublic` 新增 `total_stages`（orchestrator `_new_attempt` 按 `len(stage_order)` 落盘），前端 hydrate 改读 `totalStages`。验证：backend 642 passed、前端 92 passed、E2E 10 passed、ruff/mypy clean；发布包已重建（`build_windows.ps1` + `smoke_windows_bundle.ps1` 通过）。待用户确认此修复后再与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push。
 
 ## 当前 Task 19 Session（auto_accepted）
 
