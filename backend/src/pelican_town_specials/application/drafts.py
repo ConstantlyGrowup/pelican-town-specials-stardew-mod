@@ -40,6 +40,7 @@ from pelican_town_specials.domain.draft import DraftRecord, DraftStatus
 from pelican_town_specials.domain.errors import AppError, ErrorSummary
 from pelican_town_specials.domain.state_machine import DraftAction, transition
 from pelican_town_specials.domain.validation import ValidationSeverity, validate_draft
+from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.persistence.asset_store import (
     AssetNotFoundError,
     FileAssetStore,
@@ -406,12 +407,14 @@ class DraftService:
         asset_store: FileAssetStore,
         catalog: VanillaCatalog,
         attempt_repository: GenerationAttemptRepository,
+        attempt_registry: AttemptRegistry | None = None,
     ) -> None:
         self._drafts = draft_repository
         self._archives = archive_repository
         self._assets = asset_store
         self._catalog = catalog
         self._attempts = attempt_repository
+        self._registry = attempt_registry
 
     def create_draft(self, request: DraftCreateRequest) -> DraftRecord:
         self._require_source_asset(request.source.original_image_asset_id)
@@ -518,20 +521,21 @@ class DraftService:
         updated = draft.model_copy(update=update)
         return self._drafts.save(updated, expected_revision=draft.revision)
 
-    def discard_draft(self, draft_id: UUID) -> None:
+    async def discard_draft(self, draft_id: UUID) -> None:
         """Permanently delete a draft and its local files.
 
         ARCHIVED drafts are rejected. The draft record directory, its
         generation attempts, and any asset files it exclusively owns are
         removed; assets referenced by other drafts or archived dishes are
-        preserved.
+        preserved. A running generation is cancelled and its slot reclaimed
+        before the record is removed (Task 19.4).
         """
         draft = self.get_draft(draft_id)
         if draft.status is DraftStatus.ARCHIVED:
             raise self._illegal_transition_error(draft)
-        self._delete_draft_record(draft)
+        await self._delete_draft_record(draft)
 
-    def delete_archived_by_dish(self, dish_id: UUID) -> int:
+    async def delete_archived_by_dish(self, dish_id: UUID) -> int:
         """Delete every ARCHIVED draft linked to a (now deleted) dish.
 
         Used by the cookbook tombstone cascade so a deleted dish does not leave
@@ -544,15 +548,19 @@ class DraftService:
                 draft.status is DraftStatus.ARCHIVED
                 and draft.archived_dish_id == dish_id
             ):
-                self._delete_draft_record(draft)
+                await self._delete_draft_record(draft)
                 deleted += 1
         return deleted
 
-    def _delete_draft_record(self, draft: DraftRecord) -> None:
+    async def _delete_draft_record(self, draft: DraftRecord) -> None:
         """Delete a draft record, its attempts, and exclusively-owned assets.
 
-        Assets referenced by other drafts or active archived dishes are kept.
+        A running generation is cancelled and its slot reclaimed before the
+        records are removed so a new generation is never blocked by a deleted
+        draft (Task 19.4, R5.1-2). Assets referenced by other drafts or active
+        archived dishes are kept.
         """
+        await self._reclaim_active_attempt(draft)
         draft_id = draft.draft_id
         shared = self._referenced_asset_ids(excluding=draft_id)
         for asset_id in self._draft_asset_ids(draft):
@@ -564,6 +572,24 @@ class DraftService:
                 continue
         self._attempts.delete_for_draft(draft_id)
         self._drafts.delete(draft_id)
+
+    async def _reclaim_active_attempt(self, draft: DraftRecord) -> None:
+        """Cancel and reclaim any in-flight generation attempt for a draft.
+
+        The registry is optional (not wired in every fixture); when absent the
+        delete proceeds as before. When present, the running attempt is
+        cancelled, its rollback awaited, and the slot released by ownership.
+        """
+        if self._registry is None:
+            return
+        attempt_id = draft.active_attempt_id
+        if attempt_id is None:
+            return
+        tracked = self._registry.request_cancel(attempt_id, "draft deleted")
+        if tracked:
+            await self._registry.await_task(attempt_id)
+        # Release the slot by ownership (idempotent when the task already did).
+        self._registry.release_slot(attempt_id)
 
     def archive_draft(
         self,

@@ -35,6 +35,6 @@ def get_cookbook_dish(dish_id: UUID, request: Request) -> CookbookDishDetail:
 
 
 @router.delete("/cookbook/{dish_id}", status_code=204)
-def delete_cookbook_dish(dish_id: UUID, request: Request) -> Response:
-    cookbook_service(request).delete(dish_id)
+async def delete_cookbook_dish(dish_id: UUID, request: Request) -> Response:
+    await cookbook_service(request).delete(dish_id)
     return Response(status_code=204)

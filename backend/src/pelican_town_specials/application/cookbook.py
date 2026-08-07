@@ -40,15 +40,16 @@ class CookbookService:
             raise self._not_found_error() from exc
         return CookbookDishDetail.from_archived_dish(archive)
 
-    def delete(self, dish_id: UUID) -> None:
+    async def delete(self, dish_id: UUID) -> None:
         try:
             self._repository.delete(dish_id)
         except (FileNotFoundError, OSError) as exc:
             raise self._not_found_error() from exc
         # Cascade: a tombstoned dish must not leave its source drafts lingering
-        # on the homepage. Reuses DraftService's shared-asset protection.
+        # on the homepage. Reuses DraftService's shared-asset protection and its
+        # generation reclaim (Task 19.4).
         if self._drafts is not None:
-            self._drafts.delete_archived_by_dish(dish_id)
+            await self._drafts.delete_archived_by_dish(dish_id)
 
     @staticmethod
     def _not_found_error() -> AppError:

@@ -378,10 +378,10 @@ def test_patch_requires_presentation_or_gameplay() -> None:
         DraftPatchRequest(expected_revision=1)
 
 
-def test_discard_draft_deletes_record(services: AppServices) -> None:
+async def test_discard_draft_deletes_record(services: AppServices) -> None:
     service, record, _ = _create_blueprint(services)
 
-    service.discard_draft(record.draft_id)
+    await service.discard_draft(record.draft_id)
 
     with pytest.raises(AppError) as excinfo:
         service.get_draft(record.draft_id)
@@ -390,28 +390,32 @@ def test_discard_draft_deletes_record(services: AppServices) -> None:
     assert not (services.workspace.drafts_dir / str(record.draft_id)).exists()
 
 
-def test_discard_draft_removes_attempt_directory(services: AppServices) -> None:
+async def test_discard_draft_removes_attempt_directory(
+    services: AppServices,
+) -> None:
     service, record, _ = _create_blueprint(services)
     attempt = _succeeded_attempt(record.draft_id)
     services.attempt_repository.save(attempt)
 
-    service.discard_draft(record.draft_id)
+    await service.discard_draft(record.draft_id)
 
     assert not (
         services.workspace.staging_dir / f"attempt-{attempt.attempt_id}"
     ).exists()
 
 
-def test_discard_draft_deletes_unshared_assets(services: AppServices) -> None:
+async def test_discard_draft_deletes_unshared_assets(
+    services: AppServices,
+) -> None:
     service, record, asset_ref = _create_blueprint(services)
 
-    service.discard_draft(record.draft_id)
+    await service.discard_draft(record.draft_id)
 
     with pytest.raises(AssetNotFoundError):
         services.asset_store.stat(asset_ref.asset_id)
 
 
-def test_discard_source_draft_keeps_shared_original_image(
+async def test_discard_source_draft_keeps_shared_original_image(
     services: AppServices,
 ) -> None:
     original_ref = put_png(
@@ -437,7 +441,7 @@ def test_discard_source_draft_keeps_shared_original_image(
     blueprint = service.convert_to_blueprint(draft.draft_id)
     assert blueprint.source.original_image_asset_id == original_ref.asset_id
 
-    service.discard_draft(draft.draft_id)
+    await service.discard_draft(draft.draft_id)
 
     assert services.asset_store.stat(original_ref.asset_id) is not None
     with pytest.raises(AssetNotFoundError):
@@ -446,13 +450,13 @@ def test_discard_source_draft_keeps_shared_original_image(
         services.asset_store.stat(icon_ref.asset_id)
 
 
-def test_discard_archived_draft_is_rejected(services: AppServices) -> None:
+async def test_discard_archived_draft_is_rejected(services: AppServices) -> None:
     reviewable = make_reviewable_draft(services)
     service = _service(services)
     service.archive_draft(reviewable.draft_id, "archive-key")
 
     with pytest.raises(AppError) as excinfo:
-        service.discard_draft(reviewable.draft_id)
+        await service.discard_draft(reviewable.draft_id)
     assert excinfo.value.code == "PTS_STATE_ILLEGAL_TRANSITION"
 
 
@@ -560,7 +564,9 @@ def test_list_drafts_filters_orphaned_archived(services: AppServices) -> None:
     assert page.total == 0
 
 
-def test_list_drafts_keeps_archived_when_dish_active(services: AppServices) -> None:
+async def test_list_drafts_keeps_archived_when_dish_active(
+    services: AppServices,
+) -> None:
     """An ARCHIVED draft with an active dish still shows as archived and remains
     non-discardable (DEL-003 unchanged)."""
     reviewable = make_reviewable_draft(services)
@@ -573,5 +579,5 @@ def test_list_drafts_keeps_archived_when_dish_active(services: AppServices) -> N
     assert page.items[0].draft_id == reviewable.draft_id
     assert page.items[0].status is DraftStatus.ARCHIVED
     with pytest.raises(AppError) as excinfo:
-        service.discard_draft(reviewable.draft_id)
+        await service.discard_draft(reviewable.draft_id)
     assert excinfo.value.code == "PTS_STATE_ILLEGAL_TRANSITION"

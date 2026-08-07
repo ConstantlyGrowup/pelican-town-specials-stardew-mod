@@ -88,15 +88,16 @@ def archive_draft(
 
 
 @router.post("/drafts/{draft_id}/discard", status_code=204)
-def discard_draft(draft_id: UUID, request: Request) -> Response:
+async def discard_draft(draft_id: UUID, request: Request) -> Response:
     """Permanently delete a draft.
 
     Removes the draft record directory, its generation attempts, and asset
     files exclusively owned by the draft. Assets shared with other drafts or
-    archived dishes are preserved. ARCHIVED drafts are rejected. The request
-    and response contract is unchanged.
+    archived dishes are preserved. ARCHIVED drafts are rejected. A running
+    generation is cancelled and its slot reclaimed before deletion (Task 19.4).
+    The request and response contract is unchanged.
     """
-    _service(request).discard_draft(draft_id)
+    await _service(request).discard_draft(draft_id)
     return Response(status_code=204)
 
 

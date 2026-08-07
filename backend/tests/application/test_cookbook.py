@@ -74,11 +74,11 @@ def test_cookbook_detail_hides_source_fields(services: AppServices) -> None:
     assert detail.visuals is not None
 
 
-def test_cookbook_delete_moves_record_to_trash(services: AppServices) -> None:
+async def test_cookbook_delete_moves_record_to_trash(services: AppServices) -> None:
     draft_service, cookbook = _cookbook(services)
     dish_id = _archived_dish_id(services, draft_service)
 
-    cookbook.delete(dish_id)
+    await cookbook.delete(dish_id)
 
     assert cookbook.list().total == 0
     trash_dir = services.workspace.trash_dir / "cookbook" / str(dish_id)
@@ -86,23 +86,25 @@ def test_cookbook_delete_moves_record_to_trash(services: AppServices) -> None:
     assert (trash_dir / "tombstone.json").exists()
 
 
-def test_cookbook_detail_after_delete_is_not_found(services: AppServices) -> None:
+async def test_cookbook_detail_after_delete_is_not_found(
+    services: AppServices,
+) -> None:
     draft_service, cookbook = _cookbook(services)
     dish_id = _archived_dish_id(services, draft_service)
-    cookbook.delete(dish_id)
+    await cookbook.delete(dish_id)
 
     with pytest.raises(AppError) as excinfo:
         cookbook.get_detail(dish_id)
     assert excinfo.value.code == "PTS_COOKBOOK_NOT_FOUND"
 
 
-def test_cookbook_repeat_delete_is_not_found(services: AppServices) -> None:
+async def test_cookbook_repeat_delete_is_not_found(services: AppServices) -> None:
     draft_service, cookbook = _cookbook(services)
     dish_id = _archived_dish_id(services, draft_service)
-    cookbook.delete(dish_id)
+    await cookbook.delete(dish_id)
 
     with pytest.raises(AppError) as excinfo:
-        cookbook.delete(dish_id)
+        await cookbook.delete(dish_id)
     assert excinfo.value.code == "PTS_COOKBOOK_NOT_FOUND"
 
 
@@ -114,7 +116,9 @@ def test_cookbook_unknown_id_is_not_found(services: AppServices) -> None:
     assert excinfo.value.code == "PTS_COOKBOOK_NOT_FOUND"
 
 
-def test_cookbook_delete_cascades_source_draft(services: AppServices) -> None:
+async def test_cookbook_delete_cascades_source_draft(
+    services: AppServices,
+) -> None:
     """Deleting a dish tombstones it and removes its source draft (record,
     attempts, exclusively-owned assets) while preserving shared references."""
     original_ref = put_png(
@@ -144,7 +148,7 @@ def test_cookbook_delete_cascades_source_draft(services: AppServices) -> None:
     archive = draft_service.archive_draft(draft.draft_id, "cascade-key")
     dish_id = archive.dish_id
 
-    cookbook.delete(dish_id)
+    await cookbook.delete(dish_id)
 
     with pytest.raises(AppError) as excinfo:
         draft_service.get_draft(draft.draft_id)

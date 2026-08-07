@@ -1085,6 +1085,23 @@ class GenerationOrchestrator:
             )
         except (RevisionConflictError, AttemptMismatchError):
             pass
+        except (FileNotFoundError, OSError):
+            # Task 19.4: the draft was deleted mid-generation; keep the attempt
+            # terminal and return without trying to roll the record back.
+            failed = state.attempt.model_copy(
+                update={
+                    "status": AttemptStatus.FAILED,
+                    "finished_at": utc_now(),
+                    "error": _to_summary(error),
+                }
+            )
+            self._attempts.save(failed)
+            return attempt_failed(
+                attempt_id,
+                ErrorPayload.from_app_error(
+                    error, request_id=state.command.request_id
+                ),
+            )
         failed = state.attempt.model_copy(
             update={
                 "status": AttemptStatus.FAILED,
@@ -1140,6 +1157,17 @@ class GenerationOrchestrator:
             )
         except (RevisionConflictError, AttemptMismatchError):
             pass
+        except (FileNotFoundError, OSError):
+            # Task 19.4: the draft was deleted while the attempt ran; there is
+            # nothing to roll back. Keep the attempt terminal and return.
+            cancelled = state.attempt.model_copy(
+                update={
+                    "status": AttemptStatus.CANCELLED,
+                    "finished_at": utc_now(),
+                }
+            )
+            self._attempts.save(cancelled)
+            return
         cancelled = state.attempt.model_copy(
             update={
                 "status": AttemptStatus.CANCELLED,
