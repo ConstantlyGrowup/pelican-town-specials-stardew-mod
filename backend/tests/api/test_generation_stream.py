@@ -320,8 +320,10 @@ async def test_cancel_awaits_rollback_then_immediate_regenerate_succeeds(
 async def test_closing_streaming_response_closes_iterator_on_disconnect() -> None:
     """Regression: Starlette 1.3 (ASGI spec >= 2.4) raises from stream_response
     on client disconnect WITHOUT closing the body iterator. The generate route's
-    _ClosingStreamingResponse must close it, or the generation slot leaks and
-    every later generate request fails with PTS_GEN_BUSY."""
+    _ClosingStreamingResponse must still close it deterministically so the
+    response teardown is clean (Task 19.2: the server-owned generation itself
+    keeps running regardless; closing the body iterator only detaches the
+    subscriber)."""
     from pelican_town_specials.api.routes.generation import (
         _ClosingStreamingResponse,
     )

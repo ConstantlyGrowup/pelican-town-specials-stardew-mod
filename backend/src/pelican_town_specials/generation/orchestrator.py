@@ -453,59 +453,82 @@ class GenerationCommand(StrictModel):
 GatewayFactory = Callable[[], ModelGateway]
 
 
-class _SlotGuardedAsyncIterator:
-    """Async iterator that releases the generation slot on any termination.
+_STREAM_END = object()
 
-    The slot is reserved synchronously in ``run()`` so a busy condition can be
-    returned before the NDJSON stream starts; this wrapper guarantees the slot
-    is released when the generator finishes, raises, is cancelled, or is closed
-    even before its body has started iterating.
+
+class _ServerOwnedStream:
+    """Response-side view of a server-owned generation task.
+
+    The generation stage loop runs in a background asyncio task owned by the
+    server; this iterator reads its NDJSON events from an in-process queue.
+    Closing this iterator (client disconnect / page nav / reload) only detaches
+    this subscriber — the background task keeps running, owns the slot, and
+    writes its terminal state. Only an explicit /cancel terminates it.
     """
 
     def __init__(
         self,
-        inner: AsyncGenerator[GenerationEvent],
-        registry: AttemptRegistry,
+        orchestrator: GenerationOrchestrator,
+        command: GenerationCommand,
         attempt_id: UUID,
+        registry: AttemptRegistry,
     ) -> None:
-        self._inner = inner
-        self._registry = registry
+        self._orchestrator = orchestrator
+        self._command = command
         self._attempt_id = attempt_id
-        self._released = False
+        self._registry = registry
+        self._queue: asyncio.Queue[object] | None = None
+        self._task: asyncio.Task[None] | None = None
+        self._started = False
 
-    def __aiter__(self) -> _SlotGuardedAsyncIterator:
+    def __aiter__(self) -> _ServerOwnedStream:
         return self
 
-    def __del__(self) -> None:
-        # Last-resort GC safety: Starlette does not always aclose the body
-        # iterator on client disconnect, and an iterator that is dropped before
-        # its body ever starts would otherwise keep the generation slot
-        # occupied forever. _release is idempotent and thread-safe.
-        try:
-            self._release()
-        except Exception:  # noqa: BLE001, S110 - __del__ must never raise
-            pass
+    def _ensure_started(self) -> None:
+        if not self._started:
+            self._started = True
+            self._queue = asyncio.Queue()
+            self._task = asyncio.create_task(
+                self._orchestrator._run_server_owned(
+                    self._command, self._attempt_id, self._queue
+                )
+            )
+            # Track the task immediately so an /cancel that lands before the
+            # background task runs its own register() still finds it.
+            self._registry.register(self._attempt_id, self._task)
 
     async def __anext__(self) -> GenerationEvent:
-        try:
-            return await self._inner.__anext__()
-        except StopAsyncIteration:
-            self._release()
-            raise
-        except BaseException:
-            self._release()
-            raise
+        self._ensure_started()
+        assert self._queue is not None
+        item = await self._queue.get()
+        if item is _STREAM_END:
+            raise StopAsyncIteration
+        if isinstance(item, AppError):
+            # Re-surface a pre-stage AppError raised by the background task.
+            raise item
+        # The queue carries only GenerationEvent, _STREAM_END, or a re-raised
+        # AppError; anything else would be a programming error.
+        assert isinstance(item, GenerationEvent)
+        return item
 
     async def aclose(self) -> None:
-        try:
-            await self._inner.aclose()
-        finally:
-            self._release()
-
-    def _release(self) -> None:
-        if not self._released:
-            self._released = True
+        # Detach this subscriber only: never cancel the server-owned task. If
+        # the task was never started (stream dropped before its body began),
+        # release the slot reserved in run(); otherwise the background task
+        # owns the slot and releases it when the generation finishes.
+        if not self._started:
             self._registry.release_slot(self._attempt_id)
+            self._registry.unregister(self._attempt_id)
+
+    def __del__(self) -> None:
+        # GC safety for the never-started case (response abandoned before any
+        # iteration): release the slot so a future generation is not blocked.
+        try:
+            if not self._started:
+                self._registry.release_slot(self._attempt_id)
+                self._registry.unregister(self._attempt_id)
+        except Exception:  # noqa: BLE001, S110 - __del__ must never raise
+            pass
 
 
 class GenerationOrchestrator:
@@ -536,9 +559,7 @@ class GenerationOrchestrator:
         attempt_id = uuid4()
         if not self._registry.reserve_slot(command.draft_id, attempt_id):
             raise _busy_error(self._registry.owner())
-        return _SlotGuardedAsyncIterator(
-            self._generate(command, attempt_id), self._registry, attempt_id
-        )
+        return _ServerOwnedStream(self, command, attempt_id, self._registry)
 
     def cancel(self, attempt_id: UUID) -> bool:
         """Request cancellation of a running attempt; returns whether it was tracked."""
@@ -621,36 +642,40 @@ class GenerationOrchestrator:
     def assets(self) -> FileAssetStore:
         return self._assets
 
-    async def _generate(
-        self, command: GenerationCommand, attempt_id: UUID
-    ) -> AsyncGenerator[GenerationEvent]:
-        self._registry.register(
-            attempt_id,
-            asyncio.current_task() if asyncio.current_task() is not None else None,
-        )
-        async with self._registry.semaphore():
-            inner = self._run(command, attempt_id)
-            try:
-                yield attempt_started(attempt_id)
-                async for event in inner:
-                    yield event
-            finally:
-                # Propagate closure to the inner generator so a client
-                # disconnect (aclose on this iterator) runs _run's GeneratorExit
-                # rollback synchronously instead of leaving the draft stuck in a
-                # generating state until the inner generator is GC'd.
+    async def _run_server_owned(
+        self,
+        command: GenerationCommand,
+        attempt_id: UUID,
+        queue: asyncio.Queue[object],
+    ) -> None:
+        """Run the generation stage loop to completion in the background.
+
+        Task 19.2: the generation is owned by the server, not by any HTTP
+        connection. The stage loop runs here to its terminal state and publishes
+        each event into ``queue``; a subscriber that detaches (client disconnect
+        / page nav / reload) simply stops reading. Only an explicit /cancel
+        (CancelledError) terminates the attempt. The slot is released here on
+        every termination path.
+        """
+        self._registry.register(attempt_id, asyncio.current_task())
+        try:
+            async with self._registry.semaphore():
+                queue.put_nowait(attempt_started(attempt_id))
+                inner = self._run(command, attempt_id)
                 try:
-                    await inner.aclose()
+                    async for event in inner:
+                        queue.put_nowait(event)
+                except AppError as exc:
+                    # A pre-stage AppError (e.g. illegal state) is raised by
+                    # _run before it yields any terminal event. Surface it to
+                    # the subscriber exactly like the old stream contract did.
+                    queue.put_nowait(exc)
                 finally:
-                    # The slot must be released on EVERY termination path
-                    # (success, failure, cancel, client disconnect, or generator
-                    # GC). Starlette does not aclose the body iterator on
-                    # disconnect, so the wrapper's release is not guaranteed to
-                    # run; releasing here makes the slot self-healing. Idempotent
-                    # with the wrapper's _release(), and release is scoped to
-                    # this attempt so a stale cleanup never frees a new holder.
-                    self._registry.release_slot(attempt_id)
-                    self._registry.unregister(attempt_id)
+                    await inner.aclose()
+        finally:
+            self._registry.release_slot(attempt_id)
+            self._registry.unregister(attempt_id)
+            queue.put_nowait(_STREAM_END)
 
     async def _run(
         self, command: GenerationCommand, attempt_id: UUID
@@ -723,11 +748,17 @@ class GenerationOrchestrator:
                     return
                 self._attempts.save(self._advance_stage(state, stage))
                 yield stage_succeeded(attempt_id, stage, ordinal, len(stage_order))
+        except asyncio.CancelledError:
+            # Explicit /cancel (task.cancel) or a cancellation landing at a
+            # yield boundary: roll back and emit the cancelled terminal event.
+            yield await self._finish_cancelled(state, staged)
+            return
         except GeneratorExit:
-            # A client disconnect (abort / close / page nav) equals cancel: run
-            # the same side-effect rollback as CancelledError, then close
-            # normally. No event is yielded in this branch.
-            self._rollback_cancelled(state, staged)
+            # Task 19.2: a client disconnect (abort / close / page nav) only
+            # detaches the response subscriber; the server-owned generation
+            # continues and the draft/attempt state is preserved. This branch
+            # only fires if the server task itself is torn down unexpectedly at
+            # a yield; no event is yielded and nothing is rolled back.
             raise
 
         try:

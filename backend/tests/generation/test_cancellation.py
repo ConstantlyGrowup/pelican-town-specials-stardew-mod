@@ -73,42 +73,52 @@ async def test_second_concurrent_generation_is_rejected(
     await second.aclose()
 
 
-async def test_aclose_releases_slot_and_rolls_back(
+async def test_aclose_detaches_without_rolling_back(
     harness: GenerationHarness, ready_draft
 ) -> None:
-    """Regression: a client disconnect that closes the stream (what the route's
-    ``_ClosingStreamingResponse`` guarantees) must release the generation slot
-    and roll the draft back, so the next generation is not permanently busy.
-
-    Starlette 1.3 does not aclose the body iterator on its own, so this path
-    used to leak the slot: the draft rolled back to READY (via generator GC)
-    but the process-wide slot stayed occupied forever (PTS_GEN_BUSY).
-    """
-    harness.gateway.delay = 0.4
+    """Task 19.2: a client disconnect (what the route's ``_ClosingStreamingResponse``
+    guarantees via aclose) only detaches the subscriber. The server-owned
+    generation keeps running: the draft stays in its generating state, the
+    active attempt is not cleared, and the slot stays held until the
+    generation itself finishes."""
+    harness.gateway.delay = 0.3
     agen = harness.orchestrator.run(initial_command(ready_draft))
     iterator = agen.__aiter__()
     first = await iterator.__anext__()
     assert first.type == "attempt.started"
     attempt_id = first.attempt_id
     assert attempt_id is not None
-    # Consume stage.started so _run has persisted the GENERATING draft and its
-    # attempt and is suspended at its first yield (where aclose delivers the
-    # GeneratorExit rollback).
     stage_event = await iterator.__anext__()
     assert stage_event.type == "stage.started"
 
-    # Deterministic disconnect cleanup (the route now always acloses).
+    # Deterministic detach (the route always acloses on disconnect).
     await agen.aclose()
 
+    # Detach is not a cancel: the draft is still GENERATING, the active attempt
+    # is still set, and the slot is still owned by this attempt.
     restored = harness.orchestrator.drafts.get(ready_draft.draft_id)
-    assert restored.status is DraftStatus.READY
-    assert restored.active_attempt_id is None
+    assert restored.status is DraftStatus.GENERATING
+    assert restored.active_attempt_id == attempt_id
     attempt = harness.orchestrator.attempts.get(attempt_id)
-    assert attempt.status is AttemptStatus.CANCELLED
+    assert attempt.status is AttemptStatus.RUNNING
+    owner = harness.orchestrator._registry.owner()
+    assert owner is not None
+    assert owner.attempt_id == attempt_id
 
-    # The slot is free: a fresh generation starts without PTS_GEN_BUSY.
-    second = harness.orchestrator.run(initial_command(ready_draft))
-    await second.aclose()
+    # The slot is still held: a new generation stays busy.
+    with pytest.raises(AppError) as excinfo:
+        harness.orchestrator.run(initial_command(ready_draft))
+    assert excinfo.value.code == "PTS_GEN_BUSY"
+
+    # The detached generation continues to a terminal state: the draft reaches
+    # REVIEWABLE and the slot is released by the server-owned task.
+    await harness.orchestrator.await_cancelled(attempt_id)
+    final = harness.orchestrator.drafts.get(ready_draft.draft_id)
+    assert final.status is DraftStatus.REVIEWABLE
+    assert final.active_attempt_id is None
+    persisted = harness.orchestrator.attempts.get(attempt_id)
+    assert persisted.status is AttemptStatus.SUCCEEDED
+    assert harness.orchestrator._registry.owner() is None
 
 
 async def test_recover_interrupted_rolls_back_generating_draft(

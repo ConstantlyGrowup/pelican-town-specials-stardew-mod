@@ -495,11 +495,13 @@ async def test_dish_analysis_receives_downscaled_jpeg(
     assert _read_asset(harness.asset_store, ref) == stored_before
 
 
-async def test_client_disconnect_rolls_back_initial_generation(
+async def test_client_disconnect_detaches_initial_generation(
     harness: GenerationHarness, ready_draft
 ) -> None:
-    """A client disconnect (GeneratorExit) equals cancel: the draft rolls back
-    to READY, active_attempt_id clears, and the attempt is marked CANCELLED."""
+    """Task 19.2: a client disconnect (aclose) only detaches the subscriber.
+    The server-owned generation keeps running and reaches a terminal state;
+    the draft is not rolled back and the slot is released when it finishes."""
+    harness.gateway.delay = 0.2
     agen = harness.orchestrator.run(initial_command(ready_draft))
     first = await anext(agen)
     assert first.type == "attempt.started"
@@ -512,18 +514,29 @@ async def test_client_disconnect_rolls_back_initial_generation(
     assert mid.status is DraftStatus.GENERATING
     assert mid.active_attempt_id == attempt_id
 
+    # Detach: the stream stops reading, the generation continues server-side.
     await agen.aclose()
 
+    # Detach is not a cancel: the draft stays GENERATING until it completes.
+    still = harness.orchestrator.drafts.get(ready_draft.draft_id)
+    assert still.status is DraftStatus.GENERATING
+    assert still.active_attempt_id == attempt_id
+
+    # Wait for the server-owned task to finish.
+    await harness.orchestrator.await_cancelled(attempt_id)
+
     restored = harness.orchestrator.drafts.get(ready_draft.draft_id)
-    assert restored.status is DraftStatus.READY
+    assert restored.status is DraftStatus.REVIEWABLE
     assert restored.active_attempt_id is None
     attempt = harness.orchestrator.attempts.get(attempt_id)
-    assert attempt.status is AttemptStatus.CANCELLED
+    assert attempt.status is AttemptStatus.SUCCEEDED
+    assert harness.orchestrator._registry.owner() is None
 
 
-async def test_client_disconnect_rolls_back_regeneration(
+async def test_client_disconnect_detaches_regeneration(
     harness: GenerationHarness, reviewable_draft
 ) -> None:
+    harness.gateway.delay = 0.2
     agen = harness.orchestrator.run(full_regen_command(reviewable_draft))
     first = await anext(agen)
     assert first.type == "attempt.started"
@@ -534,11 +547,18 @@ async def test_client_disconnect_rolls_back_regeneration(
 
     mid = harness.orchestrator.drafts.get(reviewable_draft.draft_id)
     assert mid.status is DraftStatus.REGENERATING
+    assert mid.active_attempt_id == attempt_id
 
     await agen.aclose()
+
+    still = harness.orchestrator.drafts.get(reviewable_draft.draft_id)
+    assert still.status is DraftStatus.REGENERATING
+
+    await harness.orchestrator.await_cancelled(attempt_id)
 
     restored = harness.orchestrator.drafts.get(reviewable_draft.draft_id)
     assert restored.status is DraftStatus.REVIEWABLE
     assert restored.active_attempt_id is None
     attempt = harness.orchestrator.attempts.get(attempt_id)
-    assert attempt.status is AttemptStatus.CANCELLED
+    assert attempt.status is AttemptStatus.SUCCEEDED
+    assert harness.orchestrator._registry.owner() is None

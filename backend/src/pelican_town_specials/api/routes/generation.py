@@ -22,10 +22,10 @@ class _ClosingStreamingResponse(StreamingResponse):
 
     Starlette 1.3 (ASGI spec >= 2.4) raises ``ClientDisconnect`` from
     ``stream_response`` without closing the body iterator when the client goes
-    away. The generation slot lives in the body iterator's wrapper, so an
-    unclosed iterator leaks the slot and every later generation request fails
-    with PTS_GEN_BUSY. Closing here makes the disconnect cleanup deterministic
-    (rollback + slot release) instead of relying on generator GC.
+    away. Task 19.2: the generation runs in a server-owned background task, so
+    closing the body iterator on disconnect only detaches this subscriber — it
+    never cancels the generation. Closing here makes the response teardown
+    deterministic instead of relying on generator GC.
     """
 
     async def stream_response(self, send: Send) -> None:
