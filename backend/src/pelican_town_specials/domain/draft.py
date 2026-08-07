@@ -228,3 +228,17 @@ class GenerationAttemptPublic(StrictModel):
         return cls.model_validate(
             attempt.model_dump(exclude={"candidate_record_path"})
         )
+
+
+class GenerationProgressPublic(StrictModel):
+    """Read-only snapshot of a draft's generation state.
+
+    ``active`` is True while a generation attempt is running (the draft holds
+    an ``active_attempt_id``); ``attempt`` carries the current or most recent
+    attempt's public stage/status so the frontend can hydrate after a refresh
+    or page nav. A draft with no attempt at all yields ``attempt=None``.
+    """
+
+    draft_id: UUID
+    active: bool
+    attempt: GenerationAttemptPublic | None = None

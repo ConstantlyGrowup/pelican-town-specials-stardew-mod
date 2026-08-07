@@ -282,6 +282,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/drafts/{draft_id}/generation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Generation Progress
+         * @description Read-only snapshot of the draft's current or last generation attempt.
+         *
+         *     Lets the frontend rehydrate the generation state after a refresh, a page
+         *     nav, or a closed-and-reopened tab without restarting the generation. Pure
+         *     read: never writes state and never starts a provider call.
+         */
+        get: operations["generation_progress_api_v1_drafts__draft_id__generation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/drafts/{draft_id}/cancel": {
         parameters: {
             query?: never;
@@ -518,6 +542,11 @@ export interface components {
             /** Attemptid */
             attemptId?: string | null;
         };
+        /**
+         * AttemptStatus
+         * @enum {string}
+         */
+        AttemptStatus: "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "INTERRUPTED";
         /** BlueprintBuffAttributesInput */
         BlueprintBuffAttributesInput: {
             /**
@@ -995,6 +1024,58 @@ export interface components {
             recipeUnlock: components["schemas"]["RecipeUnlock"];
         };
         /**
+         * GenerationAttemptKind
+         * @enum {string}
+         */
+        GenerationAttemptKind: "INITIAL" | "FULL_REGENERATE" | "BLUEPRINT_PREVIEW" | "RETRY_FAILED_STAGE";
+        /** GenerationAttemptPublic */
+        GenerationAttemptPublic: {
+            /**
+             * Attemptid
+             * Format: uuid
+             */
+            attemptId: string;
+            /**
+             * Draftid
+             * Format: uuid
+             */
+            draftId: string;
+            kind: components["schemas"]["GenerationAttemptKind"];
+            /** Sourcerevision */
+            sourceRevision: number;
+            status: components["schemas"]["AttemptStatus"];
+            currentStage?: components["schemas"]["GenerationStage"] | null;
+            /** Stages */
+            stages: components["schemas"]["StageAttempt"][];
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+            /** Finishedat */
+            finishedAt?: string | null;
+            error?: components["schemas"]["ErrorSummary"] | null;
+        };
+        /**
+         * GenerationProgressPublic
+         * @description Read-only snapshot of a draft's generation state.
+         *
+         *     ``active`` is True while a generation attempt is running (the draft holds
+         *     an ``active_attempt_id``); ``attempt`` carries the current or most recent
+         *     attempt's public stage/status so the frontend can hydrate after a refresh
+         *     or page nav. A draft with no attempt at all yields ``attempt=None``.
+         */
+        GenerationProgressPublic: {
+            /**
+             * Draftid
+             * Format: uuid
+             */
+            draftId: string;
+            /** Active */
+            active: boolean;
+            attempt?: components["schemas"]["GenerationAttemptPublic"] | null;
+        };
+        /**
          * GenerationSource
          * @enum {string}
          */
@@ -1276,6 +1357,23 @@ export interface components {
             contextText?: string | null;
             language: components["schemas"]["Language"];
         };
+        /** StageAttempt */
+        StageAttempt: {
+            stage: components["schemas"]["GenerationStage"];
+            status: components["schemas"]["StageStatus"];
+            /** Retrycount */
+            retryCount: number;
+            /** Startedat */
+            startedAt?: string | null;
+            /** Finishedat */
+            finishedAt?: string | null;
+            error?: components["schemas"]["ErrorSummary"] | null;
+        };
+        /**
+         * StageStatus
+         * @enum {string}
+         */
+        StageStatus: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "SKIPPED";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1857,6 +1955,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generation_progress_api_v1_drafts__draft_id__generation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerationProgressPublic"];
                 };
             };
             /** @description Validation Error */

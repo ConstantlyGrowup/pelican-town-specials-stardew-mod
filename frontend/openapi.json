@@ -586,6 +586,47 @@
         }
       }
     },
+    "/api/v1/drafts/{draft_id}/generation": {
+      "get": {
+        "summary": "Generation Progress",
+        "description": "Read-only snapshot of the draft's current or last generation attempt.\n\nLets the frontend rehydrate the generation state after a refresh, a page\nnav, or a closed-and-reopened tab without restarting the generation. Pure\nread: never writes state and never starts a provider call.",
+        "operationId": "generation_progress_api_v1_drafts__draft_id__generation_get",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationProgressPublic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/drafts/{draft_id}/cancel": {
       "post": {
         "summary": "Cancel Generation",
@@ -1225,6 +1266,17 @@
           "createdAt"
         ],
         "title": "AssetView"
+      },
+      "AttemptStatus": {
+        "type": "string",
+        "enum": [
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "CANCELLED",
+          "INTERRUPTED"
+        ],
+        "title": "AttemptStatus"
       },
       "BlueprintBuffAttributesInput": {
         "properties": {
@@ -2466,6 +2518,129 @@
         ],
         "title": "GameplaySpec"
       },
+      "GenerationAttemptKind": {
+        "type": "string",
+        "enum": [
+          "INITIAL",
+          "FULL_REGENERATE",
+          "BLUEPRINT_PREVIEW",
+          "RETRY_FAILED_STAGE"
+        ],
+        "title": "GenerationAttemptKind"
+      },
+      "GenerationAttemptPublic": {
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Attemptid"
+          },
+          "draftId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Draftid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GenerationAttemptKind"
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sourcerevision"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttemptStatus"
+          },
+          "currentStage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenerationStage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageAttempt"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Stages"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startedat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attemptId",
+          "draftId",
+          "kind",
+          "sourceRevision",
+          "status",
+          "stages",
+          "startedAt"
+        ],
+        "title": "GenerationAttemptPublic"
+      },
+      "GenerationProgressPublic": {
+        "properties": {
+          "draftId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Draftid"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenerationAttemptPublic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "draftId",
+          "active"
+        ],
+        "title": "GenerationProgressPublic",
+        "description": "Read-only snapshot of a draft's generation state.\n\n``active`` is True while a generation attempt is running (the draft holds\nan ``active_attempt_id``); ``attempt`` carries the current or most recent\nattempt's public stage/status so the frontend can hydrate after a refresh\nor page nav. A draft with no attempt at all yields ``attempt=None``."
+      },
       "GenerationSource": {
         "type": "string",
         "enum": [
@@ -3162,6 +3337,76 @@
           "language"
         ],
         "title": "SourceInput"
+      },
+      "StageAttempt": {
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/GenerationStage"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StageStatus"
+          },
+          "retryCount": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Retrycount"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stage",
+          "status",
+          "retryCount"
+        ],
+        "title": "StageAttempt"
+      },
+      "StageStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "CANCELLED",
+          "SKIPPED"
+        ],
+        "title": "StageStatus"
       },
       "ValidationError": {
         "properties": {

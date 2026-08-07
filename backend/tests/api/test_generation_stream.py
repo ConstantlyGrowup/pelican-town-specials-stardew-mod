@@ -403,3 +403,145 @@ async def test_cancel_orphaned_attempt_rolls_back(
         if line
     ]
     assert events[-1]["type"] == "attempt.succeeded"
+
+
+# --- Task 19.3: read-only generation progress endpoint -----------------------
+
+
+def _progress(
+    gen_services: GenServices, gen_auth_client: ApiClient, draft_id: str
+) -> tuple[int, dict]:
+    response = gen_auth_client.client.get(
+        f"/api/v1/drafts/{draft_id}/generation",
+        headers={"Host": "testserver"},
+    )
+    body = response.json() if response.content else {}
+    return response.status_code, body
+
+
+def test_progress_missing_draft_returns_404(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> None:
+    status, body = _progress(gen_services, gen_auth_client, str(uuid4()))
+    assert status == 404
+    assert body["error"]["code"] == "PTS_DRAFT_NOT_FOUND"
+
+
+def test_progress_without_active_attempt_is_clear(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> None:
+    """A READY draft with no running generation reports no progress (200 with a
+    null attempt), not a 404 — the draft exists, only the generation is idle."""
+    draft_id = _create_ask_gus_draft(gen_services, gen_auth_client)
+    status, body = _progress(gen_services, gen_auth_client, draft_id)
+    assert status == 200
+    assert body["draftId"] == draft_id
+    assert body["active"] is False
+    assert body["attempt"] is None
+
+
+async def test_progress_while_generating_returns_current_attempt(
+    gen_services: GenServices,
+) -> None:
+    """Task 19.3: while a server-owned generation runs, the read-only progress
+    endpoint returns the persisted attempt's stage/status so the frontend can
+    hydrate after a refresh or page nav."""
+    from pelican_town_specials.domain.assets import AssetKind
+
+    app = gen_services.client.app
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        launch_token = gen_services.security.issue_launch_token()
+        bootstrap = await client.post(
+            "/session/bootstrap",
+            json={"launchToken": launch_token},
+            headers={"Host": "testserver"},
+        )
+        assert bootstrap.status_code == 204
+        csrf = bootstrap.headers["x-pts-csrf"]
+        mutation_headers = {
+            "Host": "testserver",
+            "Origin": "http://testserver",
+            "X-PTS-CSRF": csrf,
+        }
+
+        ref = put_png(gen_services.asset_store, kind=AssetKind.ORIGINAL_IMAGE)
+        create = await client.post(
+            "/api/v1/drafts",
+            json={
+                "mode": "ASK_GUS",
+                "language": "zh-CN",
+                "source": {"originalImageAssetId": str(ref.asset_id)},
+            },
+            headers=mutation_headers,
+        )
+        assert create.status_code == 201
+        draft_id = create.json()["draftId"]
+
+        gen_services.gateway.delay = 0.4
+
+        generate_task = asyncio.create_task(
+            client.post(
+                f"/api/v1/drafts/{draft_id}/generate",
+                headers=mutation_headers,
+            )
+        )
+        try:
+            deadline = time.monotonic() + 5.0
+            while time.monotonic() < deadline:
+                if gen_services.gateway.calls:
+                    break
+                await asyncio.sleep(0.01)
+            else:
+                pytest.fail("generation attempt never reached the provider")
+
+            progress = await client.get(
+                f"/api/v1/drafts/{draft_id}/generation",
+                headers={"Host": "testserver"},
+            )
+            assert progress.status_code == 200
+            body = progress.json()
+            assert body["draftId"] == draft_id
+            assert body["active"] is True
+            assert body["attempt"] is not None
+            attempt = body["attempt"]
+            assert attempt["kind"] == "INITIAL"
+            assert attempt["status"] in (
+                "RUNNING",
+                "SUCCEEDED",
+            )  # first stage runs quickly
+            assert "attemptId" in attempt
+            assert "currentStage" in attempt
+            assert "stages" in attempt
+            # Internal field must never leak to the client.
+            assert "candidateRecordPath" not in attempt
+            assert "candidate_record_path" not in attempt
+            # Every response key is camelCase.
+            assert "draftId" in body
+            assert "attemptId" in attempt
+        finally:
+            if not generate_task.done():
+                generate_task.cancel()
+                with suppress(BaseException):
+                    await generate_task
+
+
+def test_progress_reflects_finished_terminal_state(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> None:
+    """After a successful generation the draft is no longer active but the last
+    attempt's terminal status is still surfaced for history/hydration."""
+    draft_id = _create_ask_gus_draft(gen_services, gen_auth_client)
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+    )
+    assert response.status_code == 200
+
+    status, body = _progress(gen_services, gen_auth_client, draft_id)
+    assert status == 200
+    assert body["active"] is False
+    assert body["attempt"] is not None
+    assert body["attempt"]["status"] == "SUCCEEDED"

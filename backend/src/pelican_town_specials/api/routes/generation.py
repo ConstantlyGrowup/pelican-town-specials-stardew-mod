@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from pelican_town_specials.api.dependencies import generation_service
 from pelican_town_specials.application.generation import GenerationService
+from pelican_town_specials.domain.draft import GenerationProgressPublic
 
 if TYPE_CHECKING:
     from starlette.types import Send
@@ -42,6 +43,21 @@ def generate_draft(draft_id: UUID, request: Request) -> StreamingResponse:
     """Start Ask Gus generation and stream NDJSON GenerationEvent lines."""
     stream = _service(request).begin_generation(draft_id)
     return _ClosingStreamingResponse(stream, media_type="application/x-ndjson")
+
+
+@router.get(
+    "/drafts/{draft_id}/generation", response_model=GenerationProgressPublic
+)
+def generation_progress(
+    draft_id: UUID, request: Request
+) -> GenerationProgressPublic:
+    """Read-only snapshot of the draft's current or last generation attempt.
+
+    Lets the frontend rehydrate the generation state after a refresh, a page
+    nav, or a closed-and-reopened tab without restarting the generation. Pure
+    read: never writes state and never starts a provider call.
+    """
+    return _service(request).get_progress(draft_id)
 
 
 @router.post("/drafts/{draft_id}/cancel", status_code=202)

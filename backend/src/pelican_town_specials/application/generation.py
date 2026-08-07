@@ -10,6 +10,8 @@ from pelican_town_specials.domain.draft import (
     DraftRecord,
     DraftStatus,
     GenerationAttemptKind,
+    GenerationAttemptPublic,
+    GenerationProgressPublic,
 )
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.blueprint import run_blueprint_preview
@@ -75,6 +77,27 @@ class GenerationService:
         previous process crash or hard exit. Never resumes provider calls.
         """
         return self._orchestrator.recover_interrupted(draft_id)
+
+    def get_progress(self, draft_id: UUID) -> GenerationProgressPublic:
+        """Return a read-only snapshot of the draft's generation state.
+
+        Pure read: never writes, never starts a provider call. The active
+        attempt is returned when one is running; otherwise the most recent
+        attempt (terminal state) is surfaced so a reload can rehydrate. A draft
+        with no attempt at all reports ``attempt=None``.
+        """
+        draft = self._get_draft(draft_id)
+        attempt_id = draft.active_attempt_id or draft.last_attempt_id
+        if attempt_id is None:
+            return GenerationProgressPublic(
+                draft_id=draft_id, active=False, attempt=None
+            )
+        attempt = self._orchestrator.attempts.get(attempt_id)
+        return GenerationProgressPublic(
+            draft_id=draft_id,
+            active=draft.active_attempt_id is not None,
+            attempt=GenerationAttemptPublic.from_attempt(attempt),
+        )
 
     def _resolve_kind(self, draft_id: UUID) -> GenerationAttemptKind:
         draft = self._get_draft(draft_id)
