@@ -6,6 +6,7 @@ import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse
@@ -51,7 +52,7 @@ from pelican_town_specials.application.settings import (
 )
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.config import AppConfig
-from pelican_town_specials.domain.draft import DraftStatus
+from pelican_town_specials.domain.draft import AttemptStatus, DraftStatus
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
@@ -152,7 +153,9 @@ def create_app(
 
     resolved_activity_tracker = activity_tracker or ActivityTracker()
 
-    attempt_registry = AttemptRegistry()
+    attempt_registry = AttemptRegistry(
+        attempt_status_resolver=_attempt_status_resolver(resolved_attempt_repository)
+    )
     resolved_generation_service = generation_service or GenerationService(
         orchestrator=GenerationOrchestrator(
             draft_repository=resolved_draft_repository,
@@ -303,6 +306,26 @@ def create_app(
         return Response(status_code=404)
 
     return app
+
+
+def _attempt_status_resolver(
+    repository: GenerationAttemptRepository,
+) -> Callable[[UUID], AttemptStatus | None]:
+    """Return a resolver that maps an attempt id to its persisted status.
+
+    A missing attempt record resolves to None so the attributable slot can
+    reclaim a holder whose attempt was never persisted or was deleted (e.g.
+    after the owning draft was removed).
+    """
+
+    def _resolve(attempt_id: UUID) -> AttemptStatus | None:
+        try:
+            attempt = repository.get(attempt_id)
+        except (FileNotFoundError, OSError):
+            return None
+        return attempt.status
+
+    return _resolve
 
 
 def _load_default_catalog() -> VanillaCatalog:

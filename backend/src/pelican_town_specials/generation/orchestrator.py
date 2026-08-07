@@ -71,7 +71,7 @@ from pelican_town_specials.providers.contracts import (
     ProviderImageInput,
 )
 
-from .attempt_registry import AttemptRegistry
+from .attempt_registry import AttemptRegistry, SlotOwner
 from .blueprint import (
     BLUEPRINT_STAGE_ORDER,
     blueprint_icon_prompt,
@@ -325,12 +325,15 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
     )
 
 
-def _busy_error() -> AppError:
+def _busy_error(owner: SlotOwner | None = None) -> AppError:
+    details: dict[str, object] = {}
+    if owner is not None:
+        details["draftId"] = str(owner.draft_id)
     return AppError(
         code="PTS_GEN_BUSY",
         message="当前已有一个生成任务在运行，请稍后重试。",
         http_status=409,
-        details={},
+        details=details,
         retryable=False,
     )
 
@@ -463,9 +466,11 @@ class _SlotGuardedAsyncIterator:
         self,
         inner: AsyncGenerator[GenerationEvent],
         registry: AttemptRegistry,
+        attempt_id: UUID,
     ) -> None:
         self._inner = inner
         self._registry = registry
+        self._attempt_id = attempt_id
         self._released = False
 
     def __aiter__(self) -> _SlotGuardedAsyncIterator:
@@ -500,7 +505,7 @@ class _SlotGuardedAsyncIterator:
     def _release(self) -> None:
         if not self._released:
             self._released = True
-            self._registry.release_slot()
+            self._registry.release_slot(self._attempt_id)
 
 
 class GenerationOrchestrator:
@@ -526,9 +531,14 @@ class GenerationOrchestrator:
         self._clock = clock
 
     def run(self, command: GenerationCommand) -> AsyncIterator[GenerationEvent]:
-        if not self._registry.reserve_slot():
-            raise _busy_error()
-        return _SlotGuardedAsyncIterator(self._generate(command), self._registry)
+        # The attempt id is created up front so the slot can be attributed to
+        # its owning draft and attempt before any stream begins.
+        attempt_id = uuid4()
+        if not self._registry.reserve_slot(command.draft_id, attempt_id):
+            raise _busy_error(self._registry.owner())
+        return _SlotGuardedAsyncIterator(
+            self._generate(command, attempt_id), self._registry, attempt_id
+        )
 
     def cancel(self, attempt_id: UUID) -> bool:
         """Request cancellation of a running attempt; returns whether it was tracked."""
@@ -612,9 +622,8 @@ class GenerationOrchestrator:
         return self._assets
 
     async def _generate(
-        self, command: GenerationCommand
+        self, command: GenerationCommand, attempt_id: UUID
     ) -> AsyncGenerator[GenerationEvent]:
-        attempt_id = uuid4()
         self._registry.register(
             attempt_id,
             asyncio.current_task() if asyncio.current_task() is not None else None,
@@ -638,8 +647,9 @@ class GenerationOrchestrator:
                     # GC). Starlette does not aclose the body iterator on
                     # disconnect, so the wrapper's release is not guaranteed to
                     # run; releasing here makes the slot self-healing. Idempotent
-                    # with the wrapper's _release().
-                    self._registry.release_slot()
+                    # with the wrapper's _release(), and release is scoped to
+                    # this attempt so a stale cleanup never frees a new holder.
+                    self._registry.release_slot(attempt_id)
                     self._registry.unregister(attempt_id)
 
     async def _run(
