@@ -242,6 +242,9 @@ describe("useGeneration", () => {
       sourceRevision: 1,
       status,
       currentStage: status === "RUNNING" ? "DISH_ANALYSIS" : null,
+      // The run total is the full ask-gus stage order (9); `stages` only records
+      // how many stages have been reached so far (2 in these fixtures).
+      totalStages: 9,
       stages: Array.from({ length: stageCount }, (_, i) => ({
         stage: STAGES[i],
         status: i < stageCount - 1 ? "SUCCEEDED" : "RUNNING",
@@ -279,7 +282,8 @@ describe("useGeneration", () => {
     await waitFor(() => expect(result.current.phase).toBe("streaming"));
     expect(result.current.currentStage).toBe("DISH_ANALYSIS");
     expect(result.current.succeededStages).toEqual(["INPUT_VALIDATION"]);
-    expect(result.current.totalStages).toBe(2);
+    // The total is the full run total (9), not the 2 stages reached so far.
+    expect(result.current.totalStages).toBe(9);
     expect(getHandler).toHaveBeenCalled();
   });
 

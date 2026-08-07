@@ -2569,6 +2569,12 @@
             "minItems": 1,
             "title": "Stages"
           },
+          "totalStages": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Totalstages",
+            "default": 1
+          },
           "startedAt": {
             "type": "string",
             "format": "date-time",

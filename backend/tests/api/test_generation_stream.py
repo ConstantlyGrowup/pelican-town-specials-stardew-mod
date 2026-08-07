@@ -515,6 +515,10 @@ async def test_progress_while_generating_returns_current_attempt(
             assert "attemptId" in attempt
             assert "currentStage" in attempt
             assert "stages" in attempt
+            # totalStages is the full run total, not the count reached so far
+            # (the frontend renders "completed/total" from this pair).
+            assert attempt["totalStages"] == 9
+            assert len(attempt["stages"]) <= attempt["totalStages"]
             # Internal field must never leak to the client.
             assert "candidateRecordPath" not in attempt
             assert "candidate_record_path" not in attempt

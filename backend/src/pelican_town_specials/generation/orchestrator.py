@@ -706,11 +706,21 @@ class GenerationOrchestrator:
         else:
             raise _illegal_state_error()
 
+        stage_order = (
+            BLUEPRINT_STAGE_ORDER
+            if draft.mode is DraftMode.BLUEPRINT
+            else STAGE_ORDER
+        )
         staged = staged.model_copy(update={"active_attempt_id": attempt_id})
         self._drafts.control_write(
             staged, expected_revision=draft.revision, expected_attempt_id=None
         )
-        attempt = self._new_attempt(command, attempt_id, draft.revision)
+        attempt = self._new_attempt(
+            command,
+            attempt_id,
+            draft.revision,
+            total_stages=len(stage_order),
+        )
         self._attempts.save(attempt)
 
         state = _RunState(
@@ -721,11 +731,6 @@ class GenerationOrchestrator:
             gateway=gateway,
             attempt=attempt,
             staged=staged,
-        )
-        stage_order = (
-            BLUEPRINT_STAGE_ORDER
-            if draft.mode is DraftMode.BLUEPRINT
-            else STAGE_ORDER
         )
         try:
             for ordinal, stage in enumerate(stage_order, start=1):
@@ -984,7 +989,12 @@ class GenerationOrchestrator:
         state.candidate = state.candidate.model_copy(update=updates)
 
     def _new_attempt(
-        self, command: GenerationCommand, attempt_id: UUID, source_revision: int
+        self,
+        command: GenerationCommand,
+        attempt_id: UUID,
+        source_revision: int,
+        *,
+        total_stages: int,
     ) -> GenerationAttempt:
         now = utc_now()
         return GenerationAttempt(
@@ -1003,6 +1013,7 @@ class GenerationOrchestrator:
                     finished_at=None,
                 )
             ],
+            total_stages=total_stages,
             candidate_record_path=None,
             started_at=now,
             finished_at=None,

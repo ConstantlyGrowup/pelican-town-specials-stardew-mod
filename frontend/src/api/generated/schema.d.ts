@@ -1049,6 +1049,11 @@ export interface components {
             /** Stages */
             stages: components["schemas"]["StageAttempt"][];
             /**
+             * Totalstages
+             * @default 1
+             */
+            totalStages: number;
+            /**
              * Startedat
              * Format: date-time
              */

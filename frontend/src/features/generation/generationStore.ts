@@ -131,7 +131,9 @@ export function hydrateGeneration(
   const succeededStages = attempt.stages
     .filter((stage) => stage.status === "SUCCEEDED")
     .map((stage) => stage.stage);
-  const totalStages = attempt.stages.length || null;
+  // `attempt.stages` only records stages reached so far, so the total comes
+  // from the explicit `totalStages` field the orchestrator persists per run.
+  const totalStages = attempt.totalStages ?? null;
   const streaming: GenerationState = {
     phase: "streaming",
     currentStage: attempt.currentStage ?? null,

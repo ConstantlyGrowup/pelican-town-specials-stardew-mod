@@ -178,6 +178,7 @@ class GenerationAttempt(StrictModel):
     status: AttemptStatus
     current_stage: GenerationStage | None = None
     stages: list[StageAttempt] = Field(min_length=1)
+    total_stages: int = Field(default=1, ge=1)
     candidate_record_path: str | None = None
     started_at: datetime
     finished_at: datetime | None = None
@@ -204,6 +205,7 @@ class GenerationAttemptPublic(StrictModel):
     status: AttemptStatus
     current_stage: GenerationStage | None = None
     stages: list[StageAttempt] = Field(min_length=1)
+    total_stages: int = Field(default=1, ge=1)
     started_at: datetime
     finished_at: datetime | None = None
     error: ErrorSummary | None = None
