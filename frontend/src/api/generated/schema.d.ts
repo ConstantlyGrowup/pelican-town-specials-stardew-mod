@@ -252,8 +252,9 @@ export interface paths {
          *
          *     Removes the draft record directory, its generation attempts, and asset
          *     files exclusively owned by the draft. Assets shared with other drafts or
-         *     archived dishes are preserved. ARCHIVED drafts are rejected. The request
-         *     and response contract is unchanged.
+         *     archived dishes are preserved. ARCHIVED drafts are rejected. A running
+         *     generation is cancelled and its slot reclaimed before deletion (Task 19.4).
+         *     The request and response contract is unchanged.
          */
         post: operations["discard_draft_api_v1_drafts__draft_id__discard_post"];
         delete?: never;

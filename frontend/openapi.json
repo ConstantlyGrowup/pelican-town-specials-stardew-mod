@@ -516,7 +516,7 @@
     "/api/v1/drafts/{draft_id}/discard": {
       "post": {
         "summary": "Discard Draft",
-        "description": "Permanently delete a draft.\n\nRemoves the draft record directory, its generation attempts, and asset\nfiles exclusively owned by the draft. Assets shared with other drafts or\narchived dishes are preserved. ARCHIVED drafts are rejected. The request\nand response contract is unchanged.",
+        "description": "Permanently delete a draft.\n\nRemoves the draft record directory, its generation attempts, and asset\nfiles exclusively owned by the draft. Assets shared with other drafts or\narchived dishes are preserved. ARCHIVED drafts are rejected. A running\ngeneration is cancelled and its slot reclaimed before deletion (Task 19.4).\nThe request and response contract is unchanged.",
         "operationId": "discard_draft_api_v1_drafts__draft_id__discard_post",
         "parameters": [
           {
