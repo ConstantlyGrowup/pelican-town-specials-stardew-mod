@@ -6,16 +6,16 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | awaiting_milestone_acceptance |
-| project_phase | milestone-5-release-and-frontend-state |
+| overall_state | milestone_5_1_development |
+| project_phase | milestone-5.1-generation-state-management |
 | product_implementation_started | true |
-| active_session_id | 无 |
-| active_session_state | 无 |
-| active_session_type | 无 |
-| current_task | Milestone 5 验收未通过 3 项已修复（根因：Starlette 断开不 aclose → 生成槽泄漏 → 永久「有一个任务在运行」）；等待用户交互复验 |
+| active_session_id | `2026-08-07-milestone-5-1-state-management-planning` |
+| active_session_state | planned→development（2026-08-07 用户授权连续开发，用户本人统一验收，不走 Codex） |
+| active_session_type | planning→development |
+| current_task | Milestone 5.1 开发中：Task 19.1（槽归属化）实施（Context Packet `m5.1-task-19.1-slot-attribution-v1`） |
 | blocker | 无 |
-| next_action | 用户重新打包后交互复验 3 项（生成中切页、删除草稿后重新生成、reload/重开 exe 自恢复）；复验通过后一次性验收 Milestone 5（Task 19 + Task 19* + 本修复）并授权统一 push |
-| collaboration_model | 包工-子代理-Codex 审阅（2026-08-04 采用；包工生成 Packet，实施子代理执行，Codex luna/max 经 codex-mcp 新 thread 审阅） |
+| next_action | 完成 Task 19.1（AttemptRegistry 槽归属化 + 持久化对账自愈）→ 本地 focused commit → 依 19.1→19.6 顺序连续推进；本里程碑由用户本人统一验收，不走 Codex 审阅 |
+| collaboration_model | 包工-子代理（每 Task 新实施子代理）+ 用户本人统一验收（D5.1-4，本里程碑不桥接 Codex 审阅） |
 
 ## 当前 Git 状态事实
 
@@ -26,8 +26,26 @@
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | af08da4（fix: release generation slot on disconnect and recover orphaned attempts，验收修复） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Milestone 4 全量（Task 16–18 + R12–R15）、Milestone 5 全量（Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`）与本验收修复均已本地提交未 push，等待本次统一授权 push |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Milestone 4 全量（Task 16–18 + R12–R15）、Milestone 5 全量（Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`）与槽泄漏修复 `af08da4` 均已本地提交未 push。**push 门保持关闭**：Milestone 5 验收未全部通过，统一 push 推迟到 Milestone 5.1 完成后与用户一次性决定 |
 | 当前工作树范围 | 工作树干净（除预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与测试临时目录，均非本 Session 产物） |
+
+## 当前 Milestone 5.1 规划 Session（planned，等待开发授权）
+
+- `2026-08-07-milestone-5-1-state-management-planning`：只产出需求定义与 Task 分解，**不实施**。用户明确本轮由用户本人验收，不通过 Codex 审阅。
+- **触发**：Milestone 5 验收 ① 部分通过（不再 busy，但刷新后状态归零，与「继承同一个生成任务」不符）、② 未通过（删除生成中的草稿后新任务仍报 `PTS_GEN_BUSY`）。用户结论：整体（前后端）状态管理存在问题。
+- **根因**：生成状态真相源位置错误。持久化 attempt 一直在写（`orchestrator.py:714` 每阶段落盘 `current_stage`/`stages`/`status`），但无任何读取接口（`GenerationAttemptPublic` 定义于 `domain/draft.py:199` 却零使用，OpenAPI 只有 generate/cancel）。状态实际活在前端模块内存与 HTTP 流两处易失位置。
+  - ①：`orchestrator.py:716` `except GeneratorExit: self._rollback_cancelled(...)` 把客户端断开定义为权威取消，`af08da4` 的 `_ClosingStreamingResponse` 还使其确定性触发 → 生成生命周期绑在 HTTP 连接上而非服务端。
+  - ②：`_delete_draft_record`（`application/drafts.py:551`）只删资产/attempt/记录；`DraftService.__init__`（`drafts.py:401`）无 `AttemptRegistry` 引用，无取消无释放槽。task 继续跑并占槽，其 `control_write` 在已删除记录上抛 `FileNotFoundError`（`_rollback_cancelled` 只捕 Revision/AttemptMismatch）→ 槽永久挂住。
+  - 更底层：`attempt_registry.py:16` 的 `_occupied` 是无主布尔量，无法回答「槽属于谁」，故任何漏释放都不能自愈；`af08da4` 的三层兜底是补丁而非消除。
+- **用户已确认决策**：D5.1-1 只读进度端点 + 前端轮询（不做可重连流）；D5.1-2 完整状态管理重构（6 处改动全做）；D5.1-3 生成中视为活动、应用不退出；D5.1-4 用户本人验收。
+- **目标不变量**：生成生命周期由服务端拥有；持久化 attempt 为唯一真相源（流与前端 store 降为视图/缓存）；槽可归属、可对账、可自愈；删除 draft 前必先取消回收在跑 attempt；前端任何挂载路径从服务端 hydrate。
+- **用户可见契约变更**（反转 Milestone 5 部分语义，须显式记录）：新增只读进度端点（OpenAPI + 前端类型再生成）；刷新/切页/重开标签回显同一任务；断开不再回滚或取消；删除生成中草稿即时释放槽；生成期间不因空闲阈值退出。
+- **Task 分解**（编号 19.1–19.6，已按依赖顺序排列，顺序执行即满足依赖；各自独立 Packet 与本地 focused commit）：**19.1** 槽归属化与持久化对账自愈；**19.2** 服务端拥有的后台生成任务 + 断开改 detach；**19.3** 只读进度端点（复用 `GenerationAttemptPublic`）+ 契约再生成；**19.4** 删除/级联删除前取消回收 + 已删记录容错；**19.5** 前端 hydrate + 轮询 + store 降级为缓存；**19.6** 生成中计入活动 + startup sweep 收窄。
+  - 编号说明：规划初稿曾用 20–25，但 Task 20/21 已被 Milestone 6（CI/README、视觉精修与最终验收）占用，故改为 19.1–19.6，以 `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.6 为准。
+- **规划期已识别将失效的旧语义测试**（改写属对应 Task 范围内）：`test_aclose_releases_slot_and_rolls_back`、`test_closing_streaming_response_closes_iterator_on_disconnect`、`test_cancel_orphaned_attempt_rolls_back`、`useGeneration.test.tsx` 取消/竞态用例、`e2e/generation.spec.ts`、`e2e/full-journey.spec.ts`。
+- **范围外**：可重连 NDJSON 流、多并发生成、数据库/队列/事务日志、生成阶段与 prompt/图像/编译导出逻辑、已完成 Task 的回退。
+- **`af08da4` 处理**：不回退。其「槽必被释放」目标由 Task 19.1 正式实现，其「断开即取消」语义由 Task 19.2 反转。
+- **文档权威缺口**：本 Session 按用户指令只同步开发状态文档；`docs/plans/MVP_IMPLEMENTATION_PLAN.md`（gitignored，Task/里程碑边界权威源）尚未写入 Milestone 5.1，开发授权时须补齐。
 
 ## 当前 Task 19 Session（auto_accepted）
 
@@ -50,7 +68,7 @@
 - `scripts/build_windows.ps1` 全门禁复跑通过（exit 0）：backend 632 passed/2 skipped → frontend 86 passed → frontend build → **OpenAPI drift**（捕获 round-1 cancel docstring 描述变化，已再生成 `4b58f0f`）→ repo ignore policy → PyInstaller（PYZ/PKG/EXE/COLLECT）→ 发布文档复制 → bundle 结构与 release content gate。
 - `scripts/smoke_windows_bundle.ps1` 两阶段通过：Phase A 正常启动 + HTTP health + 静态首页；Phase B `--exit-after-health-check` 退出 0 + 无残留 runtime lock。
 - 产物：`dist/PelicanTownSpecials-windows-x64/`（onedir 发布包，本机已验证可启动服务）。
-- Milestone 5 全部完成 → `awaiting_milestone_acceptance`：用户一次性验收（真实交互复验 5 项修复 + 发布包体验）并授权统一 push（Milestone 4 + Milestone 5 commits）。
+- Milestone 5 自动化门禁全部完成，但 **2026-08-07 用户交互验收未全部通过**（① 部分通过、② 未通过）→ 未进入 Milestone 5 accepted，统一 push 门保持关闭。后续状态见上方 Milestone 5.1 规划 Session。
 
 ## 当前验收修复 Session（auto_accepted，待用户复验）
 

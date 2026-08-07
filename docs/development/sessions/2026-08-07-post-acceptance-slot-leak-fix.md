@@ -4,7 +4,7 @@
 |---|---|
 | `session_id` | `2026-08-07-post-acceptance-slot-leak-fix` |
 | `session_type` | acceptance-fix |
-| `state` | auto_accepted（待用户交互复验与 Milestone 统一 push） |
+| `state` | closed（2026-08-07 用户复验：① 部分通过、② 未通过 → 转入 Milestone 5.1；本 commit 不回退） |
 | `date` | 2026-08-07 |
 | `task` | Milestone 5 验收未通过项修复：生成槽泄漏导致「有一个任务在运行」永久卡死 |
 | `acceptance_contract_id` | 无（用户覆盖：本临时修复由用户直接验收，不走 Codex 审阅） |
@@ -74,6 +74,22 @@ Starlette 1.3.1 的 `StreamingResponse.__call__`（ASGI spec >= 2.4）在客户�
 
 - 用户指令跳过 Codex 审阅，由用户本人交互复验：① 生成中切页→回到草稿后不再误报「开始生成」/busy；
   ② 删除草稿后生成新草稿不再 busy；③ reload/重开 exe 后系统可自恢复。
+
+### 用户复验结果（2026-08-07）
+
+| 项 | 结果 | 说明 |
+|---|---|---|
+| ① | **部分通过** | 不再误报「开始生成」/busy、可重新生成；但用户澄清真实需求是**继承同一个生成任务**（刷新/切页/重开后回显当前生成状态），当前实现刷新后状态全部归零，不符预期 |
+| ② | **未通过** | 删除生成中的草稿后，新任务仍报「当前已有一个生成任务在运行，请稍后重试。」——删除路径完全未触达 `AttemptRegistry`（`DraftService` 无该引用），槽仍被占 |
+| ③ | 未单独报告 | 用户在 ① 中指出刷新后状态消失即涵盖此项观察 |
+
+用户结论：整体（前后端）状态管理存在问题，需要修复 → 已立 Milestone 5.1
+（`docs/development/sessions/2026-08-07-milestone-5-1-state-management-planning.md`）。
+
+**本 Session 的定位修正**：`af08da4` 治好了槽泄漏的表层现象，但把「客户端断开」钉成了权威取消语义
+（`orchestrator.py:716` + `_ClosingStreamingResponse`），方向与用户要求的「任务归服务端所有」相反；
+且其三层兜底是给无主布尔槽打补丁，而非消除该状态。commit 不回退：槽释放目标由 Milestone 5.1
+Task 21（槽归属化 + 持久化对账）正式实现，断开语义由 Task 20 反转为 detach。
 - 已知限制：`api/app.py:326` 与 `application/exports.py:194/226` 为 HEAD 预存 mypy 错误
   （stash 基线确认与本次无关）；`is_tracked` 辅助方法在 Review 前移除（未使用）。
 - 发布包：`scripts/build_windows.ps1` 全门禁复跑通过（backend 636 passed/2 skipped → frontend
