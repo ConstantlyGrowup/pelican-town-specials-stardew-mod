@@ -6,27 +6,27 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_5_1_implemented |
-| project_phase | milestone-5.1-generation-state-management |
+| overall_state | milestone_5_1_shipped |
+| project_phase | milestone-5.1-generation-state-management（已交付）→ 待 Milestone 6 授权 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-07-milestone-5-1-state-management-planning` |
-| active_session_state | development→awaiting_milestone_acceptance（6 个 Task 全部实施并本地提交，等待用户统一交互验收，不走 Codex） |
-| active_session_type | planning→development |
-| current_task | Milestone 5.1 全部 6 个 Task（19.1–19.6）已实施并本地提交；用户交互验收 ①②③④ 已通过（④刷新阶段总数显示问题已修复并重建发布包）；待用户确认修复 |
+| active_session_id | `2026-08-08-nav-home-entry` |
+| active_session_state | committed（用户验收通过，已创建本地 focused commit 并按用户授权推送远端） |
+| active_session_type | ui-fix |
+| current_task | 导航栏新增「首页」入口（用户直接要求的前端小改动，无需 Codex），已验收、提交并推送 |
 | blocker | 无 |
-| next_action | 用户在本机对重建的发布包交互验收（R5.1-1 继承同一任务、R5.1-2 删除即清除、D5.1-3 生成中不退出）；验收通过后与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push |
-| collaboration_model | 包工-子代理 + 用户本人统一验收（D5.1-4，本里程碑不桥接 Codex 审阅） |
+| next_action | Milestone 4 + 5 + 5.1 已全部验收并统一 push 至 origin/feat/mvp-implementation（0ffad8b）；本轮导航栏改动已提交并推送；下一里程碑为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
+| collaboration_model | 包工-子代理 + 用户本人验收（本轮小改动不走 Codex） |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Task8 focused commit 已推送；Task 9–15 与验收修复已本地提交，未推送） |
+| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | af08da4（fix: release generation slot on disconnect and recover orphaned attempts，验收修复） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；Milestone 4 全量（Task 16–18 + R12–R15）、Milestone 5 全量（Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`）与槽泄漏修复 `af08da4` 均已本地提交未 push。**push 门保持关闭**：Milestone 5 验收未全部通过，统一 push 推迟到 Milestone 5.1 完成后与用户一次性决定 |
+| 最新提交 | 26c3044（fix: add a home entry to the primary navigation，导航栏首页入口） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；本轮导航栏改动 `26c3044` 与 docs 记录已按用户授权推送 |
 | 当前工作树范围 | 工作树干净（除预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与测试临时目录，均非本 Session 产物） |
 
 ## 当前 Milestone 5.1 规划 Session（planned，等待开发授权）
@@ -70,6 +70,14 @@
 **用户交互验收（2026-08-07，四项全部通过）**：① 生成中刷新/切页回显同一生成任务进度 ✅；② 删除生成中的草稿后立即可新建生成 ✅；③ 生成期间无浏览器连接应用不退出 ✅；④ 重开 exe 无残留卡死 ✅。
 
 **验收发现并已修复**（commit `d6aa3b4`）：刷新后阶段总数显示错误——"已完成 2/2 个阶段"应为"2/总阶段数"。根因：`attempt.stages` 是渐进式记录（只含已推进到的阶段），hydrate 路径误用 `stages.length` 当总数。修复：`GenerationAttempt`/`GenerationAttemptPublic` 新增 `total_stages`（orchestrator `_new_attempt` 按 `len(stage_order)` 落盘），前端 hydrate 改读 `totalStages`。验证：backend 642 passed、前端 92 passed、E2E 10 passed、ruff/mypy clean；发布包已重建（`build_windows.ps1` + `smoke_windows_bundle.ps1` 通过）。待用户确认此修复后再与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push。
+
+## 当前导航栏首页入口 Session（committed）
+
+- `2026-08-08-nav-home-entry`：用户直接要求的前端 UI 小改动——主导航栏最左侧新增「首页」入口，指向 `/`（草稿首页仪表盘），解决用户在创建/收集品/设置页面无法回到首页、只能改 URL 的问题。
+- 实施（commit `26c3044`，3 文件 +8/-0）：`copy.ts` 新增 `home: "首页"`；`AppShell.tsx` 导航栏最前加 `<NavLink to="/" end>`（`end` 防 `to="/"` 匹配所有路由导致始终高亮）；`router.test.tsx` 补断言。
+- 验证：全量前端 **92 passed**、`tsc --noEmit` clean、eslint clean。
+- **首次验收失败与重建**：用户贴出运行产物 HTML 无「首页」——源码改动未重建，发布包从 exe 旁 `frontend/dist` 读静态资源（旧构建）。修复：`pnpm --dir frontend build` 重建 + 同步 `index.html`/`assets` 进 `dist/PelicanTownSpecials-windows-x64/frontend/dist/`（onedir 静态资源从磁盘读，无需重打 exe）。用户复验通过（2026-08-08）。
+- 已按用户授权提交并推送远端；`frontend/dist`、`dist/` 为 gitignored 产物，不进提交。
 
 ## 当前 Task 19 Session（auto_accepted）
 
