@@ -9,13 +9,13 @@
 | overall_state | milestone_5_1_shipped |
 | project_phase | milestone-5.1-generation-state-management（已交付）→ 待 Milestone 6 授权 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-08-nav-home-entry` |
-| active_session_state | committed（用户验收通过，已创建本地 focused commit 并按用户授权推送远端） |
-| active_session_type | ui-fix |
-| current_task | 导航栏新增「首页」入口（用户直接要求的前端小改动，无需 Codex），已验收、提交并推送 |
+| active_session_id | `2026-08-08-docs-conflict-sync` |
+| active_session_state | committed（用户确认 Brief §10，控制面 focused commit 已创建并按授权 push） |
+| active_session_type | docs-sync |
+| current_task | 按 2026-08-08 Brief 同步过时文档与产品描述冲突（D-UI-01/02/03）；仅文档；已验收提交 |
 | blocker | 无 |
-| next_action | Milestone 4 + 5 + 5.1 已全部验收并统一 push 至 origin/feat/mvp-implementation（0ffad8b）；本轮导航栏改动已提交并推送；下一里程碑为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
-| collaboration_model | 包工-子代理 + 用户本人验收（本轮小改动不走 Codex） |
+| next_action | 文档冲突同步已提交并推送；下一产品阶段仍为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
+| collaboration_model | 包工直接维护控制面与设计源同步（无 Implementer / 无 Codex；用户本人确认） |
 
 ## 当前 Git 状态事实
 
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 26c3044（fix: add a home entry to the primary navigation，导航栏首页入口） |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；本轮导航栏改动 `26c3044` 与 docs 记录已按用户授权推送 |
-| 当前工作树范围 | 工作树干净（除预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与测试临时目录，均非本 Session 产物） |
+| 最新提交 | 本 Session 控制面 docs-conflict-sync focused commit（见下方 Session 节）；其前为 8343704 |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push** |
+| 当前工作树范围 | 本 Session 控制面已提交；设计源（P1D/P2D/TD0/IP0/索引/锚点）已同步但 gitignored；另有预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` |
 
 ## 当前 Milestone 5.1 规划 Session（planned，等待开发授权）
 
@@ -71,13 +71,26 @@
 
 **验收发现并已修复**（commit `d6aa3b4`）：刷新后阶段总数显示错误——"已完成 2/2 个阶段"应为"2/总阶段数"。根因：`attempt.stages` 是渐进式记录（只含已推进到的阶段），hydrate 路径误用 `stages.length` 当总数。修复：`GenerationAttempt`/`GenerationAttemptPublic` 新增 `total_stages`（orchestrator `_new_attempt` 按 `len(stage_order)` 落盘），前端 hydrate 改读 `totalStages`。验证：backend 642 passed、前端 92 passed、E2E 10 passed、ruff/mypy clean；发布包已重建（`build_windows.ps1` + `smoke_windows_bundle.ps1` 通过）。待用户确认此修复后再与用户一次性决定 Milestone 4 + 5 + 5.1 的统一 push。
 
-## 当前导航栏首页入口 Session（committed）
+## 当前文档冲突同步 Session（committed）
+
+- `2026-08-08-docs-conflict-sync`：按用户 Brief `PelicanTownSpecials_文档冲突修改Brief_2026-08-08.md` 同步过时文档与产品描述冲突；**仅文档，不改业务代码/路由/UI**。
+- 三项裁决已写入正式源：
+  - **D-UI-01**：首页 `/` = 品牌叙事 + 草稿 Dashboard 单页；品牌 Hero 增强属 Milestone 6 FUTURE_TARGET，不得标为已完成。
+  - **D-UI-02**：一级导航冻结 首页 / 开始创作 / 收集品 / 设置；「使用与安装说明」非一级导航。
+  - **D-UI-03**：Ask Gus 结果页仅三操作（接受并存档、完整重新生成、拒绝）；无进入料理蓝图 / 无 Ask Gus→Blueprint 产品路径 / 无用户可达 `CONVERTED_TO_ADVANCED`；Blueprint 仅独立入口。
+- 版本：P1D **v2.2**、P2D **v1.1**、TD0 **v1.5**、IP0 **v0.7**；CONSTRAINTS / 设计源索引 / 三期锚点「现行结论」已同步。
+- HISTORICAL_KEEP：F19-3/F19-4 移除转换按钮（`ecfcf85`）、导航首页入口（`26c3044`）、历史 Session 与 convert 代码/测试——不改写、不删除代码。
+- 代码残留仅报告：convert API/application/OpenAPI/tests 若仍存在，文档标注非用户可达；删除需另开授权 Task。
+- 用户确认 Brief §10 后控制面 focused commit + push：`CONSTRAINTS.md`、`STATUS.md`、本 Session；设计源 gitignored。
+- 详见 `docs/development/sessions/2026-08-08-docs-conflict-sync.md`。
+
+## 导航栏首页入口 Session（committed，历史）
 
 - `2026-08-08-nav-home-entry`：用户直接要求的前端 UI 小改动——主导航栏最左侧新增「首页」入口，指向 `/`（草稿首页仪表盘），解决用户在创建/收集品/设置页面无法回到首页、只能改 URL 的问题。
 - 实施（commit `26c3044`，3 文件 +8/-0）：`copy.ts` 新增 `home: "首页"`；`AppShell.tsx` 导航栏最前加 `<NavLink to="/" end>`（`end` 防 `to="/"` 匹配所有路由导致始终高亮）；`router.test.tsx` 补断言。
 - 验证：全量前端 **92 passed**、`tsc --noEmit` clean、eslint clean。
 - **首次验收失败与重建**：用户贴出运行产物 HTML 无「首页」——源码改动未重建，发布包从 exe 旁 `frontend/dist` 读静态资源（旧构建）。修复：`pnpm --dir frontend build` 重建 + 同步 `index.html`/`assets` 进 `dist/PelicanTownSpecials-windows-x64/frontend/dist/`（onedir 静态资源从磁盘读，无需重打 exe）。用户复验通过（2026-08-08）。
-- 已按用户授权提交并推送远端；`frontend/dist`、`dist/` 为 gitignored 产物，不进提交。
+- 已按用户授权提交并推送远端；`frontend/dist`、`dist/` 为 gitignored 产物，不进提交。本事实保留为 IMPLEMENTATION_FACT，不因文档同步改写。
 
 ## 当前 Task 19 Session（auto_accepted）
 

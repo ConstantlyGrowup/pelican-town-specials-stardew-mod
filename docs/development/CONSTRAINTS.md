@@ -6,8 +6,10 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.2 | MVP 运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.5 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界，以及 Yibu 证据如何进入 Task 11 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.5 | MVP 运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论；含 2026-08-08 三操作/导航/首页冻结 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.7 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界，以及 Yibu 证据如何进入 Task 11；含 2026-08-08 产品合同同步 |
+| `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
+| `design docs/StarValleyCook_第二期产品体验与品牌化设计_v1.1.docx` | 二期体验、首页/导航与品牌叙事（Git ignored） |
 | `StarValleyCook_项目设计源索引与状态快照.md` | 设计源索引、产品命名、阶段状态和文档同步线索；保持 ignored |
 | `docs/development/STATUS.md` | 当前开发 Session、工作树事实、阻塞和下一步；是开发状态唯一真源 |
 | `docs/development/sessions/` | 每个 Session 的追加式历史证据 |
@@ -22,7 +24,11 @@
 - 默认工作区为 `%LOCALAPPDATA%\\PelicanTownSpecials\\workspace`；浏览器不直接访问任意本地文件路径。
 - 为降低小白用户配置门槛，应用维护当前 Windows 用户级环境变量 PTS_OPENAI_API_KEY；支持新增、更新和删除，不写机器级环境变量，不要求管理员权限。Key 不得进入 JSON、日志、错误正文、前端状态、测试快照、Context Packet 或 Git。
 - MVP 使用同步请求和 NDJSON 阶段事件；不提前引入数据库、登录、队列、全局 Registry 或跨用户缓存。
-- 问问 Gus 使用完整原子重生成；料理蓝图只复用原始图片和基础模板；收集品不可编辑且不暴露来源模式。
+- 问问 Gus 结果页仅三操作：接受并存档、完整重新生成、拒绝；使用完整原子重生成；不提供进入料理蓝图。
+- 料理蓝图仅从首页 / 开始创作等独立入口创建并加载基础模板；不提供 Ask Gus → Blueprint 产品转换路径；代码中历史 convert 端点若存在则不得在 UI 暴露。
+- 一级导航冻结为 首页 / 开始创作 / 收集品 / 设置（`/` `/create` `/cookbook` `/settings`）；「使用与安装说明」不作为一级导航；Bring It In-Game 保持导出后流程页；Pack the Menu 由收集品驱动。
+- 首页为单一 `/`：品牌叙事 + 创作入口 + 本地草稿 Dashboard；品牌 Hero 增强属于 Milestone 6，当前实现以 Dashboard 为主，不得标为已完成。
+- 收集品不可编辑且不暴露来源模式。
 - Mod 目标为 Stardew Valley 1.6.15、Content Patcher 2.9.0、纯 JSON/PNG 内容包；本地 Mods 路径只从 `PTS_STARDEW_MODS_DIR` 获取。
 - `AuthorName` 在工作区首次创建时生成并持久化为 `D<YYYYMMDD>`；第三期重新讨论身份策略。
 
