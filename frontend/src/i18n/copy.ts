@@ -24,6 +24,7 @@ export const PRODUCT_COPY = {
     packMenu: "打包菜单",
     bringInGame: "带进游戏",
     primaryNavigation: "主导航",
+    home: "首页",
     create: "创建",
     drafts: "草稿",
     settings: "设置",

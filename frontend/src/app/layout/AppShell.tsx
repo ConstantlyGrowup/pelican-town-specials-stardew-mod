@@ -7,6 +7,9 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <nav className="app-nav" aria-label={copy.primaryNavigation}>
+        <NavLink to="/" end>
+          {copy.home}
+        </NavLink>
         <NavLink to="/create">{copy.create}</NavLink>
         <NavLink to="/cookbook">{copy.cookbook}</NavLink>
         <NavLink to="/settings">{copy.settings}</NavLink>

@@ -102,6 +102,10 @@ function renderAt(path: string) {
 describe("router", () => {
   it("resolves the home page with frozen product copy and a draft list", async () => {
     renderAt("/");
+    expect(screen.getByRole("link", { name: copy.home })).toHaveAttribute(
+      "href",
+      "/",
+    );
     expect(screen.getByRole("heading", { name: copy.productName })).toBeVisible();
     expect(screen.getByText(copy.tagline)).toBeVisible();
     expect(await screen.findByRole("heading", { name: "南瓜汤" })).toBeVisible();
