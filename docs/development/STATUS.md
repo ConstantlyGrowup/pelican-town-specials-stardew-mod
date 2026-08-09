@@ -9,12 +9,12 @@
 | overall_state | milestone_5_1_shipped |
 | project_phase | milestone-5.1-generation-state-management（已交付）→ 待 Milestone 6 授权 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-08-docs-conflict-sync` |
-| active_session_state | committed（用户确认 Brief §10，控制面 focused commit 已创建并按授权 push） |
-| active_session_type | docs-sync |
-| current_task | 按 2026-08-08 Brief 同步过时文档与产品描述冲突（D-UI-01/02/03）；仅文档；已验收提交 |
+| active_session_id | `2026-08-09-downloadable-image-preview` |
+| active_session_state | committed（用户验收通过，已创建本地 focused commit `4fe7eca`，未 push） |
+| active_session_type | ui-fix |
+| current_task | 草稿/收集品预览图 hover 下载入口（前端小功能）；已验收提交，未 push |
 | blocker | 无 |
-| next_action | 文档冲突同步已提交并推送；下一产品阶段仍为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
+| next_action | 预览下载功能已提交（`4fe7eca`），待用户授权 push；下一产品阶段仍为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
 | collaboration_model | 包工直接维护控制面与设计源同步（无 Implementer / 无 Codex；用户本人确认） |
 
 ## 当前 Git 状态事实
@@ -22,12 +22,12 @@
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送） |
+| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送；预览图下载入口 `4fe7eca` 为本地 committed，未 push） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 本 Session 控制面 docs-conflict-sync focused commit（见下方 Session 节）；其前为 8343704 |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push** |
-| 当前工作树范围 | 本 Session 控制面已提交；设计源（P1D/P2D/TD0/IP0/索引/锚点）已同步但 gitignored；另有预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` |
+| 最新提交 | 预览图下载入口 focused commit `4fe7eca`（见下方 Session 节）；其前为 docs-conflict-sync `f38f810` |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push**；预览图下载入口 `4fe7eca` 为本地 focused commit，**未 push**（本轮未授权推送） |
+| 当前工作树范围 | 预览图下载 Session 已提交（工作树仅剩预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`、`prototype pages design/`） |
 
 ## 当前 Milestone 5.1 规划 Session（planned，等待开发授权）
 
@@ -83,6 +83,14 @@
 - 代码残留仅报告：convert API/application/OpenAPI/tests 若仍存在，文档标注非用户可达；删除需另开授权 Task。
 - 用户确认 Brief §10 后控制面 focused commit + push：`CONSTRAINTS.md`、`STATUS.md`、本 Session；设计源 gitignored。
 - 详见 `docs/development/sessions/2026-08-08-docs-conflict-sync.md`。
+
+## 预览图下载入口 Session（committed）
+
+- `2026-08-09-downloadable-image-preview`：用户直接要求的前端小功能——为已生成的草稿预览图（蓝图编辑页 / Ask Gus 审核页）与已接受收集品详情页的预览大图增加 hover 下载按钮，替代右键另存为。用户本人验收，不走 Codex 审阅。
+- 实施（commit `4fe7eca`，7 文件 +211/-3）：新增复用组件 `frontend/src/components/DownloadableImage.tsx`（hover 浮现下载按钮；点击 fetch 图片字节、按 MIME 探测扩展名，以 `{名称}-预览.<ext>` 下载）；接入三处预览图（BlueprintEditorPage / AskGusReviewPage / CookbookDetailPage）；`copy.ts` 新增 `downloadImage: "下载图片"`；`global.css` 加 hover 样式；新增组件聚焦测试 2 条。
+- 验证：定向 **38 passed**；全量前端 **94 passed**（15 文件）、`tsc --noEmit` clean、eslint clean；发布包已重建并同步（`index-CgjeyN3b.js`），无需重打 exe（onedir 从磁盘读静态资源）。
+- 范围说明：下载入口只加在预览大图；32px 像素图标未加，如需可后续追加。
+- 用户验收通过（2026-08-09），授权提交并更新文档；本轮未授权 push。`frontend/dist`、`dist/` 为 gitignored 产物，不进提交。
 
 ## 导航栏首页入口 Session（committed，历史）
 
