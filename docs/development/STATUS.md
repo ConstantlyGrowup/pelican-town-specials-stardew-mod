@@ -7,27 +7,36 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_5_1_shipped |
-| project_phase | milestone-5.1-generation-state-management（已交付）→ 待 Milestone 6 授权 |
+| project_phase | milestone-5.1（已交付）→ Milestone 6 Task 20（CI/README/发布检查）已本地提交 → 待 Task 21 授权 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-09-downloadable-image-preview` |
-| active_session_state | committed（用户验收通过，已创建本地 focused commit `4fe7eca` 并按授权推送远端） |
-| active_session_type | ui-fix |
-| current_task | 草稿/收集品预览图 hover 下载入口（前端小功能）；已验收提交并推送 |
+| active_session_id | `2026-08-09-task-20-ci-readme` |
+| active_session_state | auto_accepted（Codex PASS `gpt-5.6-luna`/max；本地 focused commit `33ab7f1` 已创建，未 push） |
+| active_session_type | milestone-6-task-20 |
+| current_task | Task 20：Windows CI、用户 README、.env 参考与发布内容检查门禁；已本地提交 |
 | blocker | 无 |
-| next_action | 预览下载功能已提交并推送（`4fe7eca` + docs `3fb9d03`）；下一产品阶段仍为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
-| collaboration_model | 包工直接维护控制面与设计源同步（无 Implementer / 无 Codex；用户本人确认） |
+| next_action | Task 20 已本地提交（`33ab7f1`，未 push）；Task 21（视觉精修、无障碍与最终验收）待用户授权启动 |
+| collaboration_model | Task 20：包工直接实施 + Codex 独立审阅（`gpt-5.6-luna`/max，独立 thread，round 0 REVISE → round 1 PASS） |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按授权推送） |
+| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按授权推送；Milestone 6 Task 20 本地 focused commit `33ab7f1` 已创建，未 push） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 预览图下载入口 focused commit `4fe7eca`（见下方 Session 节）；其前为 docs-conflict-sync `f38f810` |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push**；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按用户授权 push（`f38f810..3fb9d03`） |
-| 当前工作树范围 | 预览图下载 Session 已提交（工作树仅剩预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`、`prototype pages design/`） |
+| 最新提交 | Milestone 6 Task 20 focused commit `33ab7f1`（feat/ci，见下方 Session 节）；其前为预览图下载入口 `4fe7eca` |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push**；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按用户授权 push（`f38f810..3fb9d03`）；**Milestone 6 Task 20 本地 focused commit `33ab7f1` 已创建，未 push（待 Milestone 6 全量验收后统一 push）** |
+| 当前工作树范围 | Task 20 已提交（工作树仅剩预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`、`prototype pages design/`，及 Codex 审阅临时目录 `.review_tmp_task20_workspace/`） |
+
+## 当前 Milestone 6 Task 20 Session（auto_accepted）
+
+- `2026-08-09-task-20-ci-readme`：Milestone 6 首个 Task（CI/README/发布检查）。用户授权本 Task 由包工直接实施 + Codex 独立审阅（`gpt-5.6-luna`/max，独立 thread）。Context Packet：`mvp-task-20-ci-readme-v1`（`docs/plans/2026-08-09-task-20-ci-readme-packet.md`，gitignored）。
+- 实施（commit `33ab7f1`，8 文件 +435/-3）：`README.md` 重写为用户指南；`.env.example`（空值+说明，无 token）；`.github/workflows/ci.yml`（19 步 Windows CI）；`scripts/check_openapi_drift.ps1`；`scripts/check_product_copy.py`（命名门禁唯一实现源）；`tests/repo/test_product_copy.py` + `test_release_contents.py` + `__init__.py`。
+- 审阅：round 0 REVISE（2 项 MUST_FIX：T20-CI-001 pip `--group dev -e ./backend` 根目录解析失败 → 改 `working-directory: backend` + `-e .`；T20-NAME-002 README 隐私矛盾 → 明确仅在主动生成请求时向配置的 Provider 发送照片与上下文，Key 只用于请求鉴权）→ 修复 → round 1 **PASS**（无 MUST_FIX，无回归）。
+- 验证：`tests/repo` 8 passed（红→绿）；全量 backend+repo+integration **666 passed/2 skipped**；ruff/mypy clean（87 source files）；前端 **94 passed**/lint/build clean；E2E **10 passed**；OpenAPI drift OK；copy gate OK；`build_windows.ps1` exit 0；`smoke_windows_bundle.ps1` exit 0；ci.yml YAML 有效（19 步）。
+- 范围：Task 21（视觉精修、无障碍、最终验收）未实施，待用户授权。未改领域/API/Mod 协议。
+- auto_accepted，本地 focused commit（未 push）；推送待 Milestone 6 全量验收后统一授权。
 
 ## 当前 Milestone 5.1 规划 Session（planned，等待开发授权）
 
