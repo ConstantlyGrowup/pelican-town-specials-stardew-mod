@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
+import { DownloadableImage } from "../../components/DownloadableImage";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import { GenerationError } from "../generation/GenerationError";
@@ -173,9 +174,10 @@ export function AskGusReviewPage() {
       {(previewUrl || iconUrl) && (
         <section className="card" aria-label={`${visualName}预览资源`}>
           {previewUrl && (
-            <img
+            <DownloadableImage
               src={previewUrl}
               alt={`${visualName}预览`}
+              downloadName={`${visualName}-预览`}
               style={{ maxWidth: "100%", height: "auto", display: "block" }}
             />
           )}

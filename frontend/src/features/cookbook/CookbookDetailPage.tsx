@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiClient, assetUrl } from "../../api/client";
+import { DownloadableImage } from "../../components/DownloadableImage";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import { clearSelectionFor } from "./selectionStore";
@@ -84,9 +85,10 @@ export function CookbookDetailPage() {
         {(previewUrl || iconUrl) && (
           <section aria-label={`${dish.displayName}预览资源`}>
             {previewUrl && (
-              <img
+              <DownloadableImage
                 src={previewUrl}
                 alt={`${dish.displayName}预览`}
+                downloadName={`${dish.displayName}-预览`}
                 style={{ maxWidth: "100%", height: "auto", display: "block" }}
               />
             )}

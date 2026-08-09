@@ -177,6 +177,40 @@ button {
   gap: var(--pts-space-3);
 }
 
+.downloadable-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.downloadable-image__button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(59, 47, 30, 0.72);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.downloadable-image:hover .downloadable-image__button,
+.downloadable-image__button:focus-visible {
+  opacity: 1;
+}
+
+.downloadable-image__button svg {
+  width: 18px;
+  height: 18px;
+}
+
 :focus-visible {
   outline: 2px solid var(--pts-color-accent);
   outline-offset: 2px;

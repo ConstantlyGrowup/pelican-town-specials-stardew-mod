@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFormState } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
+import { DownloadableImage } from "../../components/DownloadableImage";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import {
@@ -333,9 +334,10 @@ export function BlueprintEditorPage() {
       {(previewUrl || iconUrl) && (
         <section className="card" aria-label={`${draft.presentation?.displayName ?? copy.draftTitle}预览资源`}>
           {previewUrl && (
-            <img
+            <DownloadableImage
               src={previewUrl}
               alt={`${draft.presentation?.displayName ?? copy.draftTitle}预览`}
+              downloadName={`${draft.presentation?.displayName ?? copy.draftTitle}-预览`}
               style={{ maxWidth: "100%", height: "auto", display: "block" }}
             />
           )}

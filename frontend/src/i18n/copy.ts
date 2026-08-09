@@ -31,6 +31,7 @@ export const PRODUCT_COPY = {
     notFoundTitle: "页面不存在",
     notFoundMessage: "你访问的页面不存在或已被移除。",
     loading: "加载中…",
+    downloadImage: "下载图片",
 
     settingsTitle: "Provider 设置",
     settingsSaved: "设置已保存。",
