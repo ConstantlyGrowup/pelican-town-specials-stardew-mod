@@ -10,11 +10,11 @@
 | project_phase | milestone-5.1-generation-state-management（已交付）→ 待 Milestone 6 授权 |
 | product_implementation_started | true |
 | active_session_id | `2026-08-09-downloadable-image-preview` |
-| active_session_state | committed（用户验收通过，已创建本地 focused commit `4fe7eca`，未 push） |
+| active_session_state | committed（用户验收通过，已创建本地 focused commit `4fe7eca` 并按授权推送远端） |
 | active_session_type | ui-fix |
-| current_task | 草稿/收集品预览图 hover 下载入口（前端小功能）；已验收提交，未 push |
+| current_task | 草稿/收集品预览图 hover 下载入口（前端小功能）；已验收提交并推送 |
 | blocker | 无 |
-| next_action | 预览下载功能已提交（`4fe7eca`），待用户授权 push；下一产品阶段仍为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
+| next_action | 预览下载功能已提交并推送（`4fe7eca` + docs `3fb9d03`）；下一产品阶段仍为 Milestone 6（CI/README、视觉精修与最终验收），待用户授权启动 |
 | collaboration_model | 包工直接维护控制面与设计源同步（无 Implementer / 无 Codex；用户本人确认） |
 
 ## 当前 Git 状态事实
@@ -22,11 +22,11 @@
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送；预览图下载入口 `4fe7eca` 为本地 committed，未 push） |
+| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按授权推送） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | 预览图下载入口 focused commit `4fe7eca`（见下方 Session 节）；其前为 docs-conflict-sync `f38f810` |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push**；预览图下载入口 `4fe7eca` 为本地 focused commit，**未 push**（本轮未授权推送） |
+| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push**；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按用户授权 push（`f38f810..3fb9d03`） |
 | 当前工作树范围 | 预览图下载 Session 已提交（工作树仅剩预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`、`prototype pages design/`） |
 
 ## 当前 Milestone 5.1 规划 Session（planned，等待开发授权）
