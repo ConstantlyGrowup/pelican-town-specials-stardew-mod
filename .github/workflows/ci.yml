@@ -1,0 +1,93 @@
+# Windows CI: verify the MVP build end-to-end and produce a release candidate.
+#
+# Mirrors the fixed gate order from the implementation plan (Milestone 6 Task 20):
+#   checkout → Python 3.13 → Node/pnpm → install per manifest →
+#   OpenAPI generate + drift → ruff/mypy/pytest → frontend install/test/build →
+#   Playwright fake E2E → PyInstaller build → bundle smoke → upload artifact.
+# CI never calls a real provider and never runs real game tests.
+name: ci
+
+on:
+  push:
+    branches:
+      - feat/mvp-implementation
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install backend dependencies (per pyproject.toml)
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev -e .
+
+      - name: Install frontend dependencies (per pnpm-lock.yaml)
+        run: pnpm install --frozen-lockfile
+
+      - name: OpenAPI generate and drift check
+        run: pwsh -NoProfile -File scripts/check_openapi_drift.ps1
+
+      - name: Ruff lint
+        run: python -m ruff check backend
+
+      - name: Mypy type check
+        run: python -m mypy backend/src
+
+      - name: Backend, repo and integration tests
+        run: python -m pytest backend/tests tests/repo tests/integration -q
+
+      - name: Product copy gate
+        run: python scripts/check_product_copy.py
+
+      - name: Frontend unit tests
+        run: pnpm --dir frontend test:run
+
+      - name: Frontend lint
+        run: pnpm --dir frontend lint
+
+      - name: Frontend build
+        run: pnpm --dir frontend build
+
+      - name: Install Playwright browser
+        run: pnpm --dir frontend exec playwright install chromium
+
+      - name: Playwright fake E2E
+        run: pnpm --dir frontend e2e
+
+      - name: Build Windows bundle
+        run: pwsh -NoProfile -File scripts/build_windows.ps1
+
+      - name: Smoke test Windows bundle
+        run: pwsh -NoProfile -File scripts/smoke_windows_bundle.ps1
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: pelican-town-specials-windows-x64
+          path: dist/PelicanTownSpecials-windows-x64
+          if-no-files-found: error
