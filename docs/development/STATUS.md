@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_7_in_progress |
-| project_phase | Milestone 7（Refine）已授权开始；Task 22（Windows 应用身份与 Gus icon）实施中 |
+| project_phase | Milestone 7（Refine）进行中；Task 22（应用身份与 Gus icon）已 auto_accepted（`7286c74`）；Task 23（per-user installer）实施中 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-10-milestone-7-task-22-app-identity` |
-| active_session_state | in_progress（Task 22 实施中） |
-| active_session_type | milestone-7-task-22-implementation |
-| current_task | Task 22：Windows 应用身份与 Gus icon（确定性 .ico、PyInstaller EXE icon、身份/版本校验） |
+| active_session_id | `2026-08-10-milestone-7-task-23-installer` |
+| active_session_state | in_progress（Task 23 实施中） |
+| active_session_type | milestone-7-task-23-implementation |
+| current_task | Task 23：Windows per-user installer（onedir 包裹、per-user 安装、快捷方式 Gus icon、卸载保留 workspace） |
 | blocker | 无 |
-| next_action | Task 22 实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 23 |
+| next_action | Task 23 实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 24 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；完成后拉起 Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -27,14 +27,22 @@
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | `ae5b320 feat: implement Task 21 visual refinement` |
 | 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 与 `origin/feat/mvp-implementation` 均为 `ae5b320`。Milestone 7 规划控制面已提交，尚未推送（待 M7 全量验收后统一 push）。 |
-| 当前工作树范围 | Milestone 7 Task 22 实施中（控制面 + 产品代码修改未提交）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
+| 当前工作树范围 | Milestone 7 Task 23 实施中（控制面 + 产品代码修改未提交）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
 
-## 当前 Milestone 7 Task 22 实施 Session（in_progress）
+## 当前 Milestone 7 Task 23 实施 Session（in_progress）
+
+- `2026-08-10-milestone-7-task-23-installer`：Task 22 已 auto_accepted（`7286c74`）；本 Session 只处理 Task 23（Windows per-user installer）。
+- 规划文档：`docs/plans/2026-08-10-milestone-7-refine.md`（gitignored）；Task 23 验收 M7-T23-INSTALL-001..005。
+- 规划裁决 M7-D01/D02：installer 包裹现有 onedir 不替换运行时；默认 per-user 安装到 `%LOCALAPPDATA%\Programs\PelicanTownSpecials`，无管理员权限；卸载保留 workspace。推荐评估 Inno Setup；工具不作为用户运行时依赖。
+
+## 当前 Milestone 7 Task 22 实施 Session（auto_accepted）
 
 - `2026-08-10-milestone-7-task-22-app-identity`：用户 2026-08-10 确认开始 Milestone 7，协作模式切回「主会话实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）」，里程碑粒度不打断。本 Session 只处理 Task 22（Windows 应用身份与 Gus icon）。
-- 规划文档：`docs/plans/2026-08-10-milestone-7-refine.md`（gitignored）；Task 22 验收 M7-T22-ICON-001..004。
+- 实现（commit `7286c74`，8 文件 +364/-1）：`scripts/generate_app_icon.py`（确定性 ICO 生成 + `--check`，唯一实现源）；`packaging/assets/pelican-town-specials.ico`（16/24/32/48/64/128/256）+ `provenance.json`；`PelicanTownSpecials.spec` EXE `icon=`；`scripts/check_exe_icon.ps1`（构建后 EXE icon 像素比对 + 版本身份）；`build_windows.ps1` 接入 EXE icon gate；`tests/repo/test_app_icon.py`。
+- 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **PASS**（无 MUST_FIX，4/4 criterion）；OPTIONAL_HARDENING 就地处理（`--check` 补 `provenance.source_sha256` 校验；Session base_commit 改为 `b5bd03d`）。
+- 验证：`tests/repo` 13 passed（8 存量 + 5 新增）；全量 backend **671 passed/2 skipped**；ruff/mypy clean；`build_windows.ps1` exit 0（EXE icon gate：reference hash `3FE51DEB...` == built exe；ProductName/1.0.0 校验通过；release content gate OK）；`smoke_windows_bundle.ps1` Phase A+B OK。
 - 规划裁决 M7-D05：EXE icon canonical source 默认 `gus-portrait-1.png`（1254×1254 RGB 带边框，方形），确定性生成多尺寸 `.ico`，不在运行时裁剪 portrait。
-- 本 Session 不创建 installer、不改 GitHub workflow、不新增语言功能；完成后待 Codex 审阅。
+- 范围：Task 23（installer）、Task 24（GitHub Release）、Task 25/26（双语）均未实施；未改 backend/API/Mod 协议。
 
 ## 已关闭 Milestone 7 Refine 规划 Session（planned → 已授权）
 

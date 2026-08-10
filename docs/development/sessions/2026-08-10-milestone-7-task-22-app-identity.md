@@ -4,11 +4,12 @@
 |---|---|
 | session_id | `2026-08-10-milestone-7-task-22-app-identity` |
 | session_type | `milestone-7-task-22-implementation` |
-| status | `in_progress` |
+| status | `auto_accepted`（Codex PASS，本地 focused commit，未 push） |
 | owner | Codex 主会话（Claude Code 主会话实施 + Codex 独立审阅） |
 | started_at | `2026-08-10` |
-| user_acceptance | `pending` |
+| user_acceptance | `pending`（M7 全量验收时统一） |
 | base_commit | `b5bd03d docs: authorize Milestone 7 and open Task 22 app identity session` |
+| product_commit | `7286c74 feat: add Gus portrait app icon and EXE identity gate` |
 
 ## 任务范围
 
@@ -43,15 +44,37 @@ Codex MCP 独立审阅（`gpt-5.6-luna` / max effort，新 thread）；PASS → 
   作为 repo gate 的一部分。
 - release 内容 gate 拒绝临时截图、源设计包、workspace 与样本素材。
 
-## 实施进度
+## 实施进度（全部完成）
 
-- [x] 更新 STATUS.md / AGENTS.md / 规划 Session，反映授权与协作模式切换（控制面提交）。
-- [ ] 生成 Context Packet `mvp-task-22-app-identity-v1`（planning_status: READY_FOR_IMPLEMENTATION）。
-- [ ] 实现：`scripts/generate_app_icon.py`、`packaging/assets/pelican-town-specials.ico`、
-      spec `icon=`、repo/release gate 测试。
-- [ ] 验证：icon 尺寸/内容、backend/frontend 回归、bundle build + smoke、copy gate。
-- [ ] Codex 独立审阅（gpt-5.6-luna/max，新 thread）→ PASS → auto_accepted → 本地 focused commit。
-- [ ] 更新本 Session 记录与 STATUS.md。
+- [x] 更新 STATUS.md / AGENTS.md / 规划 Session，反映授权与协作模式切换（控制面提交 `b5bd03d`）。
+- [x] 生成 Context Packet `mvp-task-22-app-identity-v1`（planning_status: READY_FOR_IMPLEMENTATION）。
+- [x] 实现：`scripts/generate_app_icon.py`、`packaging/assets/pelican-town-specials.ico`
+      （16/24/32/48/64/128/256，确定性）、`packaging/assets/provenance.json`、spec `icon=`、
+      `scripts/check_exe_icon.ps1`、`build_windows.ps1` 接入 EXE icon gate、
+      `tests/repo/test_app_icon.py`。
+- [x] 验证：见下方「验证证据」。
+- [x] Codex 独立审阅（gpt-5.6-luna/max，新 thread）→ **PASS**（round 0，无 MUST_FIX）→
+      auto_accepted → 本地 focused commit `7286c74`（8 文件 +364/-1）。
+- [x] 更新本 Session 记录与 STATUS.md。
+
+## Codex 审阅（gpt-5.6-luna / max effort，独立 thread）
+
+- round 0 **PASS**（无 MUST_FIX；4/4 criterion checked，scope_delta none）。
+- OPTIONAL_HARDENING（已就地处理，非 MUST_FIX）：
+  - `--check` 增补 `provenance.source_sha256` 校验（M7-T22-ICON-004 直接要求）。
+  - Session base_commit 改为实际基线 `b5bd03d`（原误写 `ae5b320`）。
+
+## 验证证据（全部通过）
+
+- `python -m pytest tests/repo -q`：**13 passed**（8 存量 + 5 新增 Task 22）。
+- `python scripts/generate_app_icon.py --check`：OK（确定性、7 尺寸、provenance 一致）。
+- `python -m pytest backend/tests tests/repo tests/integration -q`：**671 passed / 2 skipped**。
+- `python -m ruff check backend`、`python -m mypy backend/src`：clean（87 source files）。
+- `pwsh -File scripts/build_windows.ps1`：exit 0；EXE icon gate reference 32px hash
+  `3FE51DEB...` == built exe hash；EXE version identity ProductName
+  「Pelican Town Specials」/ 1.0.0；release content gate OK。
+- `pwsh -File scripts/smoke_windows_bundle.ps1`：Phase A + Phase B OK，exit 0。
+- Pillow ICO 确定性探针：7 frames（16..256），byte-identical 重生成。
 
 ## 范围说明
 
