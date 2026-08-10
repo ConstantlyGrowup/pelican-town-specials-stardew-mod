@@ -7,15 +7,15 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_7_in_progress |
-| project_phase | Milestone 7（Refine）进行中；Task 22–25 已 auto_accepted；Task 26（双语生成）待实施 |
+| project_phase | Milestone 7（Refine）进行中；Task 22–26 已全部 auto_accepted；进入 M7 全量验证与用户验收 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-10-milestone-7-task-25-bilingual-ui` |
-| active_session_state | auto_accepted（Task 25 round-1 Codex PASS，本地 focused commit，不 push） |
-| active_session_type | milestone-7-task-25-implementation |
-| current_task | Task 25：双语 UI 与 Settings locale（中文/英文界面 + Settings 语言选择，默认 zh-CN 存于 localStorage） |
+| active_session_id | `2026-08-10-milestone-7-task-26-bilingual-generation` |
+| active_session_state | auto_accepted（Task 26 实现 + round-0 REVISE 4 项 MUST_FIX 修复 + round-1 PASS，本地 focused commit `318e3cf` 已创建，未 push） |
+| active_session_type | milestone-7-task-26-implementation |
+| current_task | Task 26：双语生成与图像 prompt（en-US 新稿分析/Ask Gus 展示/原料映射/视觉与图标 prompt 全英文；zh-CN 回归不变；provenance 记录语言与 prompt version） |
 | blocker | 无 |
-| next_action | Task 25 已 auto_accepted（round-1 Codex PASS）→ 本地 focused commit（feat + docs，不 push）→ 启动 Task 26（双语生成与图像 prompt） |
-| collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；完成后拉起 Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
+| next_action | M7 全量验证与用户验收（Task 74）：五 Task（22–26）已全部 auto_accepted，复跑完整验证与用户交互验收；验收通过后授权统一 push 至 origin/feat/mvp-implementation |
+| collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
 
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation（Milestone 6 Task 20/21 与控制面记录已统一推送至 `ae5b320`） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `529981a feat: add GitHub Release auto-publish workflow (tag/manual, checksum, notes)` |
-| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 为 `529981a`，`origin/feat/mvp-implementation` 为 `ae5b320`。Milestone 7 规划控制面与 Task 22/23/24 均仅本地提交，尚未推送（待 M7 全量验收后统一 push）。 |
-| 当前工作树范围 | Milestone 7 Task 25 实现未提交（round-1 Codex PASS 后待创建本地 focused commit，feat + docs 分开）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
+| 最新提交 | `318e3cf feat: implement bilingual generation and image prompt (Task 26)` |
+| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；`origin/feat/mvp-implementation` 为 `ae5b320`。Milestone 7 规划控制面与 Task 22/23/24/25/26 均仅本地提交，尚未推送（待 M7 全量验收后统一 push）。 |
+| 当前工作树范围 | Milestone 7 Task 26 已 auto_accepted（feat `318e3cf` + docs 待本记录提交）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
@@ -54,6 +54,14 @@
 - 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **REVISE**（3 项 MUST_FIX：I18N-003 剩余英文直写未进 catalog、I18N-001 瞬态消息存渲染字符串不随 locale 重本地化、I18N-004 Settings radiogroup 无 roving tabIndex/focus）→ round 1 修复（catalog 新增约 36 键×2 收编全部 eyebrows/counters/stamps/status/severity 渲染；7 个页面瞬态消息 state 改为 catalog key 联合类型并 `{copy[key]}` 渲染；SettingsPage roving focus + 新增 `document.activeElement` 测试）→ round 1 **PASS**（5/5 criterion，无 MUST_FIX，scope_delta none；1 条 OPTIONAL_HARDENING 非阻塞：Settings 字段级校验消息留存期切 locale 不重渲染）。
 - 验证：前端 Vitest **19 files / 116 passed**；lint clean；`pnpm build` clean；copy gate OK；grep 扫描确认无残留 raw eyebrow/field-counter/export-stamp/detail-badge、raw `{draft.status}`、raw `{issue.severity}`、`alt="Gus"`、`aria-label="mode"`、`set*Error(copy.*)`；全量 backend+repo+integration **690 passed / 2 skipped**。
 - 范围：未实现 Task 26（双语生成与图像 prompt）；`ExportSpec.language` 保持 zh-CN；未改后端/API/Mod 协议/持久化；切换 UI 语言不改写旧草稿/归档数据。
+
+## 当前 Milestone 7 Task 26 实施 Session（auto_accepted）
+
+- `2026-08-10-milestone-7-task-26-bilingual-generation`：Task 25 已 auto_accepted（`a435bc5`+`efd2e5b`）；本 Session 只处理 Task 26（双语生成与图像 prompt）。Context Packet：`mvp-m7-task-26-i18n-gen-v1`（`docs/plans/2026-08-10-task-26-bilingual-generation-packet.md`，gitignored），base_commit `efd2e5b`，4 条 planning_rulings，验收 M7-T26-GEN-001..005。
+- 实现（commit `318e3cf`，12 文件 +924/-61）：analysis/ask-gus 英文 prompt 变体与语言选择函数；gateway 按 `request.language` 选 prompt/JSON 指令/修复指令/「Dish analysis：」前缀；tooltip/visual brief/icon prompt 增加 `language` 参数（默认 ZH_CN）与英文标签映射；orchestrator 视觉 prompt 传 `draft.source.language`、`_map_gameplay` 线程 language、provenance prompt_versions 语言后缀版本（`ask-gus-v3-zh`/`-en`、`visual-v3-multi-image-edit-zh`/`-en`、`analysis-v1-zh`/`-en`）；catalog 映射显示名按 language 选 zh/en（`item_id` 权威不变，`display_name_zh` 修正 Task 25「不中英混杂」一致化）。未新增翻译模型调用、未改 API/schema/编译/导出协议。
+- 审阅（gpt-5.6-luna/max，新 thread）：round 0 **REVISE** 4 项 MUST_FIX（GEN-002 英文 tooltip 超 1500 契约 → 压缩模板至 1463/1258 + 英文最长回归测试；GEN-003 英文海鲜词不触发 R15 → 英文关键词 + casefold；GEN-005 analysis provenance 缺版本 → `analysis-v1-zh/en`、blueprint provenance visual 版本不可追溯 → `model_copy` 合并，保留字段权威与 cache_eligibility）→ 修复 → round 1 **PASS**（revise_round 1，无 MUST_FIX，scope_delta none，planning_rulings R-01..R-04 全部应用）。
+- 验证：focused 测试（generation/providers/catalog）**165 passed**；全量 backend+repo+integration **705 passed/2 skipped**（含 2 个新回归测试）；ruff **All checks passed**；mypy 仅 3 处 HEAD 预存错误（`application/exports.py:194,226`、`api/app.py:356`，stash 基线确认与 Task 26 无关，未越界修复）。RED→GREEN 已确认（实施前 focused 20 failed/71 passed）。
+- 范围：未实现导出语言、未翻译旧稿、未加服务端偏好 API、未调真实 provider。Task 22–26 至此全部 auto_accepted；Milestone 7 进入全量验证与用户验收（Task 74）。
 
 ## 当前 Milestone 7 Task 22 实施 Session（auto_accepted）
 
