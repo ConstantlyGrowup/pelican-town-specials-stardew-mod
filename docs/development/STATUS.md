@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_7_in_progress |
-| project_phase | Milestone 7（Refine）进行中；Task 22（应用身份与 Gus icon）已 auto_accepted（`7286c74`）；Task 23（per-user installer）实施中 |
+| project_phase | Milestone 7（Refine）进行中；Task 23（per-user installer）已 auto_accepted（`5f54516`）；Task 24（GitHub Release）实施中 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-10-milestone-7-task-23-installer` |
-| active_session_state | in_progress（Task 23 实施中） |
-| active_session_type | milestone-7-task-23-implementation |
-| current_task | Task 23：Windows per-user installer（onedir 包裹、per-user 安装、快捷方式 Gus icon、卸载保留 workspace） |
+| active_session_id | `2026-08-10-milestone-7-task-24-release` |
+| active_session_state | in_progress（Task 24 实施中） |
+| active_session_type | milestone-7-task-24-implementation |
+| current_task | Task 24：GitHub Release 自动发布（tag/manual 触发、checksum、release notes、最小写权限） |
 | blocker | 无 |
-| next_action | Task 23 实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 24 |
+| next_action | Task 24 实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 25 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；完成后拉起 Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -25,15 +25,23 @@
 | 当前分支 | feat/mvp-implementation（Milestone 6 Task 20/21 与控制面记录已统一推送至 `ae5b320`） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `ae5b320 feat: implement Task 21 visual refinement` |
-| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 与 `origin/feat/mvp-implementation` 均为 `ae5b320`。Milestone 7 规划控制面已提交，尚未推送（待 M7 全量验收后统一 push）。 |
-| 当前工作树范围 | Milestone 7 Task 23 实施中（控制面 + 产品代码修改未提交）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
+| 最新提交 | `5f54516 feat: add Windows per-user installer wrapping the validated onedir` |
+| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 为 `5f54516`，`origin/feat/mvp-implementation` 为 `ae5b320`。Milestone 7 规划控制面与 Task 22/23 均仅本地提交，尚未推送（待 M7 全量验收后统一 push）。 |
+| 当前工作树范围 | Milestone 7 Task 23 控制面记录待提交（docs commit，随后开始 Task 24）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
 
-## 当前 Milestone 7 Task 23 实施 Session（in_progress）
+## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
-- `2026-08-10-milestone-7-task-23-installer`：Task 22 已 auto_accepted（`7286c74`）；本 Session 只处理 Task 23（Windows per-user installer）。
-- 规划文档：`docs/plans/2026-08-10-milestone-7-refine.md`（gitignored）；Task 23 验收 M7-T23-INSTALL-001..005。
-- 规划裁决 M7-D01/D02：installer 包裹现有 onedir 不替换运行时；默认 per-user 安装到 `%LOCALAPPDATA%\Programs\PelicanTownSpecials`，无管理员权限；卸载保留 workspace。推荐评估 Inno Setup；工具不作为用户运行时依赖。
+- `2026-08-10-milestone-7-task-23-installer`：本 Session 只处理 Task 23（Windows per-user installer）。Context Packet：`mvp-task-23-installer-v1`（`docs/plans/2026-08-10-task-23-installer-packet.md`，gitignored），base_commit `4333267`。
+- 实现（commit `5f54516`，10 文件 +753/-29）：`packaging/installer/PelicanTownSpecials.iss`（per-user、无管理员、`x64os`、Gus icon、start-menu 必建/desktop 可选、无 `[UninstallDelete]`）；`scripts/release_content_gate.ps1`（共享 `Test-ReleaseContent` + `*.map` + Root 绝对化）；`scripts/install_innosetup.ps1`（6.7.3 固定 + SHA-256 校验 + `/CURRENTUSER`）/`find_iscc.ps1`/`build_installer.ps1`（内容 gate + Gus icon 像素 hash + 版本身份 gate）/`smoke_installer.ps1`；`build_windows.ps1` 改接共享 gate；`tests/repo/test_installer.py`；`ci.yml`（安装 Inno Setup、构建/冒烟/上传 installer artifact）；`packaging/release/README.txt` 安装/卸载说明。
+- 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 REVISE（2 项 MUST_FIX：INSTALL-002 快捷方式未真正演练、INSTALL-003 固定 marker 可能覆盖用户文件）→ 修复 → round 1 **PASS**（5/5 criterion，无 MUST_FIX）。OPTIONAL_HARDENING 2 项非阻塞（setup log 固定路径、README 隐私措辞）。
+- 规划裁决 `R-06`（workspace 路径准确性）：实测 platformdirs 4.10.0 将 `user_data_dir("PelicanTownSpecials")` 展开为双重路径 `%LOCALAPPDATA%\PelicanTownSpecials\PelicanTownSpecials\workspace`（appauthor 默认取 appname），即 app 冻结的真实默认 workspace；Task 23 不改 app 路径（R-01）。smoke 经 `_default_workspace_path()` 探测真实路径放置 marker；README 改引用 app 数据目录 `%LOCALAPPDATA%\PelicanTownSpecials`。双重路径记录为候选后续项，M7 验收时向用户呈现。
+- 验证：`tests/repo` 22 passed；全量 backend+repo+integration **680 passed/2 skipped**；ruff/mypy clean；`smoke_installer.ps1` 全流程通过并返回干净机器状态（无残留 marker、install 目录/快捷方式消失、真实用户 workspace 保留）；Inno Setup 6.7.3 构建的 setup exe Gus icon hash 匹配、ProductName 校验通过。
+- 范围：Task 24（GitHub Release）、Task 25/26（双语）未实施；未改 backend/API/Mod 协议、未改变 app 运行时或 workspace 逻辑。
+
+## 当前 Milestone 7 Task 24 实施 Session（in_progress）
+
+- `2026-08-10-milestone-7-task-24-release`：Task 23 已 auto_accepted（`5f54516`）；本 Session 只处理 Task 24（GitHub Release 自动发布）。
+- 规划裁决 M7-D01/D02（release 相关）：仅 tag/manual 触发；生成 checksum；release notes；最小写权限。
 
 ## 当前 Milestone 7 Task 22 实施 Session（auto_accepted）
 
