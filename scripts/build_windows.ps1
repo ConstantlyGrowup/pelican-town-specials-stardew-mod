@@ -99,24 +99,8 @@ if (-not (Test-Path -LiteralPath $noticesDst)) {
 }
 
 Write-Host "==> release content gate"
-$forbiddenTop = @('workspace', 'design docs', 'docs', 'tests', 'samples', '最初设计功能清点')
-$violations = @()
-Get-ChildItem -LiteralPath $BundleDir -Recurse -Force -File | ForEach-Object {
-    $rel = $_.FullName.Substring($BundleDir.Length).TrimStart('\', '/')
-    $name = $_.Name
-    $topSegment = ($rel -split '[\\/]')[0]
-    $forbidden = $false
-    # Project-level leakage would appear at the bundle root or as named files;
-    # Python library internals (e.g. jedi/.../samples/) are not project content.
-    if ($name -like '.env*') { $forbidden = $true }
-    if ($name -like 'StarValleyCook*') { $forbidden = $true }
-    if ($name -eq 'launcher-error.log') { $forbidden = $true }
-    if ($forbiddenTop -contains $topSegment) { $forbidden = $true }
-    if ($rel -match '(^|[\\/])docs[\\/](architecture|plans)([\\/]|$)') { $forbidden = $true }
-    if ($forbidden) {
-        $violations += $rel
-    }
-}
+. (Join-Path $PSScriptRoot 'release_content_gate.ps1')
+$violations = @(Test-ReleaseContent -Root $BundleDir)
 if ($violations.Count -gt 0) {
     throw "Release bundle contains forbidden content: $($violations -join ', ')"
 }

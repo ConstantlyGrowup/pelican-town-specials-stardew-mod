@@ -85,9 +85,25 @@ jobs:
       - name: Smoke test Windows bundle
         run: pwsh -NoProfile -File scripts/smoke_windows_bundle.ps1
 
+      - name: Install Inno Setup (pinned 6.7.3)
+        run: pwsh -NoProfile -File scripts/install_innosetup.ps1 -InstallDir "${{ github.workspace }}\tools\innosetup"
+
+      - name: Build Windows installer
+        run: pwsh -NoProfile -File scripts/build_installer.ps1 -IsccPath "${{ github.workspace }}\tools\innosetup\ISCC.exe"
+
+      - name: Smoke test Windows installer
+        run: pwsh -NoProfile -File scripts/smoke_installer.ps1
+
       - name: Upload release candidate
         uses: actions/upload-artifact@v4
         with:
           name: pelican-town-specials-windows-x64
           path: dist/PelicanTownSpecials-windows-x64
+          if-no-files-found: error
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pelican-town-specials-setup-v1.0.0
+          path: dist/installer/PelicanTownSpecials-Setup-v1.0.0.exe
           if-no-files-found: error

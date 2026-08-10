@@ -4,18 +4,34 @@
 感谢使用「鹈鹕镇新菜单」！这是一个本地运行、为《星露谷物语》生成自定义食谱
 内容包的桌面工具。
 
-开始使用
+安装与启动
+----------
+
+推荐使用安装程序：双击 `PelicanTownSpecials-Setup-v1.0.0.exe` 完成安装。
+- 应用安装到 `%LOCALAPPDATA%\Programs\PelicanTownSpecials`，无需管理员权限，
+  不需要 Python、Node.js 或 Git。
+- 安装会在开始菜单创建「Pelican Town Specials」快捷方式（可选择创建桌面快捷方式）。
+- 也可以在「设置 → 应用」中卸载，或运行安装目录下的 `unins000.exe`。
+
+也可使用便携版：解压 ZIP 到你选择的文件夹（例如 `C:\PelicanTownSpecials`），
+双击 `PelicanTownSpecials.exe`。
+
+启动后：
+1. 应用会打开浏览器进入本地界面。首次启动会自动创建默认工作区（位于
+   应用数据目录 `%LOCALAPPDATA%\PelicanTownSpecials` 下）。
+   - 若浏览器未自动打开，请访问界面中显示的本地地址。
+2. 在「设置」页填入你的 Provider API Key（保存到当前 Windows 用户环境变量
+   `PTS_OPENAI_API_KEY`，不会写入任何 JSON 或日志）。
+3. 上传菜品照片，使用「问问 Gus」或「料理蓝图」生成食谱，加入「收集品」，
+   然后「打包菜单」并「带进游戏」。
+
+卸载说明
 --------
 
-1. 解压本发布包到你选择的文件夹（例如 `C:\PelicanTownSpecials`）。
-2. 双击 `PelicanTownSpecials.exe`。应用会打开浏览器进入本地界面。
-   - 首次启动会自动创建默认工作区（位于
-     `%LOCALAPPDATA%\PelicanTownSpecials\workspace`）。
-   - 若浏览器未自动打开，请访问界面中显示的本地地址。
-3. 在「设置」页填入你的 Provider API Key（保存到当前 Windows 用户环境变量
-   `PTS_OPENAI_API_KEY`，不会写入任何 JSON 或日志）。
-4. 上传菜品照片，使用「问问 Gus」或「料理蓝图」生成食谱，加入「收集品」，
-   然后「打包菜单」并「带进游戏」。
+- 卸载会删除程序文件和快捷方式，但**保留**你的工作区与用户数据
+  （`%LOCALAPPDATA%\PelicanTownSpecials`），重新安装后数据仍在。
+- 便携版直接删除解压文件夹即可；工作区数据同样位于
+  `%LOCALAPPDATA%\PelicanTownSpecials`。
 
 隐私说明
 --------
@@ -42,9 +58,8 @@
 故障排除
 --------
 
-- 若双击后浏览器未打开或界面异常，请删除
-  `%LOCALAPPDATA%\PelicanTownSpecials\workspace\app-state` 下的
+- 若双击后浏览器未打开或界面异常，请删除应用数据目录
+  `%LOCALAPPDATA%\PelicanTownSpecials` 下工作区 `app-state` 文件夹中的
   `launcher-error.log` 后重试，并查看该日志内容。
-- 卸载：直接删除本文件夹即可；工作区数据位于 `%LOCALAPPDATA%\PelicanTownSpecials`。
 
 第三方许可请见 `THIRD_PARTY_NOTICES.txt`。
