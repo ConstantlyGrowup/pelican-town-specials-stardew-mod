@@ -4,15 +4,19 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { catalogs, LOCALE_STORAGE_KEY } from "../../i18n/copy";
+import { LocaleProvider } from "../../i18n/locale";
 import { CreateDishPage } from "./CreateDishPage";
 
-const copy = PRODUCT_COPY.zh;
+const copy = catalogs["zh-CN"];
 
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  window.localStorage.clear();
+});
 afterAll(() => server.close());
 
 const assetView = {
@@ -65,6 +69,19 @@ function renderPage() {
   );
 }
 
+function renderPageWithLocale() {
+  return render(
+    <LocaleProvider>
+      <MemoryRouter initialEntries={["/create"]}>
+        <Routes>
+          <Route path="/create" element={<CreateDishPage />} />
+          <Route path="/drafts/:draftId" element={<div>draft page</div>} />
+        </Routes>
+      </MemoryRouter>
+    </LocaleProvider>,
+  );
+}
+
 describe("create dish page", () => {
   it("explains that Blueprint starts from the original image only", () => {
     const { container } = renderPage();
@@ -102,9 +119,40 @@ describe("create dish page", () => {
     const request = createSpy.mock.calls[0]?.[0]?.request as Request;
     const body = (await request.clone().json()) as {
       mode: string;
+      language: string;
       source: { originalImageAssetId: string };
     };
     expect(body.mode).toBe("ASK_GUS");
+    expect(body.language).toBe("zh-CN");
     expect(body.source.originalImageAssetId).toBe("asset-1");
+  });
+
+  it("sends the current UI locale as the draft language", async () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    const en = catalogs["en-US"];
+    const createSpy = vi.fn((info: { request: Request }) => {
+      void info;
+      return HttpResponse.json(draftView);
+    });
+    server.use(
+      http.post("/api/v1/assets/images", () => HttpResponse.json(assetView)),
+      http.post("/api/v1/drafts", createSpy),
+    );
+    renderPageWithLocale();
+
+    const file = new File(["x"], "photo.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText(en.uploadLabel), {
+      target: { files: [file] },
+    });
+    const createButton = await screen.findByRole("button", {
+      name: en.createDraft,
+    });
+    await waitFor(() => expect(createButton).toBeEnabled());
+    fireEvent.click(createButton);
+
+    await screen.findByText("draft page");
+    const request = createSpy.mock.calls[0]?.[0]?.request as Request;
+    const body = (await request.clone().json()) as { language: string };
+    expect(body.language).toBe("en-US");
   });
 });

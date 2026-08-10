@@ -13,10 +13,10 @@ import {
   it,
   vi,
 } from "vitest";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { catalogs } from "../../i18n/copy";
 import { BringInGamePage } from "./BringInGamePage";
 
-const copy = PRODUCT_COPY.zh;
+const copy = catalogs["zh-CN"];
 
 const server = setupServer();
 

@@ -199,7 +199,19 @@ export function subscribeGeneration(listener: Listener): () => void {
   };
 }
 
-export function beginGeneration(draftId: string, onSuccess?: () => void): void {
+/** Locale-aware fallback messages for the module store (M7 Task 25). */
+export type GenerationFallbackMessages = {
+  /** Shown when an unexpected stream error has no structured envelope. */
+  streamError: string;
+  /** Shown when a cancel request fails without a structured envelope. */
+  cancelError: string;
+};
+
+export function beginGeneration(
+  draftId: string,
+  onSuccess?: () => void,
+  fallback?: GenerationFallbackMessages,
+): void {
   const state = getState(draftId);
   state.controller?.abort();
   const controller = new AbortController();
@@ -243,7 +255,9 @@ export function beginGeneration(draftId: string, onSuccess?: () => void): void {
         phase: "error",
         error: {
           code: "PTS_GEN_STREAM_ERROR",
-          message: cause instanceof Error ? cause.message : "生成流异常",
+          message: cause instanceof Error
+            ? cause.message
+            : fallback?.streamError ?? "Generation stream error",
           retryable: true,
           requestId: "",
           recommendedAction: "",
@@ -300,7 +314,10 @@ function handleEvent(
  * The controller is captured when the cancel starts; a newer begin() installs a
  * fresh controller, and a stale cancel never aborts or marks that new round.
  */
-export async function cancelStream(draftId: string): Promise<void> {
+export async function cancelStream(
+  draftId: string,
+  fallback?: Pick<GenerationFallbackMessages, "cancelError">,
+): Promise<void> {
   const inFlight = pendingCancels.get(draftId);
   if (inFlight) {
     return inFlight;
@@ -316,7 +333,9 @@ export async function cancelStream(draftId: string): Promise<void> {
           ? cause.envelope
           : {
               code: "PTS_GEN_CANCEL_FAILED",
-              message: cause instanceof Error ? cause.message : "取消失败",
+              message: cause instanceof Error
+                ? cause.message
+                : fallback?.cancelError ?? "Cancel failed",
               retryable: true,
               requestId: "",
               recommendedAction: "",

@@ -1,26 +1,44 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { useForm, useFormState } from "react-hook-form";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy, useLocale, useSetLocale } from "../../i18n/locale";
+import type { Language } from "../../i18n/copy";
 import {
+  createProviderFormSchema,
   fromView,
-  providerSettingsSchema,
   toUpdate,
   type ProviderSettingsValues,
 } from "./providerForm";
 
 type ProviderKeyStatus = components["schemas"]["ProviderKeyStatus"];
 
+// Transient status/error messages store a catalog key so a live message
+// re-localizes when the user switches the UI language (M7-T25-I18N-001).
+type SettingsMessageKey =
+  | "settingsLoadFailed"
+  | "settingsSaved"
+  | "saveFailed"
+  | "deleteFailed";
+
 export function SettingsPage() {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
+  const locale = useLocale();
+  const setLocale = useSetLocale();
   const queryClient = useQueryClient();
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const radioRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // Language names are shown in their own language regardless of the active
+  // locale, so they come from the catalog like every other user-visible label.
+  const localeOptions: Array<{ value: Language; label: string }> = [
+    { value: "zh-CN", label: copy.languageChinese },
+    { value: "en-US", label: copy.languageEnglish },
+  ];
+  const [saveMessage, setSaveMessage] = useState<SettingsMessageKey | null>(null);
+  const [loadError, setLoadError] = useState<SettingsMessageKey | null>(null);
   const keyInputRef = useRef<HTMLInputElement>(null);
   const [keyStatus, setKeyStatus] = useState<ProviderKeyStatus | null>(null);
-  const [keyMessage, setKeyMessage] = useState<string | null>(null);
+  const [keyMessage, setKeyMessage] = useState<SettingsMessageKey | null>(null);
 
   const form = useForm<ProviderSettingsValues>({
     defaultValues: {
@@ -41,7 +59,7 @@ export function SettingsPage() {
     queryFn: async () => {
       const { data, error } = await apiClient.GET("/api/v1/settings/provider");
       if (error || !data) {
-        setLoadError(copy.settingsLoadFailed);
+        setLoadError("settingsLoadFailed");
         throw new Error("load failed");
       }
       setLoadError(null);
@@ -54,8 +72,35 @@ export function SettingsPage() {
     },
   });
 
+  function onLocaleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    const currentIndex = localeOptions.findIndex((option) => option.value === locale);
+    const lastIndex = localeOptions.length - 1;
+    let nextIndex: number;
+    switch (event.key) {
+      case "ArrowLeft":
+      case "ArrowUp":
+        nextIndex = currentIndex <= 0 ? lastIndex : currentIndex - 1;
+        break;
+      case "ArrowRight":
+      case "ArrowDown":
+        nextIndex = currentIndex >= lastIndex ? 0 : currentIndex + 1;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = lastIndex;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    setLocale(localeOptions[nextIndex].value);
+    radioRefs.current[nextIndex]?.focus();
+  }
+
   async function onSave(values: ProviderSettingsValues) {
-    const parsed = providerSettingsSchema.safeParse(values);
+    const parsed = createProviderFormSchema(copy).safeParse(values);
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
         const field = issue.path[0] as keyof ProviderSettingsValues | undefined;
@@ -70,10 +115,10 @@ export function SettingsPage() {
       body: toUpdate(parsed.data),
     });
     if (error) {
-      setSaveMessage(copy.saveFailed);
+      setSaveMessage("saveFailed");
       return;
     }
-    setSaveMessage(copy.settingsSaved);
+    setSaveMessage("settingsSaved");
     await queryClient.invalidateQueries({ queryKey: ["provider-settings"] });
   }
 
@@ -86,45 +131,45 @@ export function SettingsPage() {
       body: { apiKey: keyValue },
     });
     if (error || !data) {
-      setKeyMessage(copy.saveFailed);
+      setKeyMessage("saveFailed");
       return;
     }
     setKeyStatus(data);
     if (keyInputRef.current) {
       keyInputRef.current.value = "";
     }
-    setKeyMessage(copy.settingsSaved);
+    setKeyMessage("settingsSaved");
   }
 
   async function onDeleteKey() {
     const { data, error } = await apiClient.DELETE("/api/v1/settings/provider/key");
     if (error || !data) {
-      setKeyMessage(copy.deleteFailed);
+      setKeyMessage("deleteFailed");
       return;
     }
     setKeyStatus(data);
-    setKeyMessage(copy.settingsSaved);
+    setKeyMessage("settingsSaved");
   }
 
   return (
     <main className="settings-page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">SETTINGS / PROVIDER CONNECTION</p>
+          <p className="eyebrow">{copy.eyebrowSettings}</p>
           <h1>{copy.settingsTitle}</h1>
-          <p className="page-subtitle">连接你的视觉、文本和图像 Provider。</p>
+          <p className="page-subtitle">{copy.settingsSubtitle}</p>
         </div>
         <span className="settings-mark" aria-hidden="true">⚙</span>
       </div>
-      {loadError && <div className="status-banner status-error">{loadError}</div>}
+      {loadError && <div className="status-banner status-error">{copy[loadError]}</div>}
 
       <form onSubmit={handleSubmit(onSave)} className="paper-panel settings-form">
         <div className="panel-section-heading">
           <div>
-            <p className="eyebrow">01 / MODEL ROUTING</p>
-            <h2>Provider 参数</h2>
+            <p className="eyebrow">{copy.eyebrowModelRouting}</p>
+            <h2>{copy.providerParamsTitle}</h2>
           </div>
-          <span className="field-counter">LOCAL ONLY</span>
+          <span className="field-counter">{copy.localOnly}</span>
         </div>
         <div className="field">
           <label htmlFor="baseUrl">{copy.baseUrlLabel}</label>
@@ -201,7 +246,7 @@ export function SettingsPage() {
             </span>
           )}
         </div>
-        {saveMessage && <p role="status">{saveMessage}</p>}
+        {saveMessage && <p role="status">{copy[saveMessage]}</p>}
         <button className="btn btn-primary" type="submit" disabled={formState.isSubmitting}>
           {copy.saveSettings}
         </button>
@@ -210,7 +255,7 @@ export function SettingsPage() {
       <section className="paper-panel settings-key-panel" aria-label={copy.apiKeyStatusLabel}>
         <div className="panel-section-heading">
           <div>
-            <p className="eyebrow">02 / SECRET</p>
+            <p className="eyebrow">{copy.eyebrowSecret}</p>
             <h2>{copy.apiKeyStatusLabel}</h2>
           </div>
           <span className="settings-key-status">
@@ -226,13 +271,56 @@ export function SettingsPage() {
             placeholder={copy.apiKeyPlaceholder}
           />
         </div>
-        {keyMessage && <p role="status">{keyMessage}</p>}
+        {keyMessage && <p role="status">{copy[keyMessage]}</p>}
         <button className="btn btn-primary" type="button" onClick={onSaveKey}>
           {copy.saveApiKey}
         </button>
         <button className="btn btn-danger" type="button" onClick={onDeleteKey}>
           {copy.deleteApiKey}
         </button>
+      </section>
+
+      <section
+        className="paper-panel settings-language-panel"
+        aria-labelledby="language-section-title"
+      >
+        <div className="panel-section-heading">
+          <div>
+            <p className="eyebrow">{copy.eyebrowLanguage}</p>
+            <h2 id="language-section-title">{copy.languageSectionTitle}</h2>
+          </div>
+          <span className="field-counter">{copy.localOnly}</span>
+        </div>
+        <p className="settings-language-description">{copy.languageSectionDescription}</p>
+        <div
+          className="language-toggle"
+          role="radiogroup"
+          aria-label={copy.languageSectionTitle}
+          onKeyDown={onLocaleKeyDown}
+        >
+          {localeOptions.map((option, index) => {
+            const selected = option.value === locale;
+            const label =
+              option.value === "zh-CN" ? copy.languageChineseLabel : copy.languageEnglishLabel;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-label={label}
+                tabIndex={selected ? 0 : -1}
+                className={`btn ${selected ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setLocale(option.value)}
+                ref={(element) => {
+                  radioRefs.current[index] = element;
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </section>
     </main>
   );

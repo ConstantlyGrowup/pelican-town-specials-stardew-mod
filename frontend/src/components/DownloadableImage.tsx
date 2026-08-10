@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { PRODUCT_COPY } from "../i18n/copy";
+import { useCopy } from "../i18n/locale";
 
 const IMAGE_EXTENSION_BY_TYPE: Record<string, string> = {
   "image/png": "png",
@@ -40,7 +40,7 @@ export function DownloadableImage({
   downloadName,
   ...imgProps
 }: DownloadableImageProps) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
 
   async function onDownload() {
     let response: Response;

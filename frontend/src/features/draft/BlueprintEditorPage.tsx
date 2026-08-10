@@ -6,7 +6,7 @@ import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
 import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 import {
   fromDraftView,
   toPatchInput,
@@ -27,7 +27,7 @@ type IngredientCatalogItemView = components["schemas"]["IngredientCatalogItemVie
 
 export function BlueprintEditorPage() {
   const { draftId } = useParams<{ draftId: string }>();
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [ingredients, setIngredients] = useState<BlueprintIngredientRow[]>([]);
@@ -36,7 +36,11 @@ export function BlueprintEditorPage() {
   const [ingredientPickerOpen, setIngredientPickerOpen] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [stale, setStale] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  // The transient action error stores a catalog key so a live message
+  // re-localizes when the user switches the UI language (M7-T25-I18N-001).
+  const [actionError, setActionError] = useState<
+    "saveFailed" | "archiveFailed" | "discardDraftFailed" | null
+  >(null);
   const [busy, setBusy] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
@@ -203,7 +207,7 @@ export function BlueprintEditorPage() {
       return;
     }
     if (error || !data) {
-      setActionError(copy.saveFailed);
+      setActionError("saveFailed");
       return;
     }
     queryClient.setQueryData(["draft", draftId], data);
@@ -233,7 +237,7 @@ export function BlueprintEditorPage() {
     );
     setBusy(false);
     if (error || !data) {
-      setActionError(copy.archiveFailed);
+      setActionError("archiveFailed");
       return;
     }
     navigate(`/cookbook/${data.dishId}`);
@@ -254,7 +258,7 @@ export function BlueprintEditorPage() {
     );
     setBusy(false);
     if (!response.ok) {
-      setActionError(copy.discardDraftFailed);
+      setActionError("discardDraftFailed");
       return;
     }
     navigate("/");
@@ -314,17 +318,24 @@ export function BlueprintEditorPage() {
     <main className="blueprint-page" data-theme="blueprint">
       <div className="page-header blueprint-page-header">
         <div>
-          <p className="eyebrow">JOJA MART / BLUEPRINT WORKBENCH</p>
+          <p className="eyebrow">{copy.eyebrowJojaWorkbench}</p>
           <h1>{copy.editingBlueprint}</h1>
         </div>
         <div className="blueprint-revision-badge">
           <span>{copy.statusLabel}</span>
-          <strong>{draft.status}</strong>
+          <strong>{copy.draftStatusLabels[draft.status] ?? draft.status}</strong>
           <span>{copy.revisionLabel} {draft.revision}</span>
         </div>
       </div>
       <p className="blueprint-subtitle">
-        {copy.statusLabel}：{draft.status}；{copy.revisionLabel}：{draft.revision}
+        {copy.blueprintSubtitleLine
+          .replace("{status}", copy.statusLabel)
+          .replace(
+            "{statusValue}",
+            copy.draftStatusLabels[draft.status] ?? draft.status,
+          )
+          .replace("{revision}", copy.revisionLabel)
+          .replace("{revisionValue}", String(draft.revision))}
       </p>
       {conflict && (
         <div className="status-banner status-error">
@@ -347,20 +358,29 @@ export function BlueprintEditorPage() {
       {(previewUrl || iconUrl) && (
         <section
           className={`paper-panel preview-frame${previewStale ? " stale-preview" : ""}`}
-          aria-label={`${draft.presentation?.displayName ?? copy.draftTitle}预览资源`}
+          aria-label={copy.previewResourceAria.replace(
+            "{name}",
+            draft.presentation?.displayName ?? copy.draftTitle,
+          )}
         >
           {previewUrl && (
             <DownloadableImage
               src={previewUrl}
-              alt={`${draft.presentation?.displayName ?? copy.draftTitle}预览`}
-              downloadName={`${draft.presentation?.displayName ?? copy.draftTitle}-预览`}
+              alt={copy.previewImageAlt.replace(
+                "{name}",
+                draft.presentation?.displayName ?? copy.draftTitle,
+              )}
+              downloadName={`${draft.presentation?.displayName ?? copy.draftTitle}${copy.previewDownloadSuffix}`}
               style={{ maxWidth: "100%", height: "auto", display: "block" }}
             />
           )}
           {iconUrl && (
             <img
               src={iconUrl}
-              alt={`${draft.presentation?.displayName ?? copy.draftTitle}像素图标`}
+              alt={copy.iconImageAlt.replace(
+                "{name}",
+                draft.presentation?.displayName ?? copy.draftTitle,
+              )}
               width={32}
               height={32}
               style={{ imageRendering: "pixelated", display: "block" }}
@@ -369,14 +389,14 @@ export function BlueprintEditorPage() {
         </section>
       )}
           {!previewUrl && !iconUrl && (
-            <section className="paper-panel preview-frame preview-frame-empty" aria-label="暂无预览资源">
+            <section className="paper-panel preview-frame preview-frame-empty" aria-label={copy.noPreviewAssets}>
               <span aria-hidden="true">?</span>
-              <p>填写蓝图后生成第一张预览。</p>
+              <p>{copy.firstPreviewHint}</p>
             </section>
           )}
           <div className="blueprint-status-card">
             <span className="status-icon" aria-hidden="true">ⓘ</span>
-            <span>修改字段后保存，再更新预览。</span>
+            <span>{copy.saveThenUpdateHint}</span>
           </div>
         </aside>
         <section className="blueprint-canvas">
@@ -422,8 +442,8 @@ export function BlueprintEditorPage() {
         className="blueprint-section blueprint-form"
       >
         <div className="blueprint-section-heading">
-          <p className="eyebrow">01 / IDENTITY</p>
-          <span className="field-counter">USER EDITABLE</span>
+          <p className="eyebrow">{copy.eyebrowIdentity}</p>
+          <span className="field-counter">{copy.userEditable}</span>
         </div>
         <div className="field">
           <label htmlFor="displayName">{copy.displayNameLabel}</label>
@@ -478,7 +498,7 @@ export function BlueprintEditorPage() {
           <label htmlFor="tags">{copy.tagsLabel}</label>
           <div>
             <span id="tags" className="picker-value">
-              {tagList.join("、") || "—"}
+              {tagList.join(copy.tagJoiner) || "—"}
             </span>
             <button
               className="btn"
@@ -503,7 +523,9 @@ export function BlueprintEditorPage() {
         <ul>
           {ingredients.map((ingredient) => (
             <li key={ingredient.itemId}>
-              {ingredient.displayName}（{ingredient.itemId}）
+              {copy.ingredientRowLabel
+                .replace("{name}", ingredient.displayName)
+                .replace("{id}", ingredient.itemId)}
               <label>
                 {copy.ingredientQuantityLabel}
                 <input
@@ -536,7 +558,7 @@ export function BlueprintEditorPage() {
           <input id="isDrink" type="checkbox" {...form.register("isDrink")} />
         </div>
 
-        {actionError && <div className="status-banner status-error">{actionError}</div>}
+        {actionError && <div className="status-banner status-error">{copy[actionError]}</div>}
         <button className="btn btn-primary" type="submit" disabled={busy}>
           {busy ? copy.saving : copy.saveDraft}
         </button>
@@ -590,7 +612,7 @@ export function BlueprintEditorPage() {
       )}
       {confirmingDiscard && (
         <PixelModal
-          title="放弃这张料理蓝图？"
+          title={copy.discardBlueprintTitle}
           description={copy.discardDraftConfirm}
           onClose={() => setConfirmingDiscard(false)}
           footer={
@@ -604,7 +626,7 @@ export function BlueprintEditorPage() {
             </>
           }
         >
-          <p>放弃后，蓝图字段与上传素材都不会再保留。</p>
+          <p>{copy.discardBlueprintMessage}</p>
         </PixelModal>
       )}
     </main>

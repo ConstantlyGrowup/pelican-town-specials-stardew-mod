@@ -5,7 +5,8 @@ import { apiClient, getCsrfToken } from "../../api/client";
 import { GameUiIcon, SpecificIcon } from "../../components/ui/GameAssetIcon";
 import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy, useLocale } from "../../i18n/locale";
+import type { Language } from "../../i18n/copy";
 
 type DraftSummary = components["schemas"]["DraftSummary"];
 
@@ -17,9 +18,9 @@ async function loadDrafts(): Promise<DraftSummary[]> {
   return data.items;
 }
 
-function formatUpdatedAt(value: string): string {
+function formatUpdatedAt(value: string, locale: Language): string {
   const date = new Date(value);
-  return date.toLocaleString("zh-CN", {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -34,7 +35,8 @@ function formatUpdatedAt(value: string): string {
  * guides the user to create a dish.
  */
 export function HomePage() {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
   const [confirmingDraftId, setConfirmingDraftId] = useState<string | null>(null);
@@ -88,18 +90,18 @@ export function HomePage() {
 
   return (
     <main className="home-page" aria-labelledby="home-title">
-      <section className="hero" aria-label="Gus 在酒馆里鉴定一道未知菜品">
+      <section className="hero" aria-label={copy.heroAlt}>
         <div className="hero-media">
           <img
             src="/assets/ui/banner.jpg"
-            alt="Gus 在酒馆里鉴定一道未知菜品"
+            alt={copy.heroAlt}
           />
         </div>
       </section>
 
       <section className="hero-copy hero-copy--standalone" aria-labelledby="home-title">
         <div>
-          <p className="eyebrow">PELICAN TOWN SPECIALS / KITCHEN LOG</p>
+          <p className="eyebrow">{copy.eyebrowKitchenLog}</p>
           <h1 id="home-title">{copy.createFirstDraft}</h1>
           <p>{copy.tagline}</p>
         </div>
@@ -113,26 +115,26 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="story-strip" aria-label="使用流程">
+      <section className="story-strip" aria-label={copy.storyStripLabel}>
         <div className="story-step">
           <span className="story-number">01</span>
           <span>
-            <strong>上传菜品</strong>
-            <small>留下第一张照片</small>
+            <strong>{copy.storyStep1Title}</strong>
+            <small>{copy.storyStep1Subtitle}</small>
           </span>
         </div>
         <div className="story-step">
           <span className="story-number">02</span>
           <span>
-            <strong>让 Gus 鉴定</strong>
-            <small>或打开料理蓝图</small>
+            <strong>{copy.storyStep2Title}</strong>
+            <small>{copy.storyStep2Subtitle}</small>
           </span>
         </div>
         <div className="story-step">
           <span className="story-number">03</span>
           <span>
-            <strong>收进菜单</strong>
-            <small>带进你的农场生活</small>
+            <strong>{copy.storyStep3Title}</strong>
+            <small>{copy.storyStep3Subtitle}</small>
           </span>
         </div>
       </section>
@@ -140,10 +142,10 @@ export function HomePage() {
       <section aria-labelledby="create-mode-title">
         <div className="page-header">
           <div>
-            <p className="eyebrow">CHOOSE YOUR WORKBENCH</p>
-            <h2 id="create-mode-title" className="section-title">开始创作</h2>
+            <p className="eyebrow">{copy.eyebrowChooseWorkbench}</p>
+            <h2 id="create-mode-title" className="section-title">{copy.homeCreateSectionTitle}</h2>
           </div>
-          <p className="page-subtitle">从一张照片，到一张可以带进游戏的菜单。</p>
+          <p className="page-subtitle">{copy.homeCreateSectionSubtitle}</p>
         </div>
         <div className="mode-grid">
           <Link className="mode-card" to="/create">
@@ -152,9 +154,9 @@ export function HomePage() {
             </span>
             <span>
               <h2>{copy.askGus}</h2>
-              <p>把你的菜交给 Gus，听听他的判断。</p>
+              <p>{copy.askGusCardText}</p>
             </span>
-            <span className="btn btn-secondary">开始询问 →</span>
+            <span className="btn btn-secondary">{copy.startAsking}</span>
           </Link>
           <Link className="mode-card blueprint-mode" to="/create">
             <span className="mode-icon" aria-hidden="true">
@@ -162,9 +164,9 @@ export function HomePage() {
             </span>
             <span>
               <h2>{copy.blueprint}</h2>
-              <p>自己填写料理字段，直接搭建一张蓝图。</p>
+              <p>{copy.blueprintCardText}</p>
             </span>
-            <span className="btn">打开工作台 →</span>
+            <span className="btn">{copy.openWorkbench}</span>
           </Link>
         </div>
       </section>
@@ -172,10 +174,10 @@ export function HomePage() {
       <section className="home-drafts" aria-labelledby="my-drafts-title">
         <div className="page-header">
           <div>
-            <p className="eyebrow">YOUR KITCHEN LOG</p>
+            <p className="eyebrow">{copy.eyebrowYourKitchenLog}</p>
             <h2 id="my-drafts-title" className="section-title">{copy.myDrafts}</h2>
           </div>
-          <Link className="btn btn-ghost" to="/create">+ 新建草稿</Link>
+          <Link className="btn btn-ghost" to="/create">{copy.newDraft}</Link>
         </div>
         {query.isLoading && <p className="status-banner status-info">{copy.loading}</p>}
         {query.isError && (
@@ -210,7 +212,7 @@ export function HomePage() {
                     <span className={`status-chip${draft.status === "FAILED" ? " error" : draft.status.includes("GENERATING") ? " generating" : ""}`}>
                       {copy.draftStatusLabels[draft.status] ?? draft.status}
                     </span>
-                    <span>{formatUpdatedAt(draft.updatedAt)}</span>
+                    <span>{formatUpdatedAt(draft.updatedAt, locale)}</span>
                   </span>
                 </span>
               </Link>
@@ -231,16 +233,16 @@ export function HomePage() {
         </ul>
       </section>
 
-      <section className="feature-grid" aria-label="快捷入口">
+      <section className="feature-grid" aria-label={copy.quickLinksLabel}>
         <Link className="feature-link" to="/cookbook">
           <span className="mode-icon" aria-hidden="true">
             <GameUiIcon name="collections" size={30} />
           </span>
           <span>
             <h3>{copy.cookbook}</h3>
-            <p>查看已经归档的菜品与素材。</p>
+            <p>{copy.cookbookFeatureText}</p>
           </span>
-          <span>查看收集品 →</span>
+          <span>{copy.viewCookbook}</span>
         </Link>
         <Link className="feature-link" to="/pack-menu">
           <span className="mode-icon" aria-hidden="true">
@@ -248,15 +250,15 @@ export function HomePage() {
           </span>
           <span>
             <h3>{copy.packMenu}</h3>
-            <p>把选中的收集品整理成一个菜单包。</p>
+            <p>{copy.packFeatureText}</p>
           </span>
-          <span>准备打包 →</span>
+          <span>{copy.preparePack}</span>
         </Link>
       </section>
 
       {confirmingDraftId && (
         <PixelModal
-          title="放弃这份草稿？"
+          title={copy.discardDraftTitle}
           description={copy.deleteDraftConfirm}
           onClose={() => setConfirmingDraftId(null)}
           footer={
@@ -274,7 +276,7 @@ export function HomePage() {
             </>
           }
         >
-          <p>这项操作会移除草稿记录与本地素材，之后无法恢复。</p>
+          <p>{copy.discardDraftMessage}</p>
         </PixelModal>
       )}
     </main>

@@ -11,7 +11,7 @@ import { BringInGamePage } from "../features/export/BringInGamePage";
 import { PackMenuPage } from "../features/export/PackMenuPage";
 import { HomePage } from "../features/home/HomePage";
 import { SettingsPage } from "../features/settings/SettingsPage";
-import { PRODUCT_COPY } from "../i18n/copy";
+import { useCopy } from "../i18n/locale";
 import { AppShell } from "./layout/AppShell";
 
 type DraftView = components["schemas"]["DraftView"];
@@ -23,7 +23,7 @@ type DraftView = components["schemas"]["DraftView"];
  */
 function DraftRoute() {
   const { draftId } = useParams<{ draftId: string }>();
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const query = useQuery({
     queryKey: ["draft", draftId],
     queryFn: async (): Promise<DraftView> => {
@@ -59,7 +59,7 @@ function DraftRoute() {
 }
 
 export function AppRouter() {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
 
   return (
     <Routes>

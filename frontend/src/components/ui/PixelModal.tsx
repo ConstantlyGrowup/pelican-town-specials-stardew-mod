@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 
 type PixelModalProps = {
   title: string;
@@ -20,7 +20,7 @@ export function PixelModal({
   children,
   footer,
 }: PixelModalProps) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const titleId = useId();
   const descriptionId = useId();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -80,7 +80,7 @@ export function PixelModal({
       >
         <div className="pixel-modal__header">
           <div>
-            <p className="eyebrow">PELican TOWN / NOTICE</p>
+            <p className="eyebrow">{copy.eyebrowNotice}</p>
             <h2 id={titleId}>{title}</h2>
           </div>
           <button

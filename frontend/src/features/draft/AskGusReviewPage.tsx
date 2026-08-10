@@ -6,7 +6,7 @@ import { DownloadableImage } from "../../components/DownloadableImage";
 import { GameObjectIcon } from "../../components/ui/GameAssetIcon";
 import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 import { GenerationError } from "../generation/GenerationError";
 import { GenerationProgress } from "../generation/GenerationProgress";
 import { useGeneration } from "../generation/useGeneration";
@@ -20,13 +20,17 @@ type DraftView = components["schemas"]["DraftView"];
  * regeneration actions. A full regeneration keeps the previous REVIEWABLE
  * result on screen; failure restores it with an inline error and a retry entry.
  */
+// The transient action error stores a catalog key so a live message
+// re-localizes when the user switches the UI language (M7-T25-I18N-001).
+type ReviewMessageKey = "archiveFailed" | "discardFailed";
+
 export function AskGusReviewPage() {
   const { draftId } = useParams<{ draftId: string }>();
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<ReviewMessageKey | null>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   const query = useQuery({
@@ -67,7 +71,7 @@ export function AskGusReviewPage() {
     );
     setBusy(false);
     if (error || !data) {
-      setActionError(copy.archiveFailed);
+      setActionError("archiveFailed");
       return;
     }
     navigate(`/cookbook/${data.dishId}`);
@@ -88,7 +92,7 @@ export function AskGusReviewPage() {
     );
     setBusy(false);
     if (!response.ok) {
-      setActionError(copy.discardFailed);
+      setActionError("discardFailed");
       return;
     }
     navigate("/");
@@ -133,22 +137,30 @@ export function AskGusReviewPage() {
     <main className="gus-page">
       <div className="page-header gus-page-header">
         <div>
-          <p className="eyebrow">GUS REVIEW / TAVERN COUNTER</p>
+          <p className="eyebrow">{copy.eyebrowGusReview}</p>
           <h1>{copy.askGusReviewTitle}</h1>
         </div>
         <div className="gus-status-cluster">
-          <img src="/assets/ui/gus-portrait-2.png" alt="Gus" />
+          <img src="/assets/ui/gus-portrait-2.png" alt={copy.gusName} />
           <div className="draft-status-line">
             <span>{copy.modeLabel}</span>
             <strong>{copy.askGus}</strong>
             <span>{copy.statusLabel}</span>
-            <strong>{draft.status}</strong>
+            <strong>{copy.draftStatusLabels[draft.status] ?? draft.status}</strong>
           </div>
         </div>
       </div>
       <p className="gus-subtitle">
-        {copy.modeLabel}：{copy.askGus}；{copy.statusLabel}：{draft.status}；{copy.revisionLabel}：
-        {draft.revision}
+        {copy.draftSubtitleLine
+          .replace("{mode}", copy.modeLabel)
+          .replace("{modeValue}", copy.askGus)
+          .replace("{status}", copy.statusLabel)
+          .replace(
+            "{statusValue}",
+            copy.draftStatusLabels[draft.status] ?? draft.status,
+          )
+          .replace("{revision}", copy.revisionLabel)
+          .replace("{revisionValue}", String(draft.revision))}
       </p>
 
       {streaming && (
@@ -188,36 +200,36 @@ export function AskGusReviewPage() {
       )}
 
       <div className="gus-layout">
-        <section className="gus-preview" aria-label={`${visualName}预览资源`}>
+        <section className="gus-preview" aria-label={copy.previewResourceAria.replace("{name}", visualName)}>
           <div className="gus-preview__main">
             {previewUrl ? (
               <DownloadableImage
                 src={previewUrl}
-                alt={`${visualName}预览`}
-                downloadName={`${visualName}-预览`}
+                alt={copy.previewImageAlt.replace("{name}", visualName)}
+                downloadName={`${visualName}${copy.previewDownloadSuffix}`}
                 style={{ maxWidth: "100%", height: "auto", display: "block" }}
               />
             ) : (
-              <img src="/assets/ui/unknown-dish.png" alt="等待 Gus 生成菜品预览" />
+              <img src="/assets/ui/unknown-dish.png" alt={copy.waitingPreviewAlt} />
             )}
           </div>
           {iconUrl && (
             <div className="gus-preview__icon">
               <img
                 src={iconUrl}
-                alt={`${visualName}像素图标`}
+                alt={copy.iconImageAlt.replace("{name}", visualName)}
                 width={64}
                 height={64}
               />
-              <span>16 × 16 / 游戏图标</span>
+              <span>{copy.iconMeta16}</span>
             </div>
           )}
         </section>
 
       <section className={`paper-panel gus-result-panel${waitingForResult ? " is-waiting" : ""}`}>
         <div className="gus-result-heading">
-          <p className="eyebrow">GUS'S NOTES / RESULT CARD</p>
-          <img src="/assets/ui/gus-portrait-1.png" alt="Gus 的点评头像" />
+          <p className="eyebrow">{copy.eyebrowGusNotes}</p>
+          <img src="/assets/ui/gus-portrait-1.png" alt={copy.gusPortraitAlt} />
         </div>
         {draft.presentation && (
           <>
@@ -230,7 +242,7 @@ export function AskGusReviewPage() {
         )}
         {waitingForResult && (
           <div className="gus-waiting-note" role="status" aria-live="polite">
-            <img src="/assets/ui/gus-portrait-1.png" alt="Gus" />
+            <img src="/assets/ui/gus-portrait-1.png" alt={copy.gusName} />
             <div>
               <h2>{copy.gusWaitingTitle}</h2>
               <p>{copy.gusWaitingMessage}</p>
@@ -254,7 +266,16 @@ export function AskGusReviewPage() {
       </section>
       </div>
 
-      {terminal && <p className="status-banner status-warning">{copy.draftTitle}：{draft.status}</p>}
+      {terminal && (
+        <p className="status-banner status-warning">
+          {copy.draftTerminalStatusLine
+            .replace("{title}", copy.draftTitle)
+            .replace(
+              "{status}",
+              copy.draftStatusLabels[draft.status] ?? draft.status,
+            )}
+        </p>
+      )}
 
       {canGenerate && (
         <button
@@ -291,10 +312,10 @@ export function AskGusReviewPage() {
         </div>
       )}
 
-      {actionError && <div className="status-banner status-error">{actionError}</div>}
+      {actionError && <div className="status-banner status-error">{copy[actionError]}</div>}
       {confirmingDiscard && (
         <PixelModal
-          title="拒绝这份草稿？"
+          title={copy.rejectDraftTitle}
           description={copy.discardDraftConfirm}
           onClose={() => setConfirmingDiscard(false)}
           footer={
@@ -308,7 +329,7 @@ export function AskGusReviewPage() {
             </>
           }
         >
-          <p>拒绝后，这份草稿和上传的素材都不会再出现在工作区。</p>
+          <p>{copy.rejectDraftMessage}</p>
         </PixelModal>
       )}
     </main>

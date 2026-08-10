@@ -6,7 +6,7 @@ import { DownloadableImage } from "../../components/DownloadableImage";
 import { DishSlot } from "../../components/ui/DishSlot";
 import { GameUiIcon } from "../../components/ui/GameAssetIcon";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 import {
   getSelectedDishIds,
   subscribeSelection,
@@ -35,7 +35,7 @@ async function loadCookbookDish(dishId: string): Promise<CookbookDishDetail> {
 }
 
 export function CookbookPage() {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const navigate = useNavigate();
   const [activeDishId, setActiveDishId] = useState<string | null>(null);
   const selectedIds = useSyncExternalStore(subscribeSelection, getSelectedDishIds);
@@ -72,13 +72,13 @@ export function CookbookPage() {
           <GameUiIcon name="collections" size={38} />
         </div>
         <div>
-          <p className="eyebrow">ARCHIVE / DISH COLLECTION</p>
+          <p className="eyebrow">{copy.eyebrowDishCollection}</p>
           <h1>{copy.cookbookTitle}</h1>
-          <p>这里保存着已经正式写进菜单的菜品。</p>
+          <p>{copy.cookbookDescription}</p>
         </div>
-        <div className="collection-count" aria-label="收集品统计">
-          <span>★ 已收集 {query.data?.length ?? 0} 道</span>
-          <span>● 已选 {selectedIds.size} 道</span>
+        <div className="collection-count" aria-label={copy.collectionStatsLabel}>
+          <span>{copy.collectedCount.replace("{count}", String(query.data?.length ?? 0))}</span>
+          <span>{copy.selectedCount.replace("{count}", String(selectedIds.size))}</span>
         </div>
       </section>
 
@@ -89,7 +89,7 @@ export function CookbookPage() {
       {query.data && query.data.length === 0 && (
         <div className="empty-state">
           <p>{copy.cookbookEmpty}</p>
-          <Link className="btn btn-primary" to="/create">开始创建</Link>
+          <Link className="btn btn-primary" to="/create">{copy.startCreating}</Link>
         </div>
       )}
 
@@ -97,8 +97,8 @@ export function CookbookPage() {
         <section className="paper-panel cookbook-grid-panel" aria-labelledby="collection-grid-title">
           <div className="panel-section-heading">
             <div>
-              <p className="eyebrow">SAVED RECIPES</p>
-              <h2 id="collection-grid-title">已保存菜品</h2>
+              <p className="eyebrow">{copy.eyebrowSavedRecipes}</p>
+              <h2 id="collection-grid-title">{copy.savedRecipesTitle}</h2>
             </div>
           </div>
           <ul className="slot-grid" style={{ listStyle: "none", padding: 0 }}>
@@ -130,32 +130,34 @@ export function CookbookPage() {
           </ul>
         </section>
 
-        <aside className="paper-panel detail-panel cookbook-feature" aria-label="收集品预览">
-          <p className="eyebrow">SELECTED RECIPE / PREVIEW</p>
+        <aside className="paper-panel detail-panel cookbook-feature" aria-label={copy.previewLabel}>
+          <p className="eyebrow">{copy.eyebrowSelectedPreview}</p>
           {activeDish ? (
             <>
               {activeDetail?.visuals.previewAssetId ? (
                 <div className="detail-preview">
                   <DownloadableImage
                     src={assetUrl(activeDetail.visuals.previewAssetId) ?? ""}
-                    alt={`${activeDish.displayName}预览`}
-                    downloadName={`${activeDish.displayName}-预览`}
+                    alt={copy.previewImageAlt.replace("{name}", activeDish.displayName)}
+                    downloadName={`${activeDish.displayName}${copy.previewDownloadSuffix}`}
                   />
                 </div>
               ) : (
                 <div className="detail-preview detail-preview-placeholder">
-                  <GameUiIcon name="dish" size={64} alt="料理图标" />
+                  <GameUiIcon name="dish" size={64} alt={copy.dishIconAlt} />
                   <small>
-                    {activeDetailLoading ? "正在读取这道菜的预览…" : "这道菜还没有预览图"}
+                    {activeDetailLoading ? copy.loadingPreview : copy.noPreviewYet}
                   </small>
                 </div>
               )}
               <div className="detail-title-row">
                 <div>
                   <p className="detail-display-name">{activeDish.displayName}</p>
-                  <span className="tag-chip">分类 / {activeDish.categoryLabel}</span>
+                  <span className="tag-chip">
+                    {copy.categoryChipLabel.replace("{category}", activeDish.categoryLabel)}
+                  </span>
                 </div>
-                <span className="detail-badge">ARCHIVED</span>
+                <span className="detail-badge">{copy.draftStatusLabels.ARCHIVED}</span>
               </div>
               <p>{activeDish.description}</p>
               {(activeDish.tags ?? []).length > 0 && (
@@ -164,19 +166,19 @@ export function CookbookPage() {
                 </div>
               )}
               <Link className="btn btn-secondary" to={`/cookbook/${activeDish.dishId}`}>
-                查看完整菜品 →
+                {copy.viewFullDish}
               </Link>
             </>
           ) : (
-            <div className="empty-state">选择一个菜品查看详细信息。</div>
+            <div className="empty-state">{copy.noDishSelected}</div>
           )}
         </aside>
       </div>
 
       <div className="pack-bar">
         <div>
-          <strong>已选择 {selectedIds.size} 道菜</strong>
-          <span className="pack-bar__hint">把这些菜整理成菜单，带进游戏。</span>
+          <strong>{copy.packBarCount.replace("{count}", String(selectedIds.size))}</strong>
+          <span className="pack-bar__hint">{copy.packBarHint}</span>
         </div>
         <button
           className="btn btn-primary"

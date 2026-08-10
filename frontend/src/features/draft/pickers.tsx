@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { apiClient } from "../../api/client";
 import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 
 type MetaOption = components["schemas"]["MetaOption"];
 type IngredientCatalogItemView = components["schemas"]["IngredientCatalogItemView"];
@@ -18,7 +18,7 @@ function Modal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   return (
     <PixelModal
       title={title}
@@ -43,7 +43,7 @@ function Pager({
   total: number;
   onOffset: (next: number) => void;
 }) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const hasPrev = offset > 0;
   const hasNext = offset + PAGE_SIZE < total;
   return (
@@ -78,9 +78,10 @@ export function CategoryPickerModal({
   onPick: (value: string) => void;
   onClose: () => void;
 }) {
+  const copy = useCopy();
   return (
     <MetaPickerModal
-      title={PRODUCT_COPY.zh.pickCategory}
+      title={copy.pickCategory}
       endpoint="/api/v1/meta/categories"
       onPick={onPick}
       onClose={onClose}
@@ -95,9 +96,10 @@ export function TagPickerModal({
   onPick: (value: string) => void;
   onClose: () => void;
 }) {
+  const copy = useCopy();
   return (
     <MetaPickerModal
-      title={PRODUCT_COPY.zh.pickTags}
+      title={copy.pickTags}
       endpoint="/api/v1/meta/tags"
       onPick={onPick}
       onClose={onClose}
@@ -116,7 +118,7 @@ function MetaPickerModal({
   onPick: (value: string) => void;
   onClose: () => void;
 }) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<MetaOption[]>([]);
@@ -185,7 +187,7 @@ export function IngredientPickerModal({
   onAdd: (item: IngredientCatalogItemView, catalogVersion: string) => void;
   onClose: () => void;
 }) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<IngredientCatalogItemView[]>([]);
@@ -240,7 +242,9 @@ export function IngredientPickerModal({
                 type="button"
                 onClick={() => onAdd(item, catalogVersion)}
               >
-                {item.displayNameZh}（{item.displayNameEn}）
+                {copy.ingredientNameBoth
+                  .replace("{zh}", item.displayNameZh)
+                  .replace("{en}", item.displayNameEn)}
               </button>
             </li>
           ))}

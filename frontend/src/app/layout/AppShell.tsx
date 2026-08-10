@@ -1,13 +1,13 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 
 export function AppShell() {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
 
   return (
     <div className="app-shell" data-theme="warm">
       <a className="skip-link" href="#main-content">
-        跳到主要内容
+        {copy.skipToMainContent}
       </a>
       <header className="app-nav">
         <Link className="app-brand" to="/" aria-label={copy.productName}>

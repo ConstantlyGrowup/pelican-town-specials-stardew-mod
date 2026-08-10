@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useCopy } from "../../i18n/locale";
 
 type DishSlotProps = {
   label: string;
@@ -23,6 +24,7 @@ export function DishSlot({
   onClick,
   ariaLabel,
 }: DishSlotProps) {
+  const copy = useCopy();
   if (empty) {
     return (
       <div className="dish-slot empty" aria-hidden="true">
@@ -63,7 +65,7 @@ export function DishSlot({
         className={className}
         type="button"
         onClick={onClick}
-        aria-label={ariaLabel ?? `查看${label}预览`}
+        aria-label={ariaLabel ?? copy.viewPreview.replace("{name}", label)}
         aria-pressed={active}
       >
         {content(true)}

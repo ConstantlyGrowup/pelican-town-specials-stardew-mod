@@ -1,4 +1,4 @@
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 import type { GenerationErrorEnvelope } from "../../api/ndjson";
 
 type GenerationErrorProps = {
@@ -12,7 +12,7 @@ type GenerationErrorProps = {
  * regeneration degrades gracefully.
  */
 export function GenerationError({ error, onRetry }: GenerationErrorProps) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   return (
     <div className="status-banner status-error" role="alert">
       <p>{error.message}</p>

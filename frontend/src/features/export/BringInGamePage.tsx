@@ -3,14 +3,16 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 
 type ExportRecordView = components["schemas"]["ExportRecordView"];
 
 export function BringInGamePage() {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const { exportId } = useParams<{ exportId: string }>();
-  const [folderError, setFolderError] = useState<string | null>(null);
+  // The transient folder error stores a catalog key so a live message
+  // re-localizes when the user switches the UI language (M7-T25-I18N-001).
+  const [folderError, setFolderError] = useState<"openFolderFailed" | null>(null);
 
   const query = useQuery({
     queryKey: ["export", exportId],
@@ -32,7 +34,7 @@ export function BringInGamePage() {
       params: { path: { export_id: exportId ?? "" } },
     });
     if (error) {
-      setFolderError(copy.openFolderFailed);
+      setFolderError("openFolderFailed");
     }
   }
 
@@ -68,7 +70,7 @@ export function BringInGamePage() {
     <main className="bring-page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">INSTALL / LOCAL MOD PACKAGE</p>
+          <p className="eyebrow">{copy.eyebrowInstallPackage}</p>
           <h1>{copy.bringInGameTitle}</h1>
           <p className="page-subtitle">{copy.bringInGameSubtitle}</p>
         </div>
@@ -79,7 +81,7 @@ export function BringInGamePage() {
 
       <section className="paper-panel bring-summary">
         <div>
-          <p className="eyebrow">PACKAGE READY</p>
+          <p className="eyebrow">{copy.eyebrowPackageReady}</p>
           <h2>{record.spec.packDisplayName}</h2>
         </div>
         <p>
@@ -99,16 +101,16 @@ export function BringInGamePage() {
             {copy.openExportFolder}
           </button>
         </div>
-        {folderError && <div className="status-banner status-error">{folderError}</div>}
+        {folderError && <div className="status-banner status-error">{copy[folderError]}</div>}
       </section>
 
       <section className="paper-panel steps-panel" aria-labelledby="bring-steps-title">
         <div className="panel-section-heading">
           <div>
-            <p className="eyebrow">INSTALLATION CHECKLIST</p>
-            <h2 id="bring-steps-title">安装清单</h2>
+            <p className="eyebrow">{copy.eyebrowInstallChecklist}</p>
+            <h2 id="bring-steps-title">{copy.installChecklistTitle}</h2>
           </div>
-          <span className="field-counter">4 STEPS</span>
+          <span className="field-counter">{copy.stepsCountLabel.replace("{count}", "4")}</span>
         </div>
         <ol className="steps-list">
           <li className="step-item"><span className="step-number">1</span><span><h3>{copy.bringInGameStep1Title}</h3><p>{copy.bringInGameStep1Text}</p></span></li>

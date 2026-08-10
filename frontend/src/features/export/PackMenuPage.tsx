@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 import { getSelectedDishIds } from "../cookbook/selectionStore";
 import { ValidationIssues } from "./ValidationIssues";
 
@@ -19,19 +19,23 @@ function newIdempotencyKey(): string {
 }
 
 export function PackMenuPage() {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const navigate = useNavigate();
   const [selectedIds] = useState<string[]>(() => [...getSelectedDishIds()]);
 
-  const [packDisplayName, setPackDisplayName] = useState("家庭菜单");
-  const [packSlug, setPackSlug] = useState("FamilyMenu");
+  const [packDisplayName, setPackDisplayName] = useState(copy.defaultPackDisplayName);
+  const [packSlug, setPackSlug] = useState(copy.defaultPackSlug);
   const [version, setVersion] = useState("1.0.0");
-  const [description, setDescription] = useState("一份装满鹈鹕镇风味的菜单。");
+  const [description, setDescription] = useState(copy.defaultPackDescription);
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [validating, setValidating] = useState(false);
   const [packing, setPacking] = useState(false);
   const [confirmWarnings, setConfirmWarnings] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  // The transient form error stores a catalog key so a live message
+  // re-localizes when the user switches the UI language (M7-T25-I18N-001).
+  const [formError, setFormError] = useState<
+    "validateFailed" | "packFailed" | null
+  >(null);
 
   const dishesQuery = useQuery({
     queryKey: ["export-dishes", selectedIds],
@@ -79,7 +83,7 @@ export function PackMenuPage() {
     });
     setValidating(false);
     if (error || !data) {
-      setFormError(copy.validateFailed);
+      setFormError("validateFailed");
       return;
     }
     setReport(data);
@@ -97,7 +101,7 @@ export function PackMenuPage() {
     });
     setPacking(false);
     if (error || !data) {
-      setFormError(copy.packFailed);
+      setFormError("packFailed");
       return;
     }
     navigate(`/bring-in-game/${data.exportId}`);
@@ -108,7 +112,7 @@ export function PackMenuPage() {
       <main className="pack-page">
         <div className="page-header">
           <div>
-            <p className="eyebrow">EXPORT / MENU BUILDER</p>
+            <p className="eyebrow">{copy.eyebrowExportMenuBuilder}</p>
             <h1>{copy.packMenuTitle}</h1>
           </div>
         </div>
@@ -124,21 +128,23 @@ export function PackMenuPage() {
     <main className="pack-page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">EXPORT / CONTENT PATCHER PACKAGE</p>
+          <p className="eyebrow">{copy.eyebrowExportPackage}</p>
           <h1>{copy.packMenuTitle}</h1>
           <p className="page-subtitle">{copy.packMenuSubtitle}</p>
         </div>
-        <span className="export-stamp">CP / READY TO VALIDATE</span>
+        <span className="export-stamp">{copy.readyToValidateStamp}</span>
       </div>
 
       <div className="pack-layout">
         <section className="paper-panel pack-selection-panel">
           <div className="panel-section-heading">
             <div>
-              <p className="eyebrow">SELECTED ITEMS</p>
+              <p className="eyebrow">{copy.eyebrowSelectedItems}</p>
               <h2>{copy.selectedDishes}</h2>
             </div>
-            <span className="field-counter">{selectedIds.length} ITEMS</span>
+            <span className="field-counter">
+              {copy.itemsCountLabel.replace("{count}", String(selectedIds.length))}
+            </span>
           </div>
           {dishesQuery.isLoading && <p className="status-banner status-info">{copy.loading}</p>}
           {dishesQuery.isError && (
@@ -156,16 +162,16 @@ export function PackMenuPage() {
               </li>
             ))}
           </ul>
-          <Link className="btn btn-ghost" to="/cookbook">← 返回收集品，重新选择</Link>
+          <Link className="btn btn-ghost" to="/cookbook">{copy.backToReselect}</Link>
         </section>
 
       <section className="paper-panel pack-form-panel">
         <div className="panel-section-heading">
           <div>
-            <p className="eyebrow">PACKAGE IDENTITY</p>
-            <h2>菜单包信息</h2>
+            <p className="eyebrow">{copy.eyebrowPackageIdentity}</p>
+            <h2>{copy.packInfoTitle}</h2>
           </div>
-          <span className="export-stamp">LOCAL EXPORT</span>
+          <span className="export-stamp">{copy.localExport}</span>
         </div>
         <div className="field">
           <label htmlFor="packDisplayName">{copy.packDisplayNameLabel}</label>
@@ -205,7 +211,7 @@ export function PackMenuPage() {
           />
         </div>
 
-        {formError && <div className="status-banner status-error">{formError}</div>}
+        {formError && <div className="status-banner status-error">{copy[formError]}</div>}
 
         <div className="action-row pack-actions">
           <button

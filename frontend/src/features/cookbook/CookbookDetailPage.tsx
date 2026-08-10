@@ -6,19 +6,21 @@ import { DownloadableImage } from "../../components/DownloadableImage";
 import { GameObjectIcon, GameUiIcon, SpecificIcon } from "../../components/ui/GameAssetIcon";
 import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 import { clearSelectionFor } from "./selectionStore";
 
 type CookbookDishDetail = components["schemas"]["CookbookDishDetail"];
 
 export function CookbookDetailPage() {
   const { dishId } = useParams<{ dishId: string }>();
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // The transient delete error stores a catalog key so a live message
+  // re-localizes when the user switches the UI language (M7-T25-I18N-001).
+  const [error, setError] = useState<"deleteFailed" | null>(null);
 
   const query = useQuery({
     queryKey: ["cookbook", dishId],
@@ -46,7 +48,7 @@ export function CookbookDetailPage() {
     });
     setDeleting(false);
     if (deleteError) {
-      setError(copy.deleteFailed);
+      setError("deleteFailed");
       return;
     }
     clearSelectionFor(dishId);
@@ -83,26 +85,26 @@ export function CookbookDetailPage() {
       <div className="page-header">
         <div>
           <Link className="back-link" to="/cookbook">← {copy.backToList}</Link>
-          <p className="eyebrow">COOKBOOK / ARCHIVED DISH</p>
+          <p className="eyebrow">{copy.eyebrowArchivedDish}</p>
           <h1>{dish.displayName}</h1>
           <p className="page-subtitle">{dish.categoryLabel} · {dish.internalName}</p>
         </div>
-        <span className="detail-badge">ARCHIVED</span>
+        <span className="detail-badge">{copy.draftStatusLabels.ARCHIVED}</span>
       </div>
 
       <div className="detail-layout">
-        <section className="paper-panel detail-visual-panel" aria-label={`${dish.displayName}预览资源`}>
+        <section className="paper-panel detail-visual-panel" aria-label={copy.previewResourceAria.replace("{name}", dish.displayName)}>
           {previewUrl ? (
             <div className="detail-preview">
               <DownloadableImage
                 src={previewUrl}
-                alt={`${dish.displayName}预览`}
-                downloadName={`${dish.displayName}-预览`}
+                alt={copy.previewImageAlt.replace("{name}", dish.displayName)}
+                downloadName={`${dish.displayName}${copy.previewDownloadSuffix}`}
                 style={{ maxWidth: "100%", height: "auto", display: "block" }}
               />
             </div>
           ) : (
-            <div className="detail-preview detail-preview-placeholder" aria-label="暂无预览图">
+            <div className="detail-preview detail-preview-placeholder" aria-label={copy.noPreviewPlaceholder}>
               <span aria-hidden="true">✣</span>
             </div>
           )}
@@ -110,12 +112,12 @@ export function CookbookDetailPage() {
             <div className="detail-icon-row">
               <img
                 src={iconUrl}
-                alt={`${dish.displayName}像素图标`}
+                alt={copy.iconImageAlt.replace("{name}", dish.displayName)}
                 width={64}
                 height={64}
                 style={{ imageRendering: "pixelated", display: "block" }}
               />
-              <span>16 × 16 / 游戏图标</span>
+              <span>{copy.iconMeta16}</span>
             </div>
           )}
         </section>
@@ -123,7 +125,7 @@ export function CookbookDetailPage() {
         <article className="paper-panel detail-info-panel">
           <div className="detail-title-row">
             <div>
-              <p className="eyebrow">DISH CARD / DESCRIPTION</p>
+              <p className="eyebrow">{copy.eyebrowDishCard}</p>
               <p className="detail-display-name">{dish.displayName}</p>
             </div>
             <span className="tag-chip">{dish.categoryLabel}</span>
@@ -138,7 +140,7 @@ export function CookbookDetailPage() {
           <section className="detail-stats" aria-labelledby="dish-stats-title">
             <h3 id="dish-stats-title">
               <GameUiIcon name="dish" size={28} />
-              料理数据
+              {copy.statsTitle}
             </h3>
             <div className="stat-grid">
               <div className="stat-row">
@@ -188,7 +190,7 @@ export function CookbookDetailPage() {
         </article>
       </div>
 
-      {error && <div className="status-banner status-error">{error}</div>}
+      {error && <div className="status-banner status-error">{copy[error]}</div>}
       {!confirming && (
         <div className="detail-footer">
           <button className="btn btn-danger" type="button" onClick={() => setConfirming(true)}>
@@ -217,7 +219,7 @@ export function CookbookDetailPage() {
             </>
           }
         >
-          <p>删除后，这份收集品以及对应素材将无法恢复。</p>
+          <p>{copy.deleteDishMessage}</p>
         </PixelModal>
       )}
     </main>

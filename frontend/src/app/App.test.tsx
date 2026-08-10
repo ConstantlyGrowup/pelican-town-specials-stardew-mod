@@ -5,9 +5,9 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, it } from "vitest";
 import { App } from "./App";
 import { AppProviders } from "./providers";
-import { PRODUCT_COPY } from "../i18n/copy";
+import { catalogs } from "../i18n/copy";
 
-const copy = PRODUCT_COPY.zh;
+const copy = catalogs["zh-CN"];
 
 const server = setupServer(
   http.get("/api/v1/drafts", () =>

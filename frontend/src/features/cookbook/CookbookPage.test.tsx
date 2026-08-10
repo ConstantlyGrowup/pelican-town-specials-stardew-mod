@@ -5,12 +5,12 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { catalogs } from "../../i18n/copy";
 import { CookbookDetailPage } from "./CookbookDetailPage";
 import { CookbookPage } from "./CookbookPage";
 import { getSelectedDishIds, resetSelectionStore } from "./selectionStore";
 
-const copy = PRODUCT_COPY.zh;
+const copy = catalogs["zh-CN"];
 
 const server = setupServer();
 

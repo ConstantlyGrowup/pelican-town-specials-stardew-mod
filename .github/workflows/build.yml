@@ -70,6 +70,9 @@ jobs:
       - name: Product copy gate
         run: python scripts/check_product_copy.py
 
+      - name: Frontend locale gate
+        run: python scripts/check_frontend_locale.py
+
       - name: Frontend unit tests
         run: pnpm --dir frontend test:run
 

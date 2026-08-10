@@ -1,25 +1,32 @@
 import { z } from "zod";
 import type { components } from "../../api/generated/schema";
+import type { Copy } from "../../i18n/copy";
 
 type ProviderSettingsView = components["schemas"]["ProviderSettingsView"];
 type ProviderSettingsUpdate = components["schemas"]["ProviderSettingsUpdate"];
 
-export const providerSettingsSchema = z.object({
-  baseUrl: z
-    .string()
-    .url("请输入有效的 URL。")
-    .refine((value) => value.startsWith("http://") || value.startsWith("https://"), {
-      message: "Base URL 必须是 http 或 https。",
-    }),
-  visionModel: z.string().trim().min(1, "必填").max(120),
-  textModel: z.string().trim().min(1, "必填").max(120),
-  imageModel: z.string().trim().min(1, "必填").max(120),
-  chatTimeoutSeconds: z.coerce.number().int().min(30, "30–600").max(600),
-  imageTimeoutSeconds: z.coerce.number().int().min(60, "60–900").max(900),
-  maxAutomaticRetries: z.coerce.number().int().min(0).max(3),
-});
+/**
+ * Provider settings schema with locale-aware validation messages. The catalog
+ * is injected so the same zod rules can report errors in the active UI locale.
+ */
+export function createProviderFormSchema(copy: Copy) {
+  return z.object({
+    baseUrl: z
+      .string()
+      .url(copy.providerUrlInvalid)
+      .refine((value) => value.startsWith("http://") || value.startsWith("https://"), {
+        message: copy.providerUrlScheme,
+      }),
+    visionModel: z.string().trim().min(1, copy.providerRequired).max(120),
+    textModel: z.string().trim().min(1, copy.providerRequired).max(120),
+    imageModel: z.string().trim().min(1, copy.providerRequired).max(120),
+    chatTimeoutSeconds: z.coerce.number().int().min(30, copy.providerChatTimeoutRange).max(600),
+    imageTimeoutSeconds: z.coerce.number().int().min(60, copy.providerImageTimeoutRange).max(900),
+    maxAutomaticRetries: z.coerce.number().int().min(0).max(3),
+  });
+}
 
-export type ProviderSettingsValues = z.infer<typeof providerSettingsSchema>;
+export type ProviderSettingsValues = z.infer<ReturnType<typeof createProviderFormSchema>>;
 
 export function fromView(view: ProviderSettingsView): ProviderSettingsValues {
   return {

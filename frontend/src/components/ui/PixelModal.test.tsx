@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { catalogs } from "../../i18n/copy";
 import { PixelModal } from "./PixelModal";
 
 function Harness() {
@@ -39,7 +39,7 @@ describe("PixelModal", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "open" }));
     expect(
-      screen.getByRole("button", { name: PRODUCT_COPY.zh.pickClose }),
+      screen.getByRole("button", { name: catalogs["zh-CN"].pickClose }),
     ).toBeInTheDocument();
   });
 });

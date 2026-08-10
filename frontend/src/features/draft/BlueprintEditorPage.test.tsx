@@ -6,7 +6,7 @@ import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { GenerationErrorEnvelope, GenerationStage } from "../../api/ndjson";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { catalogs } from "../../i18n/copy";
 import type { GenerationPhase } from "../generation/useGeneration";
 import { BlueprintEditorPage } from "./BlueprintEditorPage";
 
@@ -39,7 +39,7 @@ vi.mock("../generation/useGeneration", async (importOriginal) => {
   };
 });
 
-const copy = PRODUCT_COPY.zh;
+const copy = catalogs["zh-CN"];
 
 const server = setupServer();
 

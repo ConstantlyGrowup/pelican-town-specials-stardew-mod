@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchGenerationProgress } from "../../api/ndjson";
+import { useCopy } from "../../i18n/locale";
 import {
   applyTerminalSnapshot,
   beginGeneration,
@@ -53,6 +54,7 @@ export function useGeneration({
   pollIntervalMs = POLL_INTERVAL_MS,
 }: UseGenerationOptions) {
   const queryClient = useQueryClient();
+  const copy = useCopy();
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
 
@@ -122,13 +124,16 @@ export function useGeneration({
   }, [running, draftId, queryClient, pollIntervalMs]);
 
   const begin = useCallback(() => {
-    beginGeneration(draftId, onSuccessRef.current);
-  }, [draftId]);
+    beginGeneration(draftId, onSuccessRef.current, {
+      streamError: copy.generationStreamError,
+      cancelError: copy.cancelStreamError,
+    });
+  }, [draftId, copy.generationStreamError, copy.cancelStreamError]);
 
   const cancel = useCallback(async () => {
-    await cancelStream(draftId);
+    await cancelStream(draftId, { cancelError: copy.cancelStreamError });
     void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
-  }, [draftId, queryClient]);
+  }, [draftId, copy.cancelStreamError, queryClient]);
 
   return {
     phase: state.phase,

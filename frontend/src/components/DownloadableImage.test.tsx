@@ -1,10 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PRODUCT_COPY } from "../i18n/copy";
+import { catalogs } from "../i18n/copy";
 import { DownloadableImage } from "./DownloadableImage";
 
-const copy = PRODUCT_COPY.zh;
+const copy = catalogs["zh-CN"];
 
 afterEach(() => {
   vi.unstubAllGlobals();

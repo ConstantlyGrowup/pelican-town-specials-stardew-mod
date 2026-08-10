@@ -1,4 +1,4 @@
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { useCopy } from "../../i18n/locale";
 import type { GenerationStage } from "../../api/ndjson";
 
 type GenerationProgressProps = {
@@ -33,7 +33,7 @@ export function GenerationProgress({
   preparingLabel,
   onCancel,
 }: GenerationProgressProps) {
-  const copy = PRODUCT_COPY.zh;
+  const copy = useCopy();
   const completed = succeededStages.length;
   const total = totalStages;
   const stageCountText =
@@ -51,7 +51,10 @@ export function GenerationProgress({
         aria-live="polite"
         aria-label={
           currentStage
-            ? `当前阶段：${copy.generationStageLabels[currentStage]}`
+            ? copy.currentStageAria.replace(
+                "{stage}",
+                copy.generationStageLabels[currentStage],
+              )
             : undefined
         }
       >

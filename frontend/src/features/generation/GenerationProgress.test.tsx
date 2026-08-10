@@ -1,10 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { PRODUCT_COPY } from "../../i18n/copy";
+import { catalogs } from "../../i18n/copy";
 import { GenerationProgress } from "./GenerationProgress";
 
-const copy = PRODUCT_COPY.zh;
+const copy = catalogs["zh-CN"];
 
 describe("GenerationProgress", () => {
   it("shows the preparing banner and the current stage label", () => {
