@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_7_in_progress |
-| project_phase | Milestone 7（Refine）进行中；Task 22–24 已 auto_accepted；Task 25（双语 UI）实施中 |
+| project_phase | Milestone 7（Refine）进行中；Task 22–25 已 auto_accepted；Task 26（双语生成）待实施 |
 | product_implementation_started | true |
 | active_session_id | `2026-08-10-milestone-7-task-25-bilingual-ui` |
-| active_session_state | in_progress（Task 25 实施中） |
+| active_session_state | auto_accepted（Task 25 round-1 Codex PASS，本地 focused commit，不 push） |
 | active_session_type | milestone-7-task-25-implementation |
 | current_task | Task 25：双语 UI 与 Settings locale（中文/英文界面 + Settings 语言选择，默认 zh-CN 存于 localStorage） |
 | blocker | 无 |
-| next_action | Task 25 实施 → 自动验证 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 26 |
+| next_action | Task 25 已 auto_accepted（round-1 Codex PASS）→ 本地 focused commit（feat + docs，不 push）→ 启动 Task 26（双语生成与图像 prompt） |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；完成后拉起 Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -27,7 +27,7 @@
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | `529981a feat: add GitHub Release auto-publish workflow (tag/manual, checksum, notes)` |
 | 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 为 `529981a`，`origin/feat/mvp-implementation` 为 `ae5b320`。Milestone 7 规划控制面与 Task 22/23/24 均仅本地提交，尚未推送（待 M7 全量验收后统一 push）。 |
-| 当前工作树范围 | Milestone 7 Task 24 控制面记录待提交（docs commit，随后开始 Task 25）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
+| 当前工作树范围 | Milestone 7 Task 25 实现未提交（round-1 Codex PASS 后待创建本地 focused commit，feat + docs 分开）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
@@ -46,10 +46,14 @@
 - 验证：`tests/repo` **28 passed**；全量 backend+repo+integration **686 passed/2 skipped**；ruff/mypy clean；workflow YAML 有效；漂移门 1.0.0/v1.0.0 过、2.0.0 明确报错；notes 生成器正常；本地 dry-run 发布产物 `sha256sum -c` 对 installer（565cd414…）与 ZIP（0488798e…）均 OK，产物名全链路一致。
 - 范围：未创建真实 GitHub Release；未改 app/backend/frontend/installer 逻辑；Task 25/26（双语）未实施。
 
-## 当前 Milestone 7 Task 25 实施 Session（in_progress）
+## 当前 Milestone 7 Task 25 实施 Session（auto_accepted）
 
-- `2026-08-10-milestone-7-task-25-bilingual-ui`：Task 24 已 auto_accepted（`529981a`）；本 Session 只处理 Task 25（双语 UI 与 Settings locale）。
-- 规划裁决 M7-D03（locale 默认 zh-CN 并存于 localStorage）已冻结；实施前生成 Context Packet。
+- `2026-08-10-milestone-7-task-25-bilingual-ui`：Task 24 已 auto_accepted（`529981a`）；本 Session 只处理 Task 25（双语 UI 与 Settings locale）。Context Packet：`mvp-m7-task-25-i18n-v1`（`docs/plans/2026-08-10-task-25-bilingual-ui-packet.md`，gitignored），base_commit `529981a`，4 条 planning_rulings，验收 M7-T25-I18N-001..005。
+- 实现（37 文件修改 + 4 新建，约 +1126/-417）：`frontend/src/i18n/copy.ts` 重写为 typed zh-CN/en-US catalog（约 160 键，无 `PRODUCT_COPY` 导出）；新建 `frontend/src/i18n/locale.tsx`（`LocaleProvider`/`useLocale`/`useCopy`/`useSetLocale`，localStorage key `pts-locale`，非法/空值回退 zh-CN，`document.documentElement.lang` 同步）；SettingsPage 语言 radiogroup（aria-checked/aria-label/箭头键导航）；全部页面/组件 useCopy 化；`providerForm` 改 `createProviderFormSchema(copy)`；`generationStore` fallback 文案参数化；CreateDishPage POST `language` = 当前 locale；新建 `scripts/check_frontend_locale.py` + `tests/repo/test_frontend_locale.py` + build.yml 步骤（PRODUCT_COPY 令牌/i18n-copy 直 import/散落 CJK 三规则）。
+- 测试：新建 `locale.test.tsx`（6 条）、Settings 语言切换（3 条）、CreateDishPage locale→language（1 条）+ 既有用例补 language 断言；13 个测试文件 `PRODUCT_COPY.zh` → `catalogs["zh-CN"]`。
+- 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **REVISE**（3 项 MUST_FIX：I18N-003 剩余英文直写未进 catalog、I18N-001 瞬态消息存渲染字符串不随 locale 重本地化、I18N-004 Settings radiogroup 无 roving tabIndex/focus）→ round 1 修复（catalog 新增约 36 键×2 收编全部 eyebrows/counters/stamps/status/severity 渲染；7 个页面瞬态消息 state 改为 catalog key 联合类型并 `{copy[key]}` 渲染；SettingsPage roving focus + 新增 `document.activeElement` 测试）→ round 1 **PASS**（5/5 criterion，无 MUST_FIX，scope_delta none；1 条 OPTIONAL_HARDENING 非阻塞：Settings 字段级校验消息留存期切 locale 不重渲染）。
+- 验证：前端 Vitest **19 files / 116 passed**；lint clean；`pnpm build` clean；copy gate OK；grep 扫描确认无残留 raw eyebrow/field-counter/export-stamp/detail-badge、raw `{draft.status}`、raw `{issue.severity}`、`alt="Gus"`、`aria-label="mode"`、`set*Error(copy.*)`；全量 backend+repo+integration **690 passed / 2 skipped**。
+- 范围：未实现 Task 26（双语生成与图像 prompt）；`ExportSpec.language` 保持 zh-CN；未改后端/API/Mod 协议/持久化；切换 UI 语言不改写旧草稿/归档数据。
 
 ## 当前 Milestone 7 Task 22 实施 Session（auto_accepted）
 
