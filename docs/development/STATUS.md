@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_7_in_progress |
-| project_phase | Milestone 7（Refine）进行中；Task 23（per-user installer）已 auto_accepted（`5f54516`）；Task 24（GitHub Release）实施中 |
+| project_phase | Milestone 7（Refine）进行中；Task 22–24 已 auto_accepted；Task 25（双语 UI）实施中 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-10-milestone-7-task-24-release` |
-| active_session_state | in_progress（Task 24 实施中） |
-| active_session_type | milestone-7-task-24-implementation |
-| current_task | Task 24：GitHub Release 自动发布（tag/manual 触发、checksum、release notes、最小写权限） |
+| active_session_id | `2026-08-10-milestone-7-task-25-bilingual-ui` |
+| active_session_state | in_progress（Task 25 实施中） |
+| active_session_type | milestone-7-task-25-implementation |
+| current_task | Task 25：双语 UI 与 Settings locale（中文/英文界面 + Settings 语言选择，默认 zh-CN 存于 localStorage） |
 | blocker | 无 |
-| next_action | Task 24 实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 25 |
+| next_action | Task 25 实施 → 自动验证 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 26 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；完成后拉起 Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation（Milestone 6 Task 20/21 与控制面记录已统一推送至 `ae5b320`） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `5f54516 feat: add Windows per-user installer wrapping the validated onedir` |
-| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 为 `5f54516`，`origin/feat/mvp-implementation` 为 `ae5b320`。Milestone 7 规划控制面与 Task 22/23 均仅本地提交，尚未推送（待 M7 全量验收后统一 push）。 |
-| 当前工作树范围 | Milestone 7 Task 23 控制面记录待提交（docs commit，随后开始 Task 24）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
+| 最新提交 | `529981a feat: add GitHub Release auto-publish workflow (tag/manual, checksum, notes)` |
+| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 为 `529981a`，`origin/feat/mvp-implementation` 为 `ae5b320`。Milestone 7 规划控制面与 Task 22/23/24 均仅本地提交，尚未推送（待 M7 全量验收后统一 push）。 |
+| 当前工作树范围 | Milestone 7 Task 24 控制面记录待提交（docs commit，随后开始 Task 25）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
@@ -38,10 +38,18 @@
 - 验证：`tests/repo` 22 passed；全量 backend+repo+integration **680 passed/2 skipped**；ruff/mypy clean；`smoke_installer.ps1` 全流程通过并返回干净机器状态（无残留 marker、install 目录/快捷方式消失、真实用户 workspace 保留）；Inno Setup 6.7.3 构建的 setup exe Gus icon hash 匹配、ProductName 校验通过。
 - 范围：Task 24（GitHub Release）、Task 25/26（双语）未实施；未改 backend/API/Mod 协议、未改变 app 运行时或 workspace 逻辑。
 
-## 当前 Milestone 7 Task 24 实施 Session（in_progress）
+## 当前 Milestone 7 Task 24 实施 Session（auto_accepted）
 
-- `2026-08-10-milestone-7-task-24-release`：Task 23 已 auto_accepted（`5f54516`）；本 Session 只处理 Task 24（GitHub Release 自动发布）。
-- 规划裁决 M7-D01/D02（release 相关）：仅 tag/manual 触发；生成 checksum；release notes；最小写权限。
+- `2026-08-10-milestone-7-task-24-release`：本 Session 只处理 Task 24（GitHub Release 自动发布）。Context Packet：`mvp-task-24-release-v1`（`docs/plans/2026-08-10-task-24-release-packet.md`，gitignored），base_commit `2d1f926`。
+- 实现（commit `529981a`，7 文件 +479/-98）：`build.yml`（可复用 verify-and-build，`workflow_call` + 漂移门 + 便携 ZIP + release notes + 4 artifact 上传）/`ci.yml`（薄调用方，永不发布）/`release.yml`（v* tag + manual；resolve-version；create-release job-scoped `contents: write`，`sha256sum` + `gh release create`，`GH_REPO` 显式，create-if-absent/update-if-present 可复现）；`scripts/check_release_version.ps1`（漂移门）；`scripts/generate_release_notes.ps1`（版本化中文 notes）；`tests/repo/test_release.py`（6 条门禁）；`test_installer.py`（断言迁移到 build.yml）。
+- 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **REVISE**（2 项 MUST_FIX：RELEASE-001 create-release 无仓库上下文 → 设 `GH_REPO`；RELEASE-002 重复运行已创建 tag 不可复现 → create-if-absent/update-if-present + 新增 `test_release_repeatable_and_repo_scoped`）→ round 1 **PASS**（4/4 criterion，无 MUST_FIX，scope_delta none）。OPTIONAL_HARDENING：本机无 gh CLI，未做真实 GitHub 命令。
+- 验证：`tests/repo` **28 passed**；全量 backend+repo+integration **686 passed/2 skipped**；ruff/mypy clean；workflow YAML 有效；漂移门 1.0.0/v1.0.0 过、2.0.0 明确报错；notes 生成器正常；本地 dry-run 发布产物 `sha256sum -c` 对 installer（565cd414…）与 ZIP（0488798e…）均 OK，产物名全链路一致。
+- 范围：未创建真实 GitHub Release；未改 app/backend/frontend/installer 逻辑；Task 25/26（双语）未实施。
+
+## 当前 Milestone 7 Task 25 实施 Session（in_progress）
+
+- `2026-08-10-milestone-7-task-25-bilingual-ui`：Task 24 已 auto_accepted（`529981a`）；本 Session 只处理 Task 25（双语 UI 与 Settings locale）。
+- 规划裁决 M7-D03（locale 默认 zh-CN 并存于 localStorage）已冻结；实施前生成 Context Packet。
 
 ## 当前 Milestone 7 Task 22 实施 Session（auto_accepted）
 
