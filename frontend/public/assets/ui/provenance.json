@@ -1,0 +1,34 @@
+{
+  "policy": "Task21 approved prototype assets only",
+  "sourceRoot": "prototype pages design/resources",
+  "assets": [
+    {
+      "file": "banner.jpg",
+      "source": "prototype pages design/resources/banner.jpg",
+      "sha256": "9C81A4968E4FB6197E16DF5449B0600F47F695C762E70A4692870BA86A30B7A8",
+      "use": "Home hero",
+      "attribution": "User-provided prototype asset"
+    },
+    {
+      "file": "unknown-dish.png",
+      "source": "prototype pages design/resources/guess.png",
+      "sha256": "09C5C730A6FFF2862E5B8B734A4C785D16F8E1840C5F931A5205883616E730DF",
+      "use": "Ask Gus empty and preparing preview",
+      "attribution": "User-provided prototype asset"
+    },
+    {
+      "file": "gus-portrait-1.png",
+      "source": "prototype pages design/resources/gus-portrait1.png",
+      "sha256": "895A07BE8113310158449AA88B2F2D7F0DC94E3DF571165BF9E95C95966265C2",
+      "use": "Ask Gus result commentary",
+      "attribution": "User-provided prototype asset"
+    },
+    {
+      "file": "gus-portrait-2.png",
+      "source": "prototype pages design/resources/gus-potrait2.png",
+      "sha256": "996A44009A27782DA72CCAC7C4F44D9A4D9D7C46739057A06F929D58ADFCF468",
+      "use": "Ask Gus status card",
+      "attribution": "User-provided prototype asset"
+    }
+  ]
+}

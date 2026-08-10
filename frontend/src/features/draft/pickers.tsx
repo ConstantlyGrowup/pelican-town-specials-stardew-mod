@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "../../api/client";
+import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 
@@ -19,15 +20,17 @@ function Modal({
 }) {
   const copy = PRODUCT_COPY.zh;
   return (
-    <div className="picker-backdrop">
-      <div className="picker-panel" role="dialog" aria-modal="true" aria-label={title}>
-        <h2>{title}</h2>
-        {children}
+    <PixelModal
+      title={title}
+      onClose={onClose}
+      footer={
         <button className="btn" type="button" onClick={onClose}>
           {copy.pickClose}
         </button>
-      </div>
-    </div>
+      }
+    >
+      {children}
+    </PixelModal>
   );
 }
 

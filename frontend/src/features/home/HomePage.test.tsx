@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router-dom";
@@ -59,11 +59,18 @@ function renderPage() {
 
 describe("home page draft dashboard", () => {
   it("renders the product identity and a list of drafts with links", async () => {
-    renderPage();
+    const { container } = renderPage();
 
-    expect(screen.getByRole("heading", { name: copy.productName })).toBeVisible();
+    expect(screen.getByRole("heading", { name: copy.createFirstDraft })).toBeVisible();
     expect(screen.getByText(copy.tagline)).toBeVisible();
     expect(screen.getByRole("heading", { name: copy.myDrafts })).toBeVisible();
+    expect(container.querySelector(".hero-media .hero-copy")).toBeNull();
+    expect(container.querySelector(".hero-copy--standalone")).not.toBeNull();
+    expect(container.querySelector('img[src="/assets/ui/gus-portrait-2.png"]')).not.toBeNull();
+    expect(container.querySelector(".specific-icon--createFirstDish")).not.toBeNull();
+    expect(container.querySelector(".specific-icon--blueprint")).not.toBeNull();
+    expect(container.querySelector(".feature-link .game-ui-icon--collections")).not.toBeNull();
+    expect(container.querySelector(".feature-link .game-ui-icon--gift")).not.toBeNull();
 
     expect(await screen.findByRole("heading", { name: "南瓜汤" })).toBeVisible();
     expect(screen.getByRole("link", { name: "南瓜汤" })).toHaveAttribute(
@@ -89,7 +96,9 @@ describe("home page draft dashboard", () => {
     renderPage();
 
     expect(await screen.findByText(copy.draftsEmpty)).toBeVisible();
-    expect(screen.getByRole("link", { name: copy.createFirstDraft })).toHaveAttribute(
+    const emptyState = screen.getByText(copy.draftsEmpty).closest(".empty-state");
+    expect(emptyState).not.toBeNull();
+    expect(within(emptyState as HTMLElement).getByRole("link", { name: copy.createFirstDraft })).toHaveAttribute(
       "href",
       "/create",
     );
@@ -110,7 +119,6 @@ describe("home page draft dashboard", () => {
   });
 
   it("deletes a draft after confirmation and refreshes the list", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
     const getSpy = vi
       .fn()
@@ -169,7 +177,9 @@ describe("home page draft dashboard", () => {
     });
     fireEvent.click(deleteButtons[0]);
 
-    expect(confirmSpy).toHaveBeenCalledWith(copy.deleteDraftConfirm);
+    const dialog = screen.getByRole("dialog", { name: "放弃这份草稿？" });
+    expect(within(dialog).getByText(copy.deleteDraftConfirm)).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.discardDraft }));
     await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(copy.unnamedDraft)).toBeVisible();
     expect(screen.queryByRole("heading", { name: "南瓜汤" })).toBeNull();
@@ -177,7 +187,6 @@ describe("home page draft dashboard", () => {
   });
 
   it("does not delete when confirmation is cancelled", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
     server.use(
       http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
@@ -189,7 +198,8 @@ describe("home page draft dashboard", () => {
       screen.getAllByRole("button", { name: copy.discardDraft })[0],
     );
 
-    expect(confirmSpy).toHaveBeenCalledWith(copy.deleteDraftConfirm);
+    const dialog = screen.getByRole("dialog", { name: "放弃这份草稿？" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
     expect(discardSpy).not.toHaveBeenCalled();
   });
 
@@ -213,11 +223,12 @@ describe("home page draft dashboard", () => {
         }),
       ),
     );
-    renderPage();
+    const { container } = renderPage();
 
     await screen.findByRole("heading", { name: "南瓜汤" });
     expect(
       screen.queryByRole("button", { name: copy.discardDraft }),
     ).toBeNull();
+    expect(container.querySelector(".draft-card-icon--archived")).toHaveTextContent("✓");
   });
 });

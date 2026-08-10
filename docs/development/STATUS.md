@@ -6,16 +6,16 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_5_1_shipped |
-| project_phase | milestone-5.1（已交付）→ Milestone 6 Task 20（CI/README/发布检查）已本地提交 → 待 Task 21 授权 |
+| overall_state | milestone_6_task_21_accepted |
+| project_phase | Milestone 6：Task 20 与 Task 21 已实施；Task 21 视觉精修及 2026-08-10 四轮用户反馈修订已通过用户人工验收，授权提交与推送 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-09-task-20-ci-readme` |
-| active_session_state | auto_accepted（Codex PASS `gpt-5.6-luna`/max；本地 focused commit `33ab7f1` 已创建，未 push） |
-| active_session_type | milestone-6-task-20 |
-| current_task | Task 20：Windows CI、用户 README、.env 参考与发布内容检查门禁；已本地提交 |
+| active_session_id | `2026-08-09-task-21-visual-refinement` |
+| active_session_state | accepted（用户本人已验收；不派发 Codex 独立审阅） |
+| active_session_type | milestone-6-task-21-implementation |
+| current_task | Task 21：视觉精修、无障碍与四轮用户反馈修订；已通过人工验收，提交与推送已获授权 |
 | blocker | 无 |
-| next_action | Task 20 已本地提交（`33ab7f1`，未 push）；Task 21（视觉精修、无障碍与最终验收）待用户授权启动 |
-| collaboration_model | Task 20：包工直接实施 + Codex 独立审阅（`gpt-5.6-luna`/max，独立 thread，round 0 REVISE → round 1 PASS） |
+| next_action | 完成 Task 21 focused commit 并推送当前分支；本次操作已获用户明确授权 |
+| collaboration_model | 直接实施：Codex 主会话实施与自动验证；用户本人视觉验收；跳过独立 Codex Review（用户明确授权） |
 
 ## 当前 Git 状态事实
 
@@ -25,9 +25,29 @@
 | 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按授权推送；Milestone 6 Task 20 本地 focused commit `33ab7f1` 已创建，未 push） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | Milestone 6 Task 20 focused commit `33ab7f1`（feat/ci，见下方 Session 节）；其前为预览图下载入口 `4fe7eca` |
+| 最新提交 | `838012c`（Task 20 Session 记录）；Task 20 产品 focused commit 为 `33ab7f1`；两者均未 push |
 | 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push**；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按用户授权 push（`f38f810..3fb9d03`）；**Milestone 6 Task 20 本地 focused commit `33ab7f1` 已创建，未 push（待 Milestone 6 全量验收后统一 push）** |
-| 当前工作树范围 | Task 20 已提交（工作树仅剩预存未跟踪 `samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/`、`prototype pages design/`，及 Codex 审阅临时目录 `.review_tmp_task20_workspace/`） |
+| 当前工作树范围 | Task 21 视觉精修与验证修改：`AGENTS.md`、本 `STATUS.md`、Task21 Session、前端 tokens/布局/页面/共享组件/资产/E2E 验收脚本；另保留用户已有的 `prototype pages design/`、`resources/official-assets/`、`samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` |
+
+## 当前 Milestone 6 Task 21 实施 Session（awaiting_user_acceptance）
+
+- `2026-08-09-task-21-visual-refinement`：用户已解除 hold并授权直接实施 Task 21；2026-08-10 已按四轮反馈完成修订并通过用户本人验收，已授权提交与推送，不派发独立 Codex Review。
+- Design System：`prototype pages design/design system.md`（201 行）；正式视觉源为 Warm Pelican 母主题 + Joja Blueprint 受控子主题 + Cookbook 最高原作浓度，派生页只继承系统。
+- Context Packet：`docs/plans/2026-08-09-task-21-visual-refinement-packet.md`，合同 `mvp-task-21-visual-refinement-v1`，`planning_status: READY_FOR_IMPLEMENTATION`，当前执行授权已由用户明确给出。
+- Baseline Matrix：`docs/plans/2026-08-09-task-21-visual-baseline-matrix.md`，定义 15 张 Windows/Chromium 1440×900 视觉基线、13 组无障碍场景、1024 最小桌面断言与最终验收门禁。
+- 依赖闭包：补入原计划遗漏的 Home、Cookbook Detail、Picker、DownloadableImage、共享 Dialog/Slot、相邻测试、E2E fixture、批准资产与 provenance；不触及后端/API/状态机。
+- 实施边界：不修改 backend/API/状态机/Mod 协议；不运行真实 Provider；完成后交用户人工验收，Task 21 不走独立 Codex Review。
+- 已实施：Warm Pelican 母主题、Joja Blueprint 受控子主题、Cookbook 槽位系统、App Shell、共享 `PixelModal`/`DishSlot`、批准 UI 资产与 provenance；Home/Create、Ask Gus/Generation、Blueprint、Cookbook/Detail、Pack/Bring/Settings 均已完成视觉精修。
+- 2026-08-10 反馈修订：接入用户提供的 Stardew 1.6.15 `springobjects.png` 与 `Cursors.zh-CN.png`，详情页原料/料理数据改用游戏图标；Cookbook 槽位与右侧预览按菜品详情动态对应，点击菜品可切换并可进入对应详情；首页将创建 CTA 收入 Hero；Gus 生成阶段改为用户可理解的中文名称并补充等待提示；Gus 结果页将菜品预览与 16×16 游戏图标拆分展示。
+- 2026-08-10 第二轮反馈修订：详情页扩大左侧预览面板与预览图；Banner 移除创建组件并将创建 CTA 独立置于使用流程上方；Ask Gus 使用 Gus portrait，草稿未生成保留 `?`、已归档使用勾选状态；首页收集品/打包入口改用原版收藏袋与礼物图标；详情页饱腹度、生命恢复与售价改用 `Cursors.zh-CN.png` 中更匹配的原版图标。
+- 2026-08-10 第三轮反馈修订：接入用户放置于 `Specific Icons` 的五份人工提取素材，替换饱腹度、生命恢复、售价、创建第一道菜和料理蓝图图标；Cookbook 标题使用收藏袋并移除误导性的 `已保存数量 / 24`；Gus 结果左侧预览取消固定高度裁剪，按回传图片原始比例自动撑开容纳区域。
+- 2026-08-10 第四轮反馈修订：按用户视觉验收反馈修正详情页料理数据板块的图标映射；饱腹度显示紫色恢复图标，体力恢复显示绿色十字图标。`GameUiIcon energy` 实际为紫色图标，用户提供的 `SpecificIcon edibility` 实际为绿色十字。
+- 已补齐：确认弹窗焦点管理、Escape/Tab 行为、跳过链接、表单语义、错误/进度 live region、确定性 E2E fixtures、视觉候选截图和 1024px 横向溢出断言。
+- 验证结果（首轮）：TypeScript、ESLint、Vitest `17 files / 98 passed`、Playwright `21 passed`、Vite production build、OpenAPI drift、product-copy gate、Windows bundle build（backend `658 passed / 2 skipped`）与 bundle smoke 全部通过；浏览器核验覆盖 1440px 核心页面和 1024px 无横向溢出。
+- 反馈修订验证（2026-08-10）：全量前端 Vitest `18 files / 105 passed`、ESLint、TypeScript、Vite production build、Playwright `26 passed` 全部通过；第三轮定向视觉 Playwright `12 passed`，覆盖人工提取图标、Cookbook 数量字段移除与 Gus 预览不裁剪。未改后端/API/状态机/Mod 协议。
+- 第四轮小修复验证（2026-08-10）：全量前端 Vitest `18 files / 105 passed`、详情页定向 Vitest `10 passed`、详情页定向浏览器视觉回归 `2 passed`；未改后端/API/状态机/Mod 协议。
+- 最终验收（2026-08-10）：用户确认此前未执行 `pnpm build` 导致的显示误判已解决，并宣布 Milestone 通过验收，授权提交与推送；当前仅剩本次 Git 操作。
+- 验收限制：视觉截图作为候选输出，不冻结 tracked screenshot baseline；未运行真实 Provider、真实游戏写入或用户可见 API Key 流程。上述内容不阻塞用户对本 Milestone 的验收与提交推送授权。
 
 ## 当前 Milestone 6 Task 20 Session（auto_accepted）
 

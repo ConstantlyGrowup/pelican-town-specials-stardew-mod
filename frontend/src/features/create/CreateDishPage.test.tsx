@@ -67,11 +67,14 @@ function renderPage() {
 
 describe("create dish page", () => {
   it("explains that Blueprint starts from the original image only", () => {
-    renderPage();
+    const { container } = renderPage();
+
+    expect(container.querySelector('img[src="/assets/ui/gus-portrait-2.png"]')).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: copy.createBlueprint }));
 
     expect(screen.getByText(copy.blueprintFromOriginalOnly)).toBeVisible();
+    expect(container.querySelector(".specific-icon--blueprint")).not.toBeNull();
   });
 
   it("uploads the image first, then creates the draft with only the assetId", async () => {

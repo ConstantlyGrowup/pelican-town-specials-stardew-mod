@@ -407,7 +407,7 @@ test.describe("generation experience", () => {
     await page.goto("/drafts/ask-gus");
     // The hydrated progress shows the current stage, not a "start" button.
     await expect(page.getByRole("button", { name: "开始生成" })).toHaveCount(0);
-    await expect(page.getByText("菜品分析")).toBeVisible();
+    await expect(page.getByText("识别菜品")).toBeVisible();
     await expect(page.getByRole("button", { name: "取消生成" })).toBeVisible();
   });
 

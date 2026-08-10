@@ -107,11 +107,25 @@ export function SettingsPage() {
   }
 
   return (
-    <main>
-      <h1>{copy.settingsTitle}</h1>
+    <main className="settings-page">
+      <div className="page-header">
+        <div>
+          <p className="eyebrow">SETTINGS / PROVIDER CONNECTION</p>
+          <h1>{copy.settingsTitle}</h1>
+          <p className="page-subtitle">连接你的视觉、文本和图像 Provider。</p>
+        </div>
+        <span className="settings-mark" aria-hidden="true">⚙</span>
+      </div>
       {loadError && <div className="status-banner status-error">{loadError}</div>}
 
-      <form onSubmit={handleSubmit(onSave)} className="card">
+      <form onSubmit={handleSubmit(onSave)} className="paper-panel settings-form">
+        <div className="panel-section-heading">
+          <div>
+            <p className="eyebrow">01 / MODEL ROUTING</p>
+            <h2>Provider 参数</h2>
+          </div>
+          <span className="field-counter">LOCAL ONLY</span>
+        </div>
         <div className="field">
           <label htmlFor="baseUrl">{copy.baseUrlLabel}</label>
           <input id="baseUrl" {...register("baseUrl")} />
@@ -193,11 +207,16 @@ export function SettingsPage() {
         </button>
       </form>
 
-      <section className="card" aria-label={copy.apiKeyStatusLabel}>
-        <p>
-          {copy.apiKeyStatusLabel}：{" "}
-          {keyStatus?.apiKeyConfigured ? copy.apiKeyConfigured : copy.apiKeyNotConfigured}
-        </p>
+      <section className="paper-panel settings-key-panel" aria-label={copy.apiKeyStatusLabel}>
+        <div className="panel-section-heading">
+          <div>
+            <p className="eyebrow">02 / SECRET</p>
+            <h2>{copy.apiKeyStatusLabel}</h2>
+          </div>
+          <span className="settings-key-status">
+            {keyStatus?.apiKeyConfigured ? copy.apiKeyConfigured : copy.apiKeyNotConfigured}
+          </span>
+        </div>
         <div className="field">
           <label htmlFor="apiKey">{copy.apiKeyStatusLabel}</label>
           <input

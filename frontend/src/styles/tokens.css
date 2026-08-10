@@ -1,20 +1,69 @@
 :root {
-  --pts-color-bg: #fdf6ec;
-  --pts-color-surface: #ffffff;
-  --pts-color-text: #3b2f1e;
-  --pts-color-muted: #8a7a5f;
-  --pts-color-accent: #b4552d;
-  --pts-color-border: #e4d6bd;
-  --pts-color-danger: #b3261e;
-  --pts-color-warning-bg: #fff3cd;
-  --pts-color-warning-border: #ffe69c;
-  --pts-color-error-bg: #fdecea;
-  --pts-color-error-border: #f5c6cb;
-  --pts-radius: 10px;
+  color-scheme: light;
+
+  --pts-page: #6f2c18;
+  --pts-page-deep: #4c1e12;
+  --pts-ink: #3b160d;
+  --pts-ink-soft: #6b3b29;
+  --pts-wood-deep: #6b2d18;
+  --pts-wood: #934821;
+  --pts-wood-mid: #c56a2d;
+  --pts-gold: #e89a3a;
+  --pts-cream: #f6c76a;
+  --pts-highlight: #fad98b;
+  --pts-paper: #fff8f6;
+  --pts-paper-pink: #fbebe4;
+  --pts-paper-muted: #efdfd9;
+
+  --pts-blue-ink: #0a1428;
+  --pts-blue: #2152a3;
+  --pts-blue-cyan: #a4d3ee;
+  --pts-blue-paper: #e1ebf4;
+  --pts-blue-white: #ffffff;
+
+  --pts-success: #1b6b36;
+  --pts-success-bright: #2e8b48;
+  --pts-warning: #92501a;
+  --pts-warning-bg: #fff0c6;
+  --pts-danger: #8a241d;
+  --pts-danger-bg: #f9d9d1;
+  --pts-info: #15517d;
+  --pts-info-bg: #d9efff;
+
+  --pts-font-body: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --pts-font-display: "Trebuchet MS", "Microsoft YaHei", sans-serif;
+  --pts-font-mono: Consolas, "Microsoft YaHei", monospace;
+
+  --pts-unit: 4px;
   --pts-space-1: 4px;
   --pts-space-2: 8px;
   --pts-space-3: 12px;
   --pts-space-4: 16px;
+  --pts-space-5: 20px;
   --pts-space-6: 24px;
-  --pts-font-body: system-ui, "Microsoft YaHei", "PingFang SC", sans-serif;
+  --pts-space-8: 32px;
+  --pts-space-10: 40px;
+  --pts-space-12: 48px;
+
+  --pts-radius-structural: 2px;
+  --pts-radius-round: 999px;
+  --pts-border-thin: 2px;
+  --pts-border-strong: 4px;
+  --pts-shadow-pixel: 4px 4px 0 var(--pts-ink);
+  --pts-shadow-pixel-small: 2px 2px 0 var(--pts-ink);
+  --pts-shadow-blueprint: 3px 3px 0 var(--pts-blue-ink);
+
+  --pts-motion-fast: 140ms;
+  --pts-motion-game: 240ms;
+  --pts-motion-moment: 520ms;
+  --pts-ease-step: steps(2, end);
+}
+
+[data-theme="blueprint"] {
+  --pts-surface-page: var(--pts-blue-paper);
+  --pts-surface-panel: var(--pts-blue-cyan);
+  --pts-surface-content: var(--pts-blue-white);
+  --pts-theme-ink: var(--pts-blue-ink);
+  --pts-theme-accent: var(--pts-blue);
+  --pts-theme-highlight: var(--pts-blue-cyan);
 }

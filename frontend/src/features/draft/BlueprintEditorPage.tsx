@@ -4,6 +4,7 @@ import { useForm, useFormState } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
+import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import {
@@ -37,6 +38,7 @@ export function BlueprintEditorPage() {
   const [stale, setStale] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   const query = useQuery({
     queryKey: ["draft", draftId],
@@ -237,10 +239,8 @@ export function BlueprintEditorPage() {
     navigate(`/cookbook/${data.dishId}`);
   }
 
-  async function onDiscard() {
-    if (!window.confirm(copy.discardDraftConfirm)) {
-      return;
-    }
+  async function onConfirmDiscard() {
+    setConfirmingDiscard(false);
     setBusy(true);
     setActionError(null);
     const headers: Record<string, string> = {};
@@ -311,9 +311,19 @@ export function BlueprintEditorPage() {
   const iconUrl = assetUrl(draft.visuals?.icon16AssetId);
 
   return (
-    <main>
-      <h1>{copy.editingBlueprint}</h1>
-      <p>
+    <main className="blueprint-page" data-theme="blueprint">
+      <div className="page-header blueprint-page-header">
+        <div>
+          <p className="eyebrow">JOJA MART / BLUEPRINT WORKBENCH</p>
+          <h1>{copy.editingBlueprint}</h1>
+        </div>
+        <div className="blueprint-revision-badge">
+          <span>{copy.statusLabel}</span>
+          <strong>{draft.status}</strong>
+          <span>{copy.revisionLabel} {draft.revision}</span>
+        </div>
+      </div>
+      <p className="blueprint-subtitle">
         {copy.statusLabel}：{draft.status}；{copy.revisionLabel}：{draft.revision}
       </p>
       {conflict && (
@@ -331,8 +341,14 @@ export function BlueprintEditorPage() {
           <p>{copy.stalePreviewMessage}</p>
         </div>
       )}
+
+      <div className="blueprint-layout">
+        <aside className="blueprint-sidebar">
       {(previewUrl || iconUrl) && (
-        <section className="card" aria-label={`${draft.presentation?.displayName ?? copy.draftTitle}预览资源`}>
+        <section
+          className={`paper-panel preview-frame${previewStale ? " stale-preview" : ""}`}
+          aria-label={`${draft.presentation?.displayName ?? copy.draftTitle}预览资源`}
+        >
           {previewUrl && (
             <DownloadableImage
               src={previewUrl}
@@ -352,6 +368,18 @@ export function BlueprintEditorPage() {
           )}
         </section>
       )}
+          {!previewUrl && !iconUrl && (
+            <section className="paper-panel preview-frame preview-frame-empty" aria-label="暂无预览资源">
+              <span aria-hidden="true">?</span>
+              <p>填写蓝图后生成第一张预览。</p>
+            </section>
+          )}
+          <div className="blueprint-status-card">
+            <span className="status-icon" aria-hidden="true">ⓘ</span>
+            <span>修改字段后保存，再更新预览。</span>
+          </div>
+        </aside>
+        <section className="blueprint-canvas">
       {generation.phase === "streaming" && (
         <GenerationProgress
           currentStage={generation.currentStage}
@@ -391,8 +419,12 @@ export function BlueprintEditorPage() {
           event.preventDefault();
           void onSave();
         }}
-        className="card"
+        className="blueprint-section blueprint-form"
       >
+        <div className="blueprint-section-heading">
+          <p className="eyebrow">01 / IDENTITY</p>
+          <span className="field-counter">USER EDITABLE</span>
+        </div>
         <div className="field">
           <label htmlFor="displayName">{copy.displayNameLabel}</label>
           <input id="displayName" {...form.register("displayName")} />
@@ -509,27 +541,31 @@ export function BlueprintEditorPage() {
           {busy ? copy.saving : copy.saveDraft}
         </button>
       </form>
+        </section>
+      </div>
 
-      {draft.status === "REVIEWABLE" && !previewStale && (
-        <button
-          className="btn btn-primary"
-          type="button"
-          onClick={onArchive}
-          disabled={busy || generation.phase === "streaming"}
-        >
-          {copy.archiveDish}
-        </button>
-      )}
-      {draft.status !== "ARCHIVED" && draft.status !== "DISCARDED" && (
-        <button
-          className="btn"
-          type="button"
-          onClick={onDiscard}
-          disabled={busy || generation.phase === "streaming"}
-        >
-          {copy.discardDraft}
-        </button>
-      )}
+      <div className="blueprint-action-bar">
+        {draft.status === "REVIEWABLE" && !previewStale && (
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={onArchive}
+            disabled={busy || generation.phase === "streaming"}
+          >
+            {copy.archiveDish}
+          </button>
+        )}
+        {draft.status !== "ARCHIVED" && draft.status !== "DISCARDED" && (
+          <button
+            className="btn btn-danger"
+            type="button"
+            onClick={() => setConfirmingDiscard(true)}
+            disabled={busy || generation.phase === "streaming"}
+          >
+            {copy.discardDraft}
+          </button>
+        )}
+      </div>
 
       {categoryPickerOpen && (
         <CategoryPickerModal
@@ -551,6 +587,25 @@ export function BlueprintEditorPage() {
           onAdd={(item, catalogVersion) => addIngredient(item, catalogVersion)}
           onClose={() => setIngredientPickerOpen(false)}
         />
+      )}
+      {confirmingDiscard && (
+        <PixelModal
+          title="放弃这张料理蓝图？"
+          description={copy.discardDraftConfirm}
+          onClose={() => setConfirmingDiscard(false)}
+          footer={
+            <>
+              <button className="btn btn-danger" type="button" onClick={() => void onConfirmDiscard()}>
+                {copy.discardDraft}
+              </button>
+              <button className="btn" type="button" onClick={() => setConfirmingDiscard(false)}>
+                {copy.cancelDelete}
+              </button>
+            </>
+          }
+        >
+          <p>放弃后，蓝图字段与上传素材都不会再保留。</p>
+        </PixelModal>
       )}
     </main>
   );

@@ -16,7 +16,12 @@ const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
-beforeEach(() => resetSelectionStore());
+beforeEach(() => {
+  resetSelectionStore();
+  server.use(
+    http.get("/api/v1/cookbook/:dish_id", () => HttpResponse.json(detail)),
+  );
+});
 afterAll(() => server.close());
 
 function renderInRouter(initialEntries: string[]) {
@@ -75,6 +80,24 @@ const detail = {
   },
 };
 
+const secondSummary = {
+  ...summary,
+  dishId: "dish-2",
+  displayName: "菠菜烟熏三文鱼",
+  description: "烟熏香气和春日蔬菜的组合。",
+};
+
+const secondDetail = {
+  ...detail,
+  ...secondSummary,
+  internalName: "SmokedSpinachSalmon",
+  visuals: {
+    ...detail.visuals,
+    previewAssetId: "00000000-0000-4000-8000-000000000012",
+    icon16AssetId: "00000000-0000-4000-8000-000000000013",
+  },
+};
+
 describe("cookbook", () => {
   it("renders summaries and never shows source labels even when injected", async () => {
     server.use(
@@ -101,6 +124,14 @@ describe("cookbook", () => {
     expect(screen.queryByText(/ASK_GUS|Gus|model-secret/)).not.toBeInTheDocument();
   });
 
+  it("uses the collection tab icon without implying a recipe capacity", async () => {
+    const { container } = renderInRouter(["/cookbook"]);
+
+    expect(await screen.findByRole("heading", { name: copy.cookbookTitle })).toBeVisible();
+    expect(container.querySelector(".cookbook-heading .game-ui-icon--collections")).not.toBeNull();
+    expect(screen.queryByText(/\/\s*24/)).not.toBeInTheDocument();
+  });
+
   it("toggles selection by dishId only", async () => {
     server.use(
       http.get("/api/v1/cookbook", () =>
@@ -115,13 +146,37 @@ describe("cookbook", () => {
     expect(getSelectedDishIds()).toEqual(new Set(["dish-1"]));
   });
 
+  it("switches the right preview without navigating, then opens the full detail page", async () => {
+    server.use(
+      http.get("/api/v1/cookbook", () =>
+        HttpResponse.json({ items: [summary, secondSummary], nextCursor: null, total: 2 }),
+      ),
+      http.get("/api/v1/cookbook/:dish_id", ({ params }) =>
+        HttpResponse.json(params.dish_id === "dish-2" ? secondDetail : detail),
+      ),
+    );
+    renderInRouter(["/cookbook"]);
+
+    expect(await screen.findByRole("img", { name: "春日面碗预览" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "查看菠菜烟熏三文鱼预览" }));
+
+    expect(await screen.findByRole("img", { name: "菠菜烟熏三文鱼预览" })).toHaveAttribute(
+      "src",
+      "/api/v1/assets/00000000-0000-4000-8000-000000000012",
+    );
+    expect(screen.getByRole("link", { name: "查看完整菜品 →" })).toHaveAttribute(
+      "href",
+      "/cookbook/dish-2",
+    );
+  });
+
   it("renders detail without source fields", async () => {
     server.use(
       http.get("/api/v1/cookbook/:dish_id", () =>
         HttpResponse.json({ ...detail, internalProvenance: { secret: true } }),
       ),
     );
-    renderInRouter(["/cookbook/dish-1"]);
+    const { container } = renderInRouter(["/cookbook/dish-1"]);
 
     expect(await screen.findByRole("heading", { name: "春日面碗" })).toBeVisible();
     expect(screen.getByText("Parsnip × 1")).toBeVisible();
@@ -133,6 +188,9 @@ describe("cookbook", () => {
       "src",
       "/api/v1/assets/00000000-0000-4000-8000-000000000003",
     );
+    const statRows = [...container.querySelectorAll(".stat-row")];
+    expect(statRows[0]?.querySelector(".game-ui-icon--energy")).not.toBeNull();
+    expect(statRows[2]?.querySelector(".specific-icon--edibility")).not.toBeNull();
     expect(screen.queryByText(/internalProvenance|secret/)).not.toBeInTheDocument();
   });
 

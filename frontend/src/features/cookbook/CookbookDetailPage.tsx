@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiClient, assetUrl } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
+import { GameObjectIcon, GameUiIcon, SpecificIcon } from "../../components/ui/GameAssetIcon";
+import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import { clearSelectionFor } from "./selectionStore";
@@ -54,18 +56,18 @@ export function CookbookDetailPage() {
 
   if (query.isLoading) {
     return (
-      <main>
+      <main className="cookbook-detail-page">
         <h1>{copy.cookbookTitle}</h1>
-        <p>{copy.loading}</p>
+        <p className="status-banner status-info">{copy.loading}</p>
       </main>
     );
   }
 
   if (query.isError || !query.data) {
     return (
-      <main>
+      <main className="cookbook-detail-page">
         <h1>{copy.unknownDish}</h1>
-        <p>
+        <p className="page-subtitle">
           <Link to="/cookbook">{copy.backToList}</Link>
         </p>
       </main>
@@ -77,72 +79,146 @@ export function CookbookDetailPage() {
   const iconUrl = assetUrl(dish.visuals.icon16AssetId);
 
   return (
-    <main>
-      <p>
-        <Link to="/cookbook">{copy.backToList}</Link>
-      </p>
-      <article className="card">
-        {(previewUrl || iconUrl) && (
-          <section aria-label={`${dish.displayName}预览资源`}>
-            {previewUrl && (
+    <main className="cookbook-detail-page">
+      <div className="page-header">
+        <div>
+          <Link className="back-link" to="/cookbook">← {copy.backToList}</Link>
+          <p className="eyebrow">COOKBOOK / ARCHIVED DISH</p>
+          <h1>{dish.displayName}</h1>
+          <p className="page-subtitle">{dish.categoryLabel} · {dish.internalName}</p>
+        </div>
+        <span className="detail-badge">ARCHIVED</span>
+      </div>
+
+      <div className="detail-layout">
+        <section className="paper-panel detail-visual-panel" aria-label={`${dish.displayName}预览资源`}>
+          {previewUrl ? (
+            <div className="detail-preview">
               <DownloadableImage
                 src={previewUrl}
                 alt={`${dish.displayName}预览`}
                 downloadName={`${dish.displayName}-预览`}
                 style={{ maxWidth: "100%", height: "auto", display: "block" }}
               />
-            )}
-            {iconUrl && (
+            </div>
+          ) : (
+            <div className="detail-preview detail-preview-placeholder" aria-label="暂无预览图">
+              <span aria-hidden="true">✣</span>
+            </div>
+          )}
+          {iconUrl && (
+            <div className="detail-icon-row">
               <img
                 src={iconUrl}
                 alt={`${dish.displayName}像素图标`}
-                width={32}
-                height={32}
+                width={64}
+                height={64}
                 style={{ imageRendering: "pixelated", display: "block" }}
               />
-            )}
+              <span>16 × 16 / 游戏图标</span>
+            </div>
+          )}
+        </section>
+
+        <article className="paper-panel detail-info-panel">
+          <div className="detail-title-row">
+            <div>
+              <p className="eyebrow">DISH CARD / DESCRIPTION</p>
+              <p className="detail-display-name">{dish.displayName}</p>
+            </div>
+            <span className="tag-chip">{dish.categoryLabel}</span>
+          </div>
+          <p className="detail-description">{dish.description}</p>
+          {(dish.tags ?? []).length > 0 && (
+            <div className="tag-row">
+              {dish.tags?.map((tag) => <span key={tag} className="tag-chip">{tag}</span>)}
+            </div>
+          )}
+
+          <section className="detail-stats" aria-labelledby="dish-stats-title">
+            <h3 id="dish-stats-title">
+              <GameUiIcon name="dish" size={28} />
+              料理数据
+            </h3>
+            <div className="stat-grid">
+              <div className="stat-row">
+                <span className="stat-row__label">
+                  <GameUiIcon name="energy" size={24} />
+                  {copy.edibilityLabel}
+                </span>
+                <strong>{dish.gameplay.recovery.edibility}</strong>
+              </div>
+              <div className="stat-row">
+                <span className="stat-row__label">
+                  <SpecificIcon name="sellPrice" size={28} />
+                  {copy.sellPriceLabel}
+                </span>
+                <strong>{dish.gameplay.sellPrice} g</strong>
+              </div>
+              <div className="stat-row">
+                <span className="stat-row__label">
+                  <SpecificIcon name="edibility" size={28} />
+                  {copy.energyLabel}
+                </span>
+                <strong>{dish.gameplay.recovery.energyRestore}</strong>
+              </div>
+              <div className="stat-row">
+                <span className="stat-row__label">
+                  <SpecificIcon name="health" size={28} />
+                  {copy.healthLabel}
+                </span>
+                <strong>{dish.gameplay.recovery.healthRestore}</strong>
+              </div>
+            </div>
           </section>
-        )}
-        <h1>{dish.displayName}</h1>
-        <p>{dish.internalName}</p>
-        <p>{dish.categoryLabel}</p>
-        <p>{dish.description}</p>
-        {(dish.tags ?? []).length > 0 && <p>{(dish.tags ?? []).join("、")}</p>}
-        <h2>{copy.ingredientsLabel}</h2>
-        <ul>
-          {dish.gameplay.ingredients.map((ingredient) => (
-            <li key={ingredient.itemId}>
-              {ingredient.displayName} × {ingredient.quantity}
-            </li>
-          ))}
-        </ul>
-        <p>
-          {copy.edibilityLabel}：{dish.gameplay.recovery.edibility}；{copy.sellPriceLabel}：
-          {dish.gameplay.sellPrice}
-        </p>
-      </article>
+
+          <section className="detail-ingredients" aria-labelledby="ingredients-title">
+            <h3 id="ingredients-title">{copy.ingredientsLabel}</h3>
+            <ul className="ingredient-list">
+              {dish.gameplay.ingredients.map((ingredient) => (
+                <li key={ingredient.itemId} className="ingredient-row">
+                  <span className="ingredient-row__content">
+                    <GameObjectIcon itemId={ingredient.itemId} size={40} />
+                    <span>{ingredient.displayName} × {ingredient.quantity}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </article>
+      </div>
 
       {error && <div className="status-banner status-error">{error}</div>}
-      {confirming ? (
-        <div className="card">
-          <h2>{copy.deleteConfirmTitle}</h2>
-          <p>{copy.deleteConfirmMessage}</p>
-          <button
-            className="btn btn-danger"
-            type="button"
-            onClick={onConfirmDelete}
-            disabled={deleting}
-          >
-            {copy.confirmDelete}
-          </button>
-          <button className="btn" type="button" onClick={() => setConfirming(false)}>
-            {copy.cancelDelete}
+      {!confirming && (
+        <div className="detail-footer">
+          <button className="btn btn-danger" type="button" onClick={() => setConfirming(true)}>
+            {copy.deleteDish}
           </button>
         </div>
-      ) : (
-        <button className="btn btn-danger" type="button" onClick={() => setConfirming(true)}>
-          {copy.deleteDish}
-        </button>
+      )}
+      {confirming && (
+        <PixelModal
+          title={copy.deleteConfirmTitle}
+          description={copy.deleteConfirmMessage}
+          onClose={() => setConfirming(false)}
+          footer={
+            <>
+              <button
+                className="btn btn-danger"
+                type="button"
+                onClick={onConfirmDelete}
+                disabled={deleting}
+              >
+                {copy.confirmDelete}
+              </button>
+              <button className="btn" type="button" onClick={() => setConfirming(false)}>
+                {copy.cancelDelete}
+              </button>
+            </>
+          }
+        >
+          <p>删除后，这份收集品以及对应素材将无法恢复。</p>
+        </PixelModal>
       )}
     </main>
   );

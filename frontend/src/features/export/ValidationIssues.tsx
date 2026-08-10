@@ -15,7 +15,7 @@ export function ValidationIssues({ issues }: { issues: ValidationIssue[] }) {
     return null;
   }
   return (
-    <ul className="validation-issues">
+    <ul className="validation-issues" role="alert" aria-label="校验问题">
       {issues.map((issue, index) => (
         <li
           key={index}

@@ -14,7 +14,7 @@ type GenerationErrorProps = {
 export function GenerationError({ error, onRetry }: GenerationErrorProps) {
   const copy = PRODUCT_COPY.zh;
   return (
-    <div className="status-banner status-error">
+    <div className="status-banner status-error" role="alert">
       <p>{error.message}</p>
       {onRetry && (
         <button className="btn" type="button" onClick={onRetry}>

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
+import { GameObjectIcon } from "../../components/ui/GameAssetIcon";
+import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
 import { PRODUCT_COPY } from "../../i18n/copy";
 import { GenerationError } from "../generation/GenerationError";
@@ -25,6 +27,7 @@ export function AskGusReviewPage() {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   const query = useQuery({
     queryKey: ["draft", draftId],
@@ -70,10 +73,8 @@ export function AskGusReviewPage() {
     navigate(`/cookbook/${data.dishId}`);
   }
 
-  async function onDiscard() {
-    if (!window.confirm(copy.discardDraftConfirm)) {
-      return;
-    }
+  async function onConfirmDiscard() {
+    setConfirmingDiscard(false);
     setBusy(true);
     setActionError(null);
     const headers: Record<string, string> = {};
@@ -126,11 +127,26 @@ export function AskGusReviewPage() {
   const previewUrl = assetUrl(draft.visuals?.previewAssetId);
   const iconUrl = assetUrl(draft.visuals?.icon16AssetId);
   const visualName = draft.presentation?.displayName ?? copy.draftTitle;
+  const waitingForResult = !draft.presentation && !terminal;
 
   return (
-    <main>
-      <h1>{copy.askGusReviewTitle}</h1>
-      <p>
+    <main className="gus-page">
+      <div className="page-header gus-page-header">
+        <div>
+          <p className="eyebrow">GUS REVIEW / TAVERN COUNTER</p>
+          <h1>{copy.askGusReviewTitle}</h1>
+        </div>
+        <div className="gus-status-cluster">
+          <img src="/assets/ui/gus-portrait-2.png" alt="Gus" />
+          <div className="draft-status-line">
+            <span>{copy.modeLabel}</span>
+            <strong>{copy.askGus}</strong>
+            <span>{copy.statusLabel}</span>
+            <strong>{draft.status}</strong>
+          </div>
+        </div>
+      </div>
+      <p className="gus-subtitle">
         {copy.modeLabel}：{copy.askGus}；{copy.statusLabel}：{draft.status}；{copy.revisionLabel}：
         {draft.revision}
       </p>
@@ -171,45 +187,72 @@ export function AskGusReviewPage() {
         </div>
       )}
 
-      {(previewUrl || iconUrl) && (
-        <section className="card" aria-label={`${visualName}预览资源`}>
-          {previewUrl && (
-            <DownloadableImage
-              src={previewUrl}
-              alt={`${visualName}预览`}
-              downloadName={`${visualName}-预览`}
-              style={{ maxWidth: "100%", height: "auto", display: "block" }}
-            />
-          )}
+      <div className="gus-layout">
+        <section className="gus-preview" aria-label={`${visualName}预览资源`}>
+          <div className="gus-preview__main">
+            {previewUrl ? (
+              <DownloadableImage
+                src={previewUrl}
+                alt={`${visualName}预览`}
+                downloadName={`${visualName}-预览`}
+                style={{ maxWidth: "100%", height: "auto", display: "block" }}
+              />
+            ) : (
+              <img src="/assets/ui/unknown-dish.png" alt="等待 Gus 生成菜品预览" />
+            )}
+          </div>
           {iconUrl && (
-            <img
-              src={iconUrl}
-              alt={`${visualName}像素图标`}
-              width={32}
-              height={32}
-              style={{ imageRendering: "pixelated", display: "block" }}
-            />
+            <div className="gus-preview__icon">
+              <img
+                src={iconUrl}
+                alt={`${visualName}像素图标`}
+                width={64}
+                height={64}
+              />
+              <span>16 × 16 / 游戏图标</span>
+            </div>
           )}
         </section>
-      )}
 
-      <section className="card">
+      <section className={`paper-panel gus-result-panel${waitingForResult ? " is-waiting" : ""}`}>
+        <div className="gus-result-heading">
+          <p className="eyebrow">GUS'S NOTES / RESULT CARD</p>
+          <img src="/assets/ui/gus-portrait-1.png" alt="Gus 的点评头像" />
+        </div>
         {draft.presentation && (
           <>
-            <h2>{draft.presentation.displayName}</h2>
-            <p>{draft.presentation.description}</p>
+            <h2 className="result-title">{draft.presentation.displayName}</h2>
+            <div className="gus-comment">
+              <p>{draft.presentation.description}</p>
+              {draft.presentation.gusComment && <p>{draft.presentation.gusComment}</p>}
+            </div>
           </>
         )}
+        {waitingForResult && (
+          <div className="gus-waiting-note" role="status" aria-live="polite">
+            <img src="/assets/ui/gus-portrait-1.png" alt="Gus" />
+            <div>
+              <h2>{copy.gusWaitingTitle}</h2>
+              <p>{copy.gusWaitingMessage}</p>
+              <p>{copy.gusWaitingDetail}</p>
+            </div>
+          </div>
+        )}
         {draft.gameplay && (
-          <ul>
+          <ul className="ingredient-list">
             {draft.gameplay.ingredients.map((ingredient) => (
-              <li key={ingredient.itemId}>
-                {ingredient.displayName} × {ingredient.quantity}
+              <li key={ingredient.itemId} className="ingredient-row">
+                <span className="ingredient-row__content">
+                  <GameObjectIcon itemId={ingredient.itemId} size={32} />
+                  <span>{ingredient.displayName}</span>
+                </span>
+                <strong>× {ingredient.quantity}</strong>
               </li>
             ))}
           </ul>
         )}
       </section>
+      </div>
 
       {terminal && <p className="status-banner status-warning">{copy.draftTitle}：{draft.status}</p>}
 
@@ -225,7 +268,7 @@ export function AskGusReviewPage() {
       )}
 
       {draft.status === "REVIEWABLE" && (
-        <div className="card">
+        <div className="card gus-actions">
           <button
             className="btn btn-primary"
             type="button"
@@ -240,7 +283,7 @@ export function AskGusReviewPage() {
           <button
             className="btn"
             type="button"
-            onClick={onDiscard}
+            onClick={() => setConfirmingDiscard(true)}
             disabled={busy || streaming}
           >
             {copy.rejectDraft}
@@ -249,6 +292,25 @@ export function AskGusReviewPage() {
       )}
 
       {actionError && <div className="status-banner status-error">{actionError}</div>}
+      {confirmingDiscard && (
+        <PixelModal
+          title="拒绝这份草稿？"
+          description={copy.discardDraftConfirm}
+          onClose={() => setConfirmingDiscard(false)}
+          footer={
+            <>
+              <button className="btn btn-danger" type="button" onClick={() => void onConfirmDiscard()}>
+                {copy.rejectDraft}
+              </button>
+              <button className="btn" type="button" onClick={() => setConfirmingDiscard(false)}>
+                {copy.cancelDelete}
+              </button>
+            </>
+          }
+        >
+          <p>拒绝后，这份草稿和上传的素材都不会再出现在工作区。</p>
+        </PixelModal>
+      )}
     </main>
   );
 }

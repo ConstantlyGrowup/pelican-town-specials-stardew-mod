@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-当前项目处于 Milestone 4（Content Patcher 编译与真实游戏验证）；Task 16/17/18 已完成并本地提交（未 push，Milestone 4 门）；Task 18 游戏验收核心通过，R12–R15 游戏内细节修复已本地提交；当前下一步为用户游戏内复验 R12–R15，随后 Task 19（PyInstaller 发布包）。
+当前项目处于 Milestone 6；Task 20（Windows CI、用户 README、.env 参考与发布检查）已通过 Codex Review 并本地提交。Task 21 的 Design System、Context Packet、Acceptance Ledger 与视觉/无障碍基线矩阵已编制并完成实施；2026-08-10 已按用户反馈完成四轮视觉与交互修订，并通过用户人工验收，已授权提交与推送，不派发 Codex 独立审阅。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 

@@ -105,8 +105,13 @@ export function PackMenuPage() {
 
   if (selectedIds.length === 0) {
     return (
-      <main>
-        <h1>{copy.packMenuTitle}</h1>
+      <main className="pack-page">
+        <div className="page-header">
+          <div>
+            <p className="eyebrow">EXPORT / MENU BUILDER</p>
+            <h1>{copy.packMenuTitle}</h1>
+          </div>
+        </div>
         <div className="status-banner status-warning">{copy.noDishesSelected}</div>
         <Link to="/cookbook" className="btn">
           {copy.backToCookbook}
@@ -116,27 +121,52 @@ export function PackMenuPage() {
   }
 
   return (
-    <main>
-      <h1>{copy.packMenuTitle}</h1>
-      <p>{copy.packMenuSubtitle}</p>
+    <main className="pack-page">
+      <div className="page-header">
+        <div>
+          <p className="eyebrow">EXPORT / CONTENT PATCHER PACKAGE</p>
+          <h1>{copy.packMenuTitle}</h1>
+          <p className="page-subtitle">{copy.packMenuSubtitle}</p>
+        </div>
+        <span className="export-stamp">CP / READY TO VALIDATE</span>
+      </div>
 
-      <section className="card">
-        <h2>{copy.selectedDishes}</h2>
-        {dishesQuery.isLoading && <p>{copy.loading}</p>}
-        {dishesQuery.isError && (
-          <div className="status-banner status-error">{copy.cookbookLoadFailed}</div>
-        )}
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {dishesQuery.data?.map((dish) => (
-            <li key={dish.dishId} className="selected-dish">
-              <strong>{dish.displayName}</strong>
-              <span>{dish.categoryLabel}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="pack-layout">
+        <section className="paper-panel pack-selection-panel">
+          <div className="panel-section-heading">
+            <div>
+              <p className="eyebrow">SELECTED ITEMS</p>
+              <h2>{copy.selectedDishes}</h2>
+            </div>
+            <span className="field-counter">{selectedIds.length} ITEMS</span>
+          </div>
+          {dishesQuery.isLoading && <p className="status-banner status-info">{copy.loading}</p>}
+          {dishesQuery.isError && (
+            <div className="status-banner status-error">{copy.cookbookLoadFailed}</div>
+          )}
+          <ul className="selected-dish-list">
+            {dishesQuery.data?.map((dish, index) => (
+              <li key={dish.dishId} className="selected-dish">
+                <span className="selected-dish__number">{String(index + 1).padStart(2, "0")}</span>
+                <span>
+                  <strong>{dish.displayName}</strong>
+                  <small>{dish.categoryLabel}</small>
+                </span>
+                <span aria-hidden="true">✓</span>
+              </li>
+            ))}
+          </ul>
+          <Link className="btn btn-ghost" to="/cookbook">← 返回收集品，重新选择</Link>
+        </section>
 
-      <section className="card">
+      <section className="paper-panel pack-form-panel">
+        <div className="panel-section-heading">
+          <div>
+            <p className="eyebrow">PACKAGE IDENTITY</p>
+            <h2>菜单包信息</h2>
+          </div>
+          <span className="export-stamp">LOCAL EXPORT</span>
+        </div>
         <div className="field">
           <label htmlFor="packDisplayName">{copy.packDisplayNameLabel}</label>
           <input
@@ -177,14 +207,16 @@ export function PackMenuPage() {
 
         {formError && <div className="status-banner status-error">{formError}</div>}
 
-        <button
-          className="btn"
-          type="button"
-          onClick={onValidate}
-          disabled={validating || dishesQuery.isLoading}
-        >
-          {validating ? copy.validating : copy.validateButton}
-        </button>
+        <div className="action-row pack-actions">
+          <button
+            className="btn"
+            type="button"
+            onClick={onValidate}
+            disabled={validating || dishesQuery.isLoading}
+          >
+            {validating ? copy.validating : copy.validateButton}
+          </button>
+        </div>
 
         {report && (
           <>
@@ -213,15 +245,19 @@ export function PackMenuPage() {
           </>
         )}
 
-        <button
-          className="btn btn-primary"
-          type="button"
-          onClick={onPack}
-          disabled={!canPack}
-        >
-          {packing ? copy.packing : copy.packButton}
-        </button>
+        <div className="action-row pack-actions">
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={onPack}
+            disabled={!canPack}
+            aria-label={packing ? copy.packing : copy.packButton}
+          >
+            {packing ? copy.packing : copy.packButton} →
+          </button>
+        </div>
       </section>
+      </div>
     </main>
   );
 }

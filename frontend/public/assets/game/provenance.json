@@ -1,0 +1,66 @@
+{
+  "policy": "Task21 user-provided Stardew Valley 1.6.15 official asset staging",
+  "sourceRoot": "resources/official-assets/stardew-1.6.15",
+  "assets": [
+    {
+      "file": "springobjects.png",
+      "source": "resources/official-assets/stardew-1.6.15/Maps/springobjects.png",
+      "sha256": "2CC844A42B69E7AA245FDCDC840E5414D88958025CE82B49F45AD0E78251DC73",
+      "use": "Vanilla 16x16 food and ingredient object icons",
+      "attribution": "User-provided Stardew Valley 1.6.15 unpacked asset"
+    },
+    {
+      "file": "Cursors.zh-CN.png",
+      "source": "resources/official-assets/stardew-1.6.15/LooseSprites/Cursors.zh-CN.png",
+      "sha256": "92D62665388B457A51E79B1CEFA9D5B96D7B41AE5744BBD6FD0F18CDC64DA871",
+      "use": "Vanilla dish, collection, gift, recovery, health, energy and gold UI icons",
+      "attribution": "User-provided Stardew Valley 1.6.15 unpacked asset"
+    },
+    {
+      "file": "specific-icons/饱腹度.png",
+      "source": "resources/official-assets/stardew-1.6.15/Specific Icons/饱腹度.png",
+      "sha256": "92A6AD5CE357D0DEC019566B01BFAFF98FBAF5B446DDDA5915D37E5D7D332966",
+      "use": "User-supplied extracted semantic icon for dish edibility",
+      "attribution": "User-provided extracted Stardew Valley 1.6.15 asset"
+    },
+    {
+      "file": "specific-icons/创建第一道菜.png",
+      "source": "resources/official-assets/stardew-1.6.15/Specific Icons/创建第一道菜.png",
+      "sha256": "4191AF17FA7ABAD5A161C9E889D2E8056F403D2B136943C71C21124E166CBE18",
+      "use": "User-supplied extracted icon for the create-first-dish CTA",
+      "attribution": "User-provided extracted Stardew Valley 1.6.15 asset"
+    },
+    {
+      "file": "specific-icons/料理蓝图.png",
+      "source": "resources/official-assets/stardew-1.6.15/Specific Icons/料理蓝图.png",
+      "sha256": "34ED7FA1336B39B4E69FA1B8862AAB4E367F4563F73106EED54B022535F8070B",
+      "use": "User-supplied extracted icon for Blueprint Mode",
+      "attribution": "User-provided extracted Stardew Valley 1.6.15 asset"
+    },
+    {
+      "file": "specific-icons/生命恢复.png",
+      "source": "resources/official-assets/stardew-1.6.15/Specific Icons/生命恢复.png",
+      "sha256": "86EB49B9D65555D2910063311851D052D4672F35B33146B29A21AE6FC59F167E",
+      "use": "User-supplied extracted semantic icon for health recovery",
+      "attribution": "User-provided extracted Stardew Valley 1.6.15 asset"
+    },
+    {
+      "file": "specific-icons/售价.png",
+      "source": "resources/official-assets/stardew-1.6.15/Specific Icons/售价.png",
+      "sha256": "722D3D45096B3548575906DCEEFDDD9EA797FBBF4320650CC83049631DFEF4E4",
+      "use": "User-supplied extracted semantic icon for dish sell price",
+      "attribution": "User-provided extracted Stardew Valley 1.6.15 asset"
+    }
+  ],
+  "derivedFixtures": {
+    "source": "springobjects.png",
+    "use": "Deterministic Playwright cookbook screenshots only",
+    "tiles": {
+      "dish-1.png": "itemId 139 (Salmon)",
+      "dish-2.png": "itemId 256 (Tomato)",
+      "dish-3.png": "itemId 276 (Pumpkin)",
+      "dish-4.png": "itemId 834 (Mango)",
+      "dish-5.png": "itemId 24 (Parsnip)"
+    }
+  }
+}

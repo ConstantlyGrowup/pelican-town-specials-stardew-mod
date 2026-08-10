@@ -42,16 +42,16 @@ export function BringInGamePage() {
 
   if (query.isLoading) {
     return (
-      <main>
+      <main className="bring-page">
         <h1>{copy.bringInGameTitle}</h1>
-        <p>{copy.loading}</p>
+        <p className="status-banner status-info">{copy.loading}</p>
       </main>
     );
   }
 
   if (query.isError || !query.data) {
     return (
-      <main>
+      <main className="bring-page">
         <h1>{copy.bringInGameTitle}</h1>
         <div className="status-banner status-error">{copy.exportRecordNotFound}</div>
         <Link to="/cookbook" className="btn">
@@ -65,12 +65,23 @@ export function BringInGamePage() {
   const statusLabel = copy.exportStatusLabels[record.status] ?? record.status;
 
   return (
-    <main>
-      <h1>{copy.bringInGameTitle}</h1>
-      <p>{copy.bringInGameSubtitle}</p>
+    <main className="bring-page">
+      <div className="page-header">
+        <div>
+          <p className="eyebrow">INSTALL / LOCAL MOD PACKAGE</p>
+          <h1>{copy.bringInGameTitle}</h1>
+          <p className="page-subtitle">{copy.bringInGameSubtitle}</p>
+        </div>
+        <span className={`export-stamp ${record.status === "SUCCEEDED" ? "export-stamp-success" : ""}`}>
+          {statusLabel}
+        </span>
+      </div>
 
-      <section className="card">
-        <h2>{record.spec.packDisplayName}</h2>
+      <section className="paper-panel bring-summary">
+        <div>
+          <p className="eyebrow">PACKAGE READY</p>
+          <h2>{record.spec.packDisplayName}</h2>
+        </div>
         <p>
           {copy.versionLabel}: {record.spec.version} · {copy.packSlugLabel}:{" "}
           {record.spec.packSlug}
@@ -91,15 +102,20 @@ export function BringInGamePage() {
         {folderError && <div className="status-banner status-error">{folderError}</div>}
       </section>
 
-      <section className="card">
-        <h2>{copy.bringInGameStep1Title}</h2>
-        <p>{copy.bringInGameStep1Text}</p>
-        <h2>{copy.bringInGameStep2Title}</h2>
-        <p>{copy.bringInGameStep2Text}</p>
-        <h2>{copy.bringInGameStep3Title}</h2>
-        <p>{copy.bringInGameStep3Text}</p>
-        <h2>{copy.bringInGameStep4Title}</h2>
-        <p>{copy.bringInGameStep4Text}</p>
+      <section className="paper-panel steps-panel" aria-labelledby="bring-steps-title">
+        <div className="panel-section-heading">
+          <div>
+            <p className="eyebrow">INSTALLATION CHECKLIST</p>
+            <h2 id="bring-steps-title">安装清单</h2>
+          </div>
+          <span className="field-counter">4 STEPS</span>
+        </div>
+        <ol className="steps-list">
+          <li className="step-item"><span className="step-number">1</span><span><h3>{copy.bringInGameStep1Title}</h3><p>{copy.bringInGameStep1Text}</p></span></li>
+          <li className="step-item"><span className="step-number">2</span><span><h3>{copy.bringInGameStep2Title}</h3><p>{copy.bringInGameStep2Text}</p></span></li>
+          <li className="step-item"><span className="step-number">3</span><span><h3>{copy.bringInGameStep3Title}</h3><p>{copy.bringInGameStep3Text}</p></span></li>
+          <li className="step-item"><span className="step-number">4</span><span><h3>{copy.bringInGameStep4Title}</h3><p>{copy.bringInGameStep4Text}</p></span></li>
+        </ol>
       </section>
     </main>
   );

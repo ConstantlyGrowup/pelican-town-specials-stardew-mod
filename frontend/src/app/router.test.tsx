@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router-dom";
@@ -106,7 +106,7 @@ describe("router", () => {
       "href",
       "/",
     );
-    expect(screen.getByRole("heading", { name: copy.productName })).toBeVisible();
+    expect(screen.getByRole("heading", { name: copy.createFirstDraft })).toBeVisible();
     expect(screen.getByText(copy.tagline)).toBeVisible();
     expect(await screen.findByRole("heading", { name: "南瓜汤" })).toBeVisible();
     expect(screen.getByRole("link", { name: "南瓜汤" })).toHaveAttribute(
@@ -124,9 +124,11 @@ describe("router", () => {
       ),
     );
     renderAt("/");
-    expect(screen.getByRole("heading", { name: copy.productName })).toBeVisible();
+    expect(screen.getByRole("heading", { name: copy.createFirstDraft })).toBeVisible();
     expect(await screen.findByText(copy.draftsEmpty)).toBeVisible();
-    expect(screen.getByRole("link", { name: copy.createFirstDraft })).toHaveAttribute(
+    const emptyState = screen.getByText(copy.draftsEmpty).closest(".empty-state");
+    expect(emptyState).not.toBeNull();
+    expect(within(emptyState as HTMLElement).getByRole("link", { name: copy.createFirstDraft })).toHaveAttribute(
       "href",
       "/create",
     );

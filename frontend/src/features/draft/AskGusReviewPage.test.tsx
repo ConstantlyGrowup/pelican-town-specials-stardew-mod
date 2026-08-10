@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -224,7 +224,6 @@ describe("ask gus review", () => {
   });
 
   it("rejects the draft after confirmation and navigates home", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
     server.use(
       http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
@@ -234,13 +233,13 @@ describe("ask gus review", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: copy.rejectDraft }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(copy.discardDraftConfirm);
+    const dialog = screen.getByRole("dialog", { name: "拒绝这份草稿？" });
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.rejectDraft }));
     await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("home page")).toBeVisible();
   });
 
   it("does not reject when confirmation is cancelled", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
     server.use(
       http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
@@ -250,7 +249,8 @@ describe("ask gus review", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: copy.rejectDraft }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(copy.discardDraftConfirm);
+    const dialog = screen.getByRole("dialog", { name: "拒绝这份草稿？" });
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.cancelDelete }));
     expect(discardSpy).not.toHaveBeenCalled();
     expect(screen.queryByText("home page")).toBeNull();
   });
@@ -386,6 +386,8 @@ describe("ask gus review", () => {
     await screen.findByRole("button", { name: copy.startGeneration });
     // F19-4-001: the no-gameplay-yet hint was removed.
     expect(screen.queryByText("尚未填写玩法字段。")).toBeNull();
+    expect(screen.getByText(copy.gusWaitingTitle)).toBeVisible();
+    expect(screen.getByText(copy.gusWaitingMessage)).toBeVisible();
   });
 
   it("offers a cancel entry in the running banner for a GENERATING draft", async () => {
