@@ -4,7 +4,7 @@
 |---|---|
 | session_id | `2026-08-10-milestone-7-acceptance-and-release` |
 | session_type | `milestone-7-full-acceptance-and-release` |
-| status | `committed`（v1.1.0 已发布并核验；待用户发布版复验） |
+| status | `closed`（2026-08-11 用户确认 v1.1.0 fresh-install 复验通过，M7 正式关闭） |
 | owner | 包工（Claude Code 主会话） |
 | started_at | `2026-08-10` |
 | acceptance_contract_id | `mvp-m7-full-acceptance-v1` |
@@ -22,6 +22,11 @@
 本地构建产物：`dist\installer\PelicanTownSpecials-Setup-v1.0.0.exe`（SHA-256
 `372A94EE19B810B798F417CF0E8DA701A62BFF01B78483DD3E92ED00FF9725B5`，含 Gus icon 门禁、
 版本身份门禁、content gate；前端 bundle 确认含 `pts-locale` 语言切换）。
+
+## v1.1.0 fresh-install 复验（2026-08-11，用户确认通过）
+
+用户对 GitHub Release **v1.1.0** 发布版做 fresh-install 全新安装验收，结果通过（含双语功能），
+并宣布 Milestone 7 正式关闭。Task 22–26、M7 全量验证、v1.1.0 发布与 fresh-install 复验全部完成。
 
 ## Release 执行（用户已授权 push）
 
@@ -55,4 +60,4 @@
 - 旧 `v1.0.0` tag 留在远端但无 Release 产物；如用户需要可另行授权删除远端 tag。
 - Task 23 记录的双路径 workspace（`%LOCALAPPDATA%\PelicanTownSpecials\PelicanTownSpecials\workspace`）
   保留为候选后续项，不阻塞本次发布。
-- 等待用户对 GitHub Release v1.1.0 发布版 fresh-install 复验（含双语功能）。
+- 2026-08-11 用户 fresh-install 复验 v1.1.0 安装版通过（含双语功能），M7 正式关闭。

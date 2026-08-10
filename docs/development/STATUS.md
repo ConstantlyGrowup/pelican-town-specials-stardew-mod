@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_7_accepted_and_released |
-| project_phase | Milestone 7（Refine）完成并发布；Task 22–26 全部通过验收；v1.1.0（双语 UI + 双语生成前后端）已发布到 GitHub Release；Task 24 经真实发布流程验证 |
+| overall_state | milestone_7_closed |
+| project_phase | Milestone 7（Refine）正式关闭：Task 22–26 全部通过验收并发布；v1.1.0 已发布并经用户 fresh-install 复验通过（2026-08-11）；双语 UI + 双语生成前后端交付完成 |
 | product_implementation_started | true |
 | active_session_id | `2026-08-10-milestone-7-acceptance-and-release` |
-| active_session_state | accepted + released（M7 五 Task 用户验收通过；v1.1.0 已由 GitHub Actions release.yml 实际发布并核验产物） |
+| active_session_state | closed（M7 五 Task 用户验收通过；v1.1.0 已由 GitHub Actions 实际发布并核验产物；2026-08-11 用户确认 fresh-install 复验通过，M7 正式关闭） |
 | active_session_type | milestone-7-full-acceptance-and-release |
-| current_task | M7 验收与 v1.1.0 Release 收尾：状态记录同步；等待用户对 v1.1.0 发布版 fresh-install 复验 |
+| current_task | M7 关闭收尾：状态记录同步完成；无新工作 |
 | blocker | 无 |
-| next_action | 用户授权推送本地 `7c0afd3`（M7 收尾 docs commit，branch ahead 1）；用户复验 GitHub Release v1.1.0 安装版（含双语功能）；如需修正则按验收即发布流程重发；无新工作则 M7 关闭 |
+| next_action | M7 已正式关闭；等待用户开启下一里程碑或新需求；如需修正 v1.1.0 发布版则按验收即发布流程重发 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 本地 `7c0afd3 docs: record v1.1.0 GitHub Release outcome and close M7 release session`（branch 领先 origin 1 个提交，待推送授权）；origin 分支与 tag `v1.1.0` 位于 `b39b50d` |
-| 远端操作 | Milestone 7 已推送至 `b39b50d`（`feat/mvp-implementation`）；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）。本地 `7c0afd3`（M7 收尾 docs commit，仅 STATUS.md 与 acceptance-and-release Session 记录）尚未推送，待用户授权最终 push。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
+| 最新提交 | origin `feat/mvp-implementation` 位于 `4e9d739`（含 M7 收尾 docs commit `7c0afd3`）；tag `v1.1.0` 位于 `b39b50d`；M7 正式关闭记录 docs commit 已提交本地（待推送授权） |
+| 远端操作 | Milestone 7 已推送至 `4e9d739`（`feat/mvp-implementation`）；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。M7 正式关闭 docs commit 已提交本地（待推送授权）。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
 | 当前工作树范围 | M7 全部提交完成，tracked 工作树干净（仅保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件）。 |
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
