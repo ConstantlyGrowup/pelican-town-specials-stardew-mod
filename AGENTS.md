@@ -57,6 +57,8 @@
 
 里程碑粒度下（2026-08-04 起生效）：普通 Task 的 `PASS` 经包工复核后自动进入 `auto_accepted` 并创建本地 focused commit（不 push），不逐 Task 打断用户；Milestone 全量验证后进入 `awaiting_milestone_acceptance`，用户一次性验收并授权统一 push。用户明确验收仍是进入 `accepted` 的默认前提，仅此自动路径和下述自动审批例外除外。
 
+验收即发布（2026-08-10 起生效）：Milestone 全量验收通过后，或用户明确要求「把当前改动同步到发布版本/生产版本」（区别于本地修改预览）时，包工应把当前项目最新版本做成 installer 并发布进 GitHub Release（setup.exe + 便携 ZIP + SHA256SUMS + release notes），让用户通过 GitHub 简易安装版持续追踪新改动。步骤：修复阻塞 CI 的门禁 → 按 `packaging/pyinstaller/version_info.txt` 升版本并同步全链路（.iss / README.txt / build_installer.ps1 默认值 / app.py / diagnostics.py / build.yml / release.yml / 锁定测试）→ 重新生成 OpenAPI 契约 → 本地 `build_windows.ps1` + `build_installer.ps1` 全量验证 → 用户授权后 push 分支 → tag `vX.Y.Z` → push tag 触发 `release.yml` → 核验 GitHub Release 产物。tag 推送与 Release 发布均需用户单独授权。
+
 唯一的自动审批例外是：Task 仅包含纯后台代码，未改变用户可见或功能行为，且自动测试、静态检查和必要的代码级检查能够完全覆盖该 Task 的目标。如果覆盖范围或“无功能变化”存在疑问，必须升级为用户 Review，并说明原因，请用户决定下一步。
 
 ## Git 安全边界

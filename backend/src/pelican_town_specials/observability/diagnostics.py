@@ -22,7 +22,7 @@ from .logging import read_log_lines
 from .redaction import redact_json, redact_value
 
 APP_NAME = "PelicanTownSpecials"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 API_VERSION = "v1"
 
 

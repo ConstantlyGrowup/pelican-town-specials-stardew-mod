@@ -61,7 +61,7 @@ def test_build_pipeline_reused_and_gated() -> None:
 
 def test_version_consistency_driven_by_one_define() -> None:
     version = _frozen_version()
-    assert version == "1.0.0", "frozen metadata version is expected to be 1.0.0"
+    assert version == "1.1.0", "frozen metadata version is expected to be 1.1.0"
     # The pipeline default, the drift gate and the release input all center on
     # the same version, so the installer / ZIP / checksum / title can't disagree.
     build = _text(BUILD)
