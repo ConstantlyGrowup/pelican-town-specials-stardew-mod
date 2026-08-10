@@ -8,7 +8,7 @@
 | owner | Codex 主会话（Claude Code 主会话实施 + Codex 独立审阅） |
 | started_at | `2026-08-10` |
 | user_acceptance | `pending` |
-| base_commit | `ae5b320 feat: implement Task 21 visual refinement` |
+| base_commit | `b5bd03d docs: authorize Milestone 7 and open Task 22 app identity session` |
 
 ## 任务范围
 

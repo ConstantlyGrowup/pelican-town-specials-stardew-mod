@@ -1,0 +1,15 @@
+{
+  "source": "frontend/public/assets/ui/gus-portrait-1.png",
+  "source_sha256": "895A07BE8113310158449AA88B2F2D7F0DC94E3DF571165BF9E95C95966265C2",
+  "sizes": [
+    16,
+    24,
+    32,
+    48,
+    64,
+    128,
+    256
+  ],
+  "sha256": "5C6F4A96F717022F87B50E5A18FFE1F05A611AA8CBC6FF46EE2A9887D97B61C1",
+  "generator": "scripts/generate_app_icon.py"
+}

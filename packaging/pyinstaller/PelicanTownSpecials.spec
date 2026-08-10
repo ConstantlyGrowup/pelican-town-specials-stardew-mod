@@ -74,6 +74,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     contents_directory=".",
+    icon=os.path.join(repo_root, "packaging", "assets", "pelican-town-specials.ico"),
     version=os.path.join(SPECPATH, "version_info.txt"),
 )
 

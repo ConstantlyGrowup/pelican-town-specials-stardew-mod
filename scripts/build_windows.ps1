@@ -58,6 +58,12 @@ Write-Host "==> PyInstaller build"
 python -m PyInstaller --clean --noconfirm packaging/pyinstaller/PelicanTownSpecials.spec
 Assert-Zero "PyInstaller build"
 
+Write-Host "==> EXE icon gate (Task 22)"
+pwsh -NoProfile -File scripts/check_exe_icon.ps1 -BundleDir $BundleDir
+if ($LASTEXITCODE -ne 0) {
+    throw "FAILED: EXE icon gate"
+}
+
 Write-Host "==> copy release docs into bundle root"
 $readmeSrc = Join-Path $repoRoot 'packaging\release\README.txt'
 $noticesSrc = Join-Path $repoRoot 'packaging\release\THIRD_PARTY_NOTICES.txt'
