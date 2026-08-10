@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_7_in_progress |
-| project_phase | Milestone 7（Refine）进行中；Task 22–26 已全部 auto_accepted；进入 M7 全量验证与用户验收 |
+| overall_state | milestone_7_accepted |
+| project_phase | Milestone 7（Refine）完成；Task 22/23/25/26 用户 fresh-install 验收通过；Task 24 经 GitHub Release 实际发布验证；已授权统一 push 与 v1.0.0 Release |
 | product_implementation_started | true |
 | active_session_id | `2026-08-10-milestone-7-task-26-bilingual-generation` |
-| active_session_state | auto_accepted（Task 26 实现 + round-0 REVISE 4 项 MUST_FIX 修复 + round-1 PASS，本地 focused commit `318e3cf` 已创建，未 push） |
-| active_session_type | milestone-7-task-26-implementation |
-| current_task | Task 26：双语生成与图像 prompt（en-US 新稿分析/Ask Gus 展示/原料映射/视觉与图标 prompt 全英文；zh-CN 回归不变；provenance 记录语言与 prompt version） |
+| active_session_state | accepted（M7 五 Task 全部通过用户验收：22/23/25/26 用户确认，24 经 Release 发布验证；已授权统一 push 与发布） |
+| active_session_type | milestone-7-full-acceptance |
+| current_task | M7 全量验收收尾：push origin/feat/mvp-implementation → tag v1.0.0 → push 触发 GitHub Actions Release 发布 |
 | blocker | 无 |
-| next_action | M7 全量验证与用户验收（Task 74）：五 Task（22–26）已全部 auto_accepted，复跑完整验证与用户交互验收；验收通过后授权统一 push 至 origin/feat/mvp-implementation |
+| next_action | 执行 release：push 分支 + push v1.0.0 标签；等待 Actions build.yml/release.yml 全绿；核验 GitHub Release v1.0.0 产物（setup.exe + ZIP + SHA256SUMS + notes）；记录 Task 24 验收 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -22,12 +22,12 @@
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Milestone 6 Task 20/21 与控制面记录已统一推送至 `ae5b320`） |
+| 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `318e3cf feat: implement bilingual generation and image prompt (Task 26)` |
-| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；`origin/feat/mvp-implementation` 为 `ae5b320`。Milestone 7 规划控制面与 Task 22/23/24/25/26 均仅本地提交，尚未推送（待 M7 全量验收后统一 push）。 |
-| 当前工作树范围 | Milestone 7 Task 26 已 auto_accepted（feat `318e3cf` + docs 待本记录提交）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
+| 最新提交 | `c4c474e docs: record Task 26 acceptance and open M7 full validation`（+ 本条 M7 验收记录） |
+| 远端操作 | Milestone 6 已推送至 `ae5b320`。Milestone 7 Task 22–26 全部本地 focused commit（`7286c74`/`5f54516`/`529981a`/`a435bc5`/`318e3cf` + 控制面记录）已获用户授权统一 push；随后打 `v1.0.0` 标签推送触发 GitHub Actions Release（Task 24 验收）。 |
+| 当前工作树范围 | M7 全部提交完成，工作树干净（仅保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件）。 |
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
