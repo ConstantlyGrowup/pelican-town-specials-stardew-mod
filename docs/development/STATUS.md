@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_7_accepted |
-| project_phase | Milestone 7（Refine）完成；Task 22/23/25/26 用户 fresh-install 验收通过；Task 24 经 GitHub Release 实际发布验证；已授权统一 push 与 v1.0.0 Release |
+| overall_state | milestone_7_accepted_and_released |
+| project_phase | Milestone 7（Refine）完成并发布；Task 22–26 全部通过验收；v1.1.0（双语 UI + 双语生成前后端）已发布到 GitHub Release；Task 24 经真实发布流程验证 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-10-milestone-7-task-26-bilingual-generation` |
-| active_session_state | accepted（M7 五 Task 全部通过用户验收：22/23/25/26 用户确认，24 经 Release 发布验证；已授权统一 push 与发布） |
-| active_session_type | milestone-7-full-acceptance |
-| current_task | M7 全量验收收尾：push origin/feat/mvp-implementation → tag v1.0.0 → push 触发 GitHub Actions Release 发布 |
+| active_session_id | `2026-08-10-milestone-7-acceptance-and-release` |
+| active_session_state | accepted + released（M7 五 Task 用户验收通过；v1.1.0 已由 GitHub Actions release.yml 实际发布并核验产物） |
+| active_session_type | milestone-7-full-acceptance-and-release |
+| current_task | M7 验收与 v1.1.0 Release 收尾：状态记录同步；等待用户对 v1.1.0 发布版 fresh-install 复验 |
 | blocker | 无 |
-| next_action | 执行 release：push 分支 + push v1.0.0 标签；等待 Actions build.yml/release.yml 全绿；核验 GitHub Release v1.0.0 产物（setup.exe + ZIP + SHA256SUMS + notes）；记录 Task 24 验收 |
+| next_action | 用户复验 GitHub Release v1.1.0 安装版（含双语功能）；如需修正则按验收即发布流程重发；无新工作则 M7 关闭 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `c4c474e docs: record Task 26 acceptance and open M7 full validation`（+ 本条 M7 验收记录） |
-| 远端操作 | Milestone 6 已推送至 `ae5b320`。Milestone 7 Task 22–26 全部本地 focused commit（`7286c74`/`5f54516`/`529981a`/`a435bc5`/`318e3cf` + 控制面记录）已获用户授权统一 push；随后打 `v1.0.0` 标签推送触发 GitHub Actions Release（Task 24 验收）。 |
-| 当前工作树范围 | M7 全部提交完成，工作树干净（仅保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件）。 |
+| 最新提交 | `b39b50d fix: CI ignore gate on fresh checkout and bump release version to 1.1.0` |
+| 远端操作 | Milestone 7 已推送至 `b39b50d`（`feat/mvp-implementation`）；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
+| 当前工作树范围 | M7 全部提交完成，tracked 工作树干净（仅保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件）。 |
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
