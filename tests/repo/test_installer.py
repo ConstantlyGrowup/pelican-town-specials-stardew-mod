@@ -25,6 +25,7 @@ FIND_ISCC = REPO_ROOT / "scripts" / "find_iscc.ps1"
 SMOKE = REPO_ROOT / "scripts" / "smoke_installer.ps1"
 VERSION_INFO = REPO_ROOT / "packaging" / "pyinstaller" / "version_info.txt"
 CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+BUILD = REPO_ROOT / ".github" / "workflows" / "build.yml"
 
 WORKSPACE_DIR = "{localappdata}\\PelicanTownSpecials\\workspace"
 
@@ -128,8 +129,14 @@ def test_smoke_covers_uninstall_and_workspace() -> None:
 
 
 def test_ci_builds_and_smokes_installer() -> None:
+    # The verified pipeline now lives in the reusable build.yml; ci.yml calls it
+    # and never publishes (Milestone 7 Task 24).
+    build = _text(BUILD)
+    assert "install_innosetup.ps1" in build, "pipeline must pin/install Inno Setup"
+    assert "build_installer.ps1" in build, "pipeline must build the installer"
+    assert "smoke_installer.ps1" in build, "pipeline must smoke-test the installer"
+    assert "PelicanTownSpecials-Setup-v${{ inputs.version }}.exe" in build, (
+        "pipeline must upload the versioned setup exe"
+    )
     ci = _text(CI)
-    assert "install_innosetup.ps1" in ci, "CI must pin/install Inno Setup"
-    assert "build_installer.ps1" in ci, "CI must build the installer"
-    assert "smoke_installer.ps1" in ci, "CI must smoke-test the installer"
-    assert "PelicanTownSpecials-Setup-v1.0.0.exe" in ci, "CI must upload the setup exe"
+    assert "uses: ./.github/workflows/build.yml" in ci, "ci.yml must call the shared pipeline"

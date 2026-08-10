@@ -1,0 +1,102 @@
+# Release: publish a GitHub Release from a v* tag or an explicit manual run.
+#
+# The verify-and-build job reuses the shared pipeline (build.yml), so a Release
+# is only ever assembled from a fully verified build on a clean Windows runner.
+# Only the create-release job holds contents: write (the minimum needed to
+# publish); CI itself stays read-only and no workflow references any secret or
+# API key. The version is resolved from the tag (v1.0.0) or the manual input,
+# must match packaging/pyinstaller/version_info.txt (drift gate in build.yml),
+# and drives the installer / portable ZIP / checksum / release title so they
+# can never disagree. The release job knows its repository via GH_REPO and
+# creates the Release if absent, or edits and re-uploads (--clobber) if the tag
+# already has one, so re-running a tag flow is repeatable instead of failing.
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (with or without a leading v), e.g. v1.0.0
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Resolve version from tag or manual input
+        id: resolve
+        run: |
+          raw="${{ github.event_name == 'push' && github.ref_name || inputs.version }}"
+          version="${raw#v}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+
+  verify-and-build:
+    needs: [resolve-version]
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.resolve-version.outputs.version }}
+
+  create-release:
+    needs: [resolve-version, verify-and-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: pelican-town-specials-setup-${{ needs.resolve-version.outputs.version }}
+          path: release-assets
+
+      - name: Download portable ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: pelican-town-specials-windows-x64-${{ needs.resolve-version.outputs.version }}-zip
+          path: release-assets
+
+      - name: Download release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes
+
+      - name: Generate SHA-256 checksums
+        run: |
+          cd release-assets
+          sha256sum PelicanTownSpecials-Setup-v${{ needs.resolve-version.outputs.version }}.exe PelicanTownSpecials-windows-x64-v${{ needs.resolve-version.outputs.version }}.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="${{ needs.resolve-version.outputs.tag }}"
+          cd release-assets
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; updating assets and notes."
+            gh release edit "$tag" --title "Pelican Town Specials v${{ needs.resolve-version.outputs.version }}" --notes-file ../release-notes/RELEASE_NOTES.md
+            gh release upload "$tag" \
+              PelicanTownSpecials-Setup-v${{ needs.resolve-version.outputs.version }}.exe \
+              PelicanTownSpecials-windows-x64-v${{ needs.resolve-version.outputs.version }}.zip \
+              SHA256SUMS.txt --clobber
+          else
+            echo "Creating release $tag."
+            gh release create "$tag" \
+              PelicanTownSpecials-Setup-v${{ needs.resolve-version.outputs.version }}.exe \
+              PelicanTownSpecials-windows-x64-v${{ needs.resolve-version.outputs.version }}.zip \
+              SHA256SUMS.txt \
+              --title "Pelican Town Specials v${{ needs.resolve-version.outputs.version }}" \
+              --notes-file ../release-notes/RELEASE_NOTES.md
+          fi
