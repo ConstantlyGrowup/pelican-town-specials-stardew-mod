@@ -6,30 +6,45 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_6_task_21_accepted |
-| project_phase | Milestone 6：Task 20 与 Task 21 已实施；Task 21 视觉精修及 2026-08-10 四轮用户反馈修订已通过用户人工验收，授权提交与推送 |
+| overall_state | milestone_7_in_progress |
+| project_phase | Milestone 7（Refine）已授权开始；Task 22（Windows 应用身份与 Gus icon）实施中 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-09-task-21-visual-refinement` |
-| active_session_state | accepted（用户本人已验收；不派发 Codex 独立审阅） |
-| active_session_type | milestone-6-task-21-implementation |
-| current_task | Task 21：视觉精修、无障碍与四轮用户反馈修订；已通过人工验收，提交与推送已获授权 |
+| active_session_id | `2026-08-10-milestone-7-task-22-app-identity` |
+| active_session_state | in_progress（Task 22 实施中） |
+| active_session_type | milestone-7-task-22-implementation |
+| current_task | Task 22：Windows 应用身份与 Gus icon（确定性 .ico、PyInstaller EXE icon、身份/版本校验） |
 | blocker | 无 |
-| next_action | 完成 Task 21 focused commit 并推送当前分支；本次操作已获用户明确授权 |
-| collaboration_model | 直接实施：Codex 主会话实施与自动验证；用户本人视觉验收；跳过独立 Codex Review（用户明确授权） |
+| next_action | Task 22 实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）→ auto_accepted → 本地 focused commit → Task 23 |
+| collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；完成后拉起 Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
 
 | 项目 | 当前值 |
 |---|---|
 | 仓库 | 已在当前目录初始化 |
-| 当前分支 | feat/mvp-implementation（Milestone 4+5+5.1 全量已统一 push 至 `0ffad8b`；导航栏首页入口 `26c3044` 与 docs 记录已推送；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按授权推送；Milestone 6 Task 20 本地 focused commit `33ab7f1` 已创建，未 push） |
+| 当前分支 | feat/mvp-implementation（Milestone 6 Task 20/21 与控制面记录已统一推送至 `ae5b320`） |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `838012c`（Task 20 Session 记录）；Task 20 产品 focused commit 为 `33ab7f1`；两者均未 push |
-| 远端操作 | 已推送：Task5–Task10、自治规则控制面与 Milestone 2 全部修复（2301daa..4b58be0）；Milestone 3 全量（Task 11–15 + R1–R11）已按用户授权统一 push（4b58be0..916e3da → origin/feat/mvp-implementation）；**Milestone 4+5+5.1 全量已按用户授权统一 push**（916e3da..0ffad8b，35 commits：Task 16–18 + R12–R15、Task 19 `3492650`、Task 19* `ecfcf85`/`5116fc8`、OpenAPI 再生成 `4b58f0f`、槽泄漏修复 `af08da4`、M5.1 六个 Task `8bf2d8f`–`57b155f`、阶段总数修复 `d6aa3b4`、验收记录 `0ffad8b`）；导航栏首页入口 `26c3044` 与 docs 记录 `8343704` 已按用户授权推送；**本 Session 文档冲突同步控制面已按用户授权 commit + push**；预览图下载入口 `4fe7eca` 与 docs 记录 `3fb9d03` 已按用户授权 push（`f38f810..3fb9d03`）；**Milestone 6 Task 20 本地 focused commit `33ab7f1` 已创建，未 push（待 Milestone 6 全量验收后统一 push）** |
-| 当前工作树范围 | Task 21 视觉精修与验证修改：`AGENTS.md`、本 `STATUS.md`、Task21 Session、前端 tokens/布局/页面/共享组件/资产/E2E 验收脚本；另保留用户已有的 `prototype pages design/`、`resources/official-assets/`、`samples/image-edit/`、`samples/牛肉0.jpg`、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` |
+| 最新提交 | `ae5b320 feat: implement Task 21 visual refinement` |
+| 远端操作 | 已推送：Task 5–Task 10、Milestone 2–5.1、Milestone 6 Task 20/21 及相关控制面记录；当前 `HEAD` 与 `origin/feat/mvp-implementation` 均为 `ae5b320`。Milestone 7 规划控制面已提交，尚未推送（待 M7 全量验收后统一 push）。 |
+| 当前工作树范围 | Milestone 7 Task 22 实施中（控制面 + 产品代码修改未提交）；另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/` 与 `.review_tmp_task20_workspace/` 未跟踪文件。 |
 
-## 当前 Milestone 6 Task 21 实施 Session（awaiting_user_acceptance）
+## 当前 Milestone 7 Task 22 实施 Session（in_progress）
+
+- `2026-08-10-milestone-7-task-22-app-identity`：用户 2026-08-10 确认开始 Milestone 7，协作模式切回「主会话实施 → Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）」，里程碑粒度不打断。本 Session 只处理 Task 22（Windows 应用身份与 Gus icon）。
+- 规划文档：`docs/plans/2026-08-10-milestone-7-refine.md`（gitignored）；Task 22 验收 M7-T22-ICON-001..004。
+- 规划裁决 M7-D05：EXE icon canonical source 默认 `gus-portrait-1.png`（1254×1254 RGB 带边框，方形），确定性生成多尺寸 `.ico`，不在运行时裁剪 portrait。
+- 本 Session 不创建 installer、不改 GitHub workflow、不新增语言功能；完成后待 Codex 审阅。
+
+## 已关闭 Milestone 7 Refine 规划 Session（planned → 已授权）
+
+- `2026-08-10-milestone-7-refine-planning`：用户 2026-08-10 确认规划并授权开始 Task 22；规划阶段不创建实施 Packet、不修改产品代码，已完成使命。
+- 规划文档：`docs/plans/2026-08-10-milestone-7-refine.md`；主计划已追加 Milestone 7 章节，版本更新为 v0.8。
+- Task 拆分：**Task 22** Windows 应用身份与 Gus icon；**Task 23** per-user installer；**Task 24** GitHub Release 自动发布；**Task 25** 双语 UI 与 Settings locale；**Task 26** 双语生成与图像 prompt。
+- 依赖：`22 → 23 → 24`，`25 → 26`；推荐串行执行 `22 → 23 → 24 → 25 → 26`。
+- 规划裁决：保留 PyInstaller onedir；installer 默认 per-user 且不需管理员权限；卸载保留 workspace；Release 仅 tag/manual；默认 icon 使用 `gus-portrait-1.png`；locale 默认 `zh-CN` 并存于 localStorage；新稿使用当前语言、旧记录语言保持权威；M7 不默默加入第二次翻译模型调用。
+
+## Milestone 6 Task 21 实施 Session（accepted，已推送）
 
 - `2026-08-09-task-21-visual-refinement`：用户已解除 hold并授权直接实施 Task 21；2026-08-10 已按四轮反馈完成修订并通过用户本人验收，已授权提交与推送，不派发独立 Codex Review。
 - Design System：`prototype pages design/design system.md`（201 行）；正式视觉源为 Warm Pelican 母主题 + Joja Blueprint 受控子主题 + Cookbook 最高原作浓度，派生页只继承系统。
@@ -55,8 +70,8 @@
 - 实施（commit `33ab7f1`，8 文件 +435/-3）：`README.md` 重写为用户指南；`.env.example`（空值+说明，无 token）；`.github/workflows/ci.yml`（19 步 Windows CI）；`scripts/check_openapi_drift.ps1`；`scripts/check_product_copy.py`（命名门禁唯一实现源）；`tests/repo/test_product_copy.py` + `test_release_contents.py` + `__init__.py`。
 - 审阅：round 0 REVISE（2 项 MUST_FIX：T20-CI-001 pip `--group dev -e ./backend` 根目录解析失败 → 改 `working-directory: backend` + `-e .`；T20-NAME-002 README 隐私矛盾 → 明确仅在主动生成请求时向配置的 Provider 发送照片与上下文，Key 只用于请求鉴权）→ 修复 → round 1 **PASS**（无 MUST_FIX，无回归）。
 - 验证：`tests/repo` 8 passed（红→绿）；全量 backend+repo+integration **666 passed/2 skipped**；ruff/mypy clean（87 source files）；前端 **94 passed**/lint/build clean；E2E **10 passed**；OpenAPI drift OK；copy gate OK；`build_windows.ps1` exit 0；`smoke_windows_bundle.ps1` exit 0；ci.yml YAML 有效（19 步）。
-- 范围：Task 21（视觉精修、无障碍、最终验收）未实施，待用户授权。未改领域/API/Mod 协议。
-- auto_accepted，本地 focused commit（未 push）；推送待 Milestone 6 全量验收后统一授权。
+- 范围：Task 20（CI/README/发布检查）的历史实施记录；Task 21 随后已完成并通过用户验收，未改领域/API/Mod 协议。
+- Task 20 与 Task 21 已纳入 Milestone 6 的 `ae5b320` 提交并推送；本节保留当时的 Task 20 自动验收证据。
 
 ## 当前 Milestone 5.1 规划 Session（planned，等待开发授权）
 

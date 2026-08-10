@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-当前项目处于 Milestone 6；Task 20（Windows CI、用户 README、.env 参考与发布检查）已通过 Codex Review 并本地提交。Task 21 的 Design System、Context Packet、Acceptance Ledger 与视觉/无障碍基线矩阵已编制并完成实施；2026-08-10 已按用户反馈完成四轮视觉与交互修订，并通过用户人工验收，已授权提交与推送，不派发 Codex 独立审阅。
+当前项目已完成 Milestone 6；Task 20（Windows CI、用户 README、.env 参考与发布检查）和 Task 21（视觉精修、无障碍与用户反馈修订）均已通过验收，并在 `ae5b320` 提交、推送。当前处于 Milestone 7（Refine）实施：Task 22–26 已拆分并获用户授权（2026-08-10），按 `22 → 23 → 24 → 25 → 26` 串行推进；本阶段实现完成后拉取 Codex 审阅，本地 focused commit，不自动 push。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 
