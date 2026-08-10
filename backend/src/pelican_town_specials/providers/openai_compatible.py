@@ -18,6 +18,7 @@ from pelican_town_specials.application.settings import (
     ProviderSettings,
     SecretStore,
 )
+from pelican_town_specials.domain.common import Language
 from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.providers.contracts import (
@@ -29,12 +30,8 @@ from pelican_town_specials.providers.contracts import (
     ImageMediaType,
     ImageOperation,
 )
-from pelican_town_specials.providers.prompts.analysis_v1 import (
-    ANALYSIS_JSON_INSTRUCTION,
-    ANALYSIS_PROMPT_V1,
-)
-from pelican_town_specials.providers.prompts.ask_gus_v2 import ASK_GUS_JSON_INSTRUCTION
-from pelican_town_specials.providers.prompts.ask_gus_v3 import ASK_GUS_PROMPT_V3
+from pelican_town_specials.providers.prompts.analysis_v1 import analysis_prompt_for
+from pelican_town_specials.providers.prompts.ask_gus_v3 import ask_gus_prompt_for
 from pelican_town_specials.providers.retry import RetryPolicy
 from pelican_town_specials.providers.safe_download import (
     SafeImageDownloader,
@@ -92,15 +89,17 @@ class OpenAICompatibleGateway:
     ) -> DishAnalysis:
         self._require_model(self._settings.vision_model, "vision_model")
         image_data_url = self._data_url(request.image.data, request.image.media_type)
+        prompt, json_instruction = analysis_prompt_for(request.language)
         content = await self._chat_structured(
             model=self._settings.vision_model,
             request_id=request.request_id,
             timeout=self._settings.chat_timeout_seconds,
-            prompt=ANALYSIS_PROMPT_V1,
-            json_instruction=ANALYSIS_JSON_INSTRUCTION,
+            prompt=prompt,
+            json_instruction=json_instruction,
             target_type=DishAnalysis,
             image_data_url=image_data_url,
             json_only=json_only,
+            language=request.language,
         )
         return content
 
@@ -111,16 +110,24 @@ class OpenAICompatibleGateway:
         json_only: bool = False,
     ) -> GeneratedDishCore:
         self._require_model(self._settings.text_model, "text_model")
-        prompt = f"{ASK_GUS_PROMPT_V3}\n\n菜品分析：\n{request.analysis.model_dump_json(by_alias=True)}"
+        prompt, json_instruction = ask_gus_prompt_for(request.language)
+        analysis_prefix = (
+            "Dish analysis:" if request.language is Language.EN_US else "菜品分析："
+        )
+        prompt = (
+            f"{prompt}\n\n{analysis_prefix}\n"
+            f"{request.analysis.model_dump_json(by_alias=True)}"
+        )
         content = await self._chat_structured(
             model=self._settings.text_model,
             request_id=request.request_id,
             timeout=self._settings.chat_timeout_seconds,
             prompt=prompt,
-            json_instruction=ASK_GUS_JSON_INSTRUCTION,
+            json_instruction=json_instruction,
             target_type=GeneratedDishCore,
             image_data_url=None,
             json_only=json_only,
+            language=request.language,
         )
         return content
 
@@ -143,6 +150,7 @@ class OpenAICompatibleGateway:
         target_type: type[TModel],
         image_data_url: str | None,
         json_only: bool = False,
+        language: Language = Language.ZH_CN,
     ) -> TModel:
         use_json_schema = not json_only
         repairs = 0
@@ -179,13 +187,15 @@ class OpenAICompatibleGateway:
                     raise self._invalid_structured_output_error(exc.issues) from exc
                 repairs += 1
                 current_prompt = _repair_prompt(
-                    prompt, json_instruction, exc.issues
+                    prompt, json_instruction, exc.issues, language=language
                 )
             except StructuredOutputError as exc:
                 if repairs >= MAX_REPAIRS:
                     raise self._invalid_structured_output_error([]) from exc
                 repairs += 1
-                current_prompt = _repair_prompt_plain(prompt, json_instruction)
+                current_prompt = _repair_prompt_plain(
+                    prompt, json_instruction, language=language
+                )
 
     async def _generate_edit(
         self,
@@ -592,15 +602,33 @@ def _repair_prompt(
     prompt: str,
     json_instruction: str,
     issues: list[dict[str, object]],
+    *,
+    language: Language = Language.ZH_CN,
 ) -> str:
     summary = _summarize_issues(issues)
+    if language is Language.EN_US:
+        return (
+            f"{prompt}\n{json_instruction}\n\nThe previous output failed validation. "
+            f"Fix it and return only the corrected JSON object. "
+            f"Validation issues: {summary}"
+        )
     return (
         f"{prompt}\n{json_instruction}\n\n上次输出未通过校验，请修复。"
         f"只返回修正后的 JSON 对象。校验问题：{summary}"
     )
 
 
-def _repair_prompt_plain(prompt: str, json_instruction: str) -> str:
+def _repair_prompt_plain(
+    prompt: str,
+    json_instruction: str,
+    *,
+    language: Language = Language.ZH_CN,
+) -> str:
+    if language is Language.EN_US:
+        return (
+            f"{prompt}\n{json_instruction}\n\nThe previous output was not a valid pure "
+            "JSON object. Return only a JSON object."
+        )
     return (
         f"{prompt}\n{json_instruction}\n\n上次输出不是合法的纯 JSON 对象，"
         "请只返回一个 JSON 对象。"

@@ -18,6 +18,7 @@ from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
 from pelican_town_specials.domain.common import (
     DraftMode,
     GenerationStage,
+    Language,
     StrictModel,
     utc_now,
 )
@@ -92,8 +93,13 @@ from .events import (
 STAGE_ORDER = tuple(GenerationStage)
 
 _ASK_GUS_PROMPT_VERSION = "ask-gus-v3"
+_ANALYSIS_PROMPT_VERSION = "analysis-v1"
 _VISUAL_PROMPT_VERSION = "visual-v3-multi-image-edit"
 _ICON_SIZE = "1024x1024"
+
+
+def _language_suffix(language: Language) -> str:
+    return "en" if language is Language.EN_US else "zh"
 
 
 class _RunState:
@@ -165,6 +171,8 @@ class _RunState:
 def _map_gameplay(
     core: GeneratedDishCore,
     catalog: VanillaCatalog,
+    *,
+    language: Language,
 ) -> GameplaySpec:
     ingredients: list[GameIngredient] = []
     used_item_ids: set[str] = set()
@@ -175,10 +183,13 @@ def _map_gameplay(
             candidates,
             catalog,
             used_item_ids=frozenset(used_item_ids),
+            language=language,
         )
         used_item_ids.add(mapped.item_id)
         ingredients.append(mapped)
-    ingredients = ensure_main_protein(_dish_text(core), ingredients, catalog)
+    ingredients = ensure_main_protein(
+        _dish_text(core), ingredients, catalog, language=language
+    )
     return GameplaySpec(
         ingredients=ingredients,
         recovery=core.recovery,
@@ -269,7 +280,17 @@ def _preview_size(data: bytes) -> str:
     return f"{width}x{height}"
 
 
-def _icon_prompt(core: GeneratedDishCore) -> str:
+def _icon_prompt(
+    core: GeneratedDishCore,
+    *,
+    language: Language = Language.ZH_CN,
+) -> str:
+    if language is Language.EN_US:
+        return (
+            f"Stardew Valley-style 16×16 game icon: {core.presentation.display_name}"
+            ". Single item centered, solid magenta background (#FF00FF), no shadows, "
+            "no reflections, no text, no borders"
+        )
     return (
         f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
         "。单个物品居中，纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
@@ -279,10 +300,12 @@ def _icon_prompt(core: GeneratedDishCore) -> str:
 def _preview_prompt(
     presentation: PresentationSpec,
     gameplay: GameplaySpec,
+    *,
+    language: Language = Language.ZH_CN,
 ) -> str:
     """Build the shared hard-anchor full tooltip edit prompt from validated
     fields (Ask Gus consumes the same prompt language as Blueprint)."""
-    return build_full_tooltip_prompt(presentation, gameplay)
+    return build_full_tooltip_prompt(presentation, gameplay, language=language)
 
 
 def _to_summary(error: AppError) -> ErrorSummary:
@@ -313,13 +336,15 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
         "gameplay.buff": FieldAuthority.AGENT_ASSIGNED,
         "gameplay.recipe_unlock": FieldAuthority.AGENT_ASSIGNED,
     }
+    suffix = _language_suffix(draft.source.language)
     return base.model_copy(
         update={
             "authority_by_field": authority,
             "prompt_versions": {
                 **base.prompt_versions,
-                "ask-gus": _ASK_GUS_PROMPT_VERSION,
-                "visual": _VISUAL_PROMPT_VERSION,
+                "analysis": f"{_ANALYSIS_PROMPT_VERSION}-{suffix}",
+                "ask-gus": f"{_ASK_GUS_PROMPT_VERSION}-{suffix}",
+                "visual": f"{_VISUAL_PROMPT_VERSION}-{suffix}",
             },
         }
     )
@@ -820,14 +845,18 @@ class GenerationOrchestrator:
             self._update_candidate(state, presentation=state.presentation)
         elif stage is GenerationStage.INGREDIENT_MAPPING:
             assert state.core is not None
-            state.gameplay = _map_gameplay(state.core, self._catalog)
+            state.gameplay = _map_gameplay(
+                state.core, self._catalog, language=draft.source.language
+            )
             self._update_candidate(state, gameplay=state.gameplay)
         elif stage is GenerationStage.VISUAL_BRIEF:
             if draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
                 assert draft.gameplay is not None
                 state.visual_brief = build_blueprint_visual_brief(
-                    draft.presentation, draft.gameplay
+                    draft.presentation,
+                    draft.gameplay,
+                    language=draft.source.language,
                 )
             else:
                 assert state.core is not None
@@ -835,10 +864,14 @@ class GenerationOrchestrator:
         elif stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION:
             if draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
-                icon_prompt = blueprint_icon_prompt(draft.presentation)
+                icon_prompt = blueprint_icon_prompt(
+                    draft.presentation, language=draft.source.language
+                )
             else:
                 assert state.core is not None
-                icon_prompt = _icon_prompt(state.core)
+                icon_prompt = _icon_prompt(
+                    state.core, language=draft.source.language
+                )
             generated_icon = await gateway.generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.GENERATION,
@@ -890,6 +923,7 @@ class GenerationOrchestrator:
                 prompt = blueprint_preview_prompt(
                     snapshot_presentation,
                     snapshot_gameplay,
+                    language=draft.source.language,
                 )
             else:
                 assert state.core is not None
@@ -900,6 +934,7 @@ class GenerationOrchestrator:
                 prompt = _preview_prompt(
                     snapshot_presentation,
                     snapshot_gameplay,
+                    language=draft.source.language,
                 )
             # Shared final budget gate for both modes: business fields stay
             # verbatim; an over-limit prompt fails controlled, pre-provider.
@@ -1030,8 +1065,18 @@ class GenerationOrchestrator:
         target_status = transition(state.staged, action).status
         if state.draft.mode is DraftMode.BLUEPRINT:
             # Blueprint generation never rewrites user provenance to AGENT_ASSIGNED
-            # and never enables cache eligibility.
-            provenance = state.draft.provenance
+            # and never enables cache eligibility; it records which visual prompt
+            # template produced the preview so provenance stays traceable (R-03).
+            base = state.draft.provenance
+            suffix = _language_suffix(state.draft.source.language)
+            provenance = base.model_copy(
+                update={
+                    "prompt_versions": {
+                        **base.prompt_versions,
+                        "visual": f"{_VISUAL_PROMPT_VERSION}-{suffix}",
+                    },
+                }
+            )
         else:
             provenance = _generated_provenance(state.draft)
         return state.candidate.model_copy(
@@ -1212,5 +1257,7 @@ def _build_visual_spec(state: _RunState, source_revision: int) -> VisualSpec:
         iconSourceAssetId=state.icon_source_asset_id,
         icon16AssetId=state.icon_16.asset_id,
         sourceRevision=source_revision,
-        promptVersion=_VISUAL_PROMPT_VERSION,
+        promptVersion=(
+            f"{_VISUAL_PROMPT_VERSION}-{_language_suffix(state.draft.source.language)}"
+        ),
     )

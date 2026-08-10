@@ -322,6 +322,66 @@ def test_blueprint_preview_prompt_stays_within_provider_limit() -> None:
     assert len(prompt) <= 1500
 
 
+def test_blueprint_preview_prompt_en_stays_within_provider_limit() -> None:
+    """The English tooltip prompt must also fit the 1500-char provider contract
+    with maximum-length user fields and a maximum BuffSpec (M7-T26-GEN-002)."""
+    from pelican_town_specials.domain.common import Language
+    from pelican_town_specials.domain.dish import (
+        BuffAttributes,
+        BuffSpec,
+        GameIngredient,
+        GameplaySpec,
+        PresentationSpec,
+        RecoverySpec,
+    )
+    from pelican_town_specials.generation.blueprint import blueprint_preview_prompt
+
+    presentation = PresentationSpec(
+        displayName="N" * 60,
+        internalName="MaxName",
+        categoryLabel="C" * 40,
+        description="D" * 400,
+        tags=[],
+    )
+    gameplay = GameplaySpec(
+        ingredients=[
+            GameIngredient(
+                itemId=str(index),
+                displayName="I" * 80,
+                quantity=1,
+                mappingReason="catalog match",
+                catalogVersion="stardew-1.6.15-v1",
+            )
+            for index in range(8)
+        ],
+        recovery=RecoverySpec(edibility=500),
+        sellPrice=50000,
+        isDrink=False,
+        buff=BuffSpec(
+            id="B" * 80,
+            durationMinutes=1440,
+            attributes=BuffAttributes(
+                farmingLevel=99999,
+                fishingLevel=99999,
+                miningLevel=99999,
+                foragingLevel=99999,
+                combatLevel=99999,
+                luckLevel=99999,
+                attack=99999,
+                defense=99999,
+                immunity=99999,
+                magneticRadius=99999,
+                maxStamina=99999,
+                speed=99999,
+            ),
+        ),
+    )
+    prompt = blueprint_preview_prompt(
+        presentation, gameplay, language=Language.EN_US
+    )
+    assert len(prompt) <= 1500
+
+
 def test_blueprint_enforce_preview_prompt_budget_rejects_oversized_prompt() -> None:
     """The shared budget gate rejects an oversized Blueprint prompt with a
     controlled non-retryable error; the current builder stays within the
@@ -343,15 +403,213 @@ def test_blueprint_enforce_preview_prompt_budget_rejects_oversized_prompt() -> N
 async def test_blueprint_preserves_provenance_and_cache_eligibility(
     harness: GenerationHarness, blueprint_stale
 ) -> None:
-    before_provenance = blueprint_stale.provenance
     await _collect(
         harness.orchestrator.run(blueprint_preview_command(blueprint_stale))
     )
     restored = harness.orchestrator.drafts.get(blueprint_stale.draft_id)
-    # Provenance is preserved verbatim: no AGENT_ASSIGNED, no cache eligibility.
-    assert restored.provenance == before_provenance
+    # Provenance keeps user authority and cache ineligibility; the successful
+    # preview records which visual prompt template produced it (R-03).
     assert restored.provenance.cache_eligibility is False
     assert (
         FieldAuthority.AGENT_ASSIGNED
         not in restored.provenance.authority_by_field.values()
     )
+    assert restored.provenance.prompt_versions == {
+        "visual": "visual-v3-multi-image-edit-zh"
+    }
+
+
+# --- Task 26: en-US prompt branches -----------------------------------------
+
+
+def _en_presentation_and_gameplay() -> tuple:
+    from pelican_town_specials.domain.dish import (
+        GameIngredient,
+        GameplaySpec,
+        PresentationSpec,
+        RecoverySpec,
+    )
+
+    presentation = PresentationSpec(
+        displayName="Spring Noodle Bowl",
+        internalName="SpringNoodleBowl",
+        categoryLabel="Main Course",
+        description="A warm bowl of spring noodles.",
+        tags=["spring", "noodles"],
+    )
+    gameplay = GameplaySpec(
+        ingredients=[
+            GameIngredient(
+                itemId="24",
+                displayName="Parsnip",
+                quantity=1,
+                mappingReason="catalog match",
+                catalogVersion="stardew-1.6.15-v1",
+            )
+        ],
+        recovery=RecoverySpec(edibility=80),
+        sellPrice=220,
+        isDrink=False,
+    )
+    return presentation, gameplay
+
+
+def test_build_full_tooltip_prompt_en_uses_english_labels() -> None:
+    from pelican_town_specials.domain.common import Language
+    from pelican_town_specials.generation.blueprint import (
+        build_full_tooltip_prompt,
+    )
+
+    presentation, gameplay = _en_presentation_and_gameplay()
+    prompt = build_full_tooltip_prompt(
+        presentation, gameplay, language=Language.EN_US
+    )
+    assert prompt.endswith(f"Price:{gameplay.sell_price}g")
+    for required in (
+        "Title:",
+        "Category:",
+        "Description:",
+        "Energy:",
+        "Health:",
+        "Price:",
+        "item hover tooltip",
+        "not a poster",
+        "No Buff: do not generate a buff row or a duration row.",
+    ):
+        assert required in prompt
+    for forbidden in (
+        "标题：",
+        "类别：",
+        "描述：",
+        "能量：",
+        "生命：",
+        "售价：",
+        "无 Buff：",
+        "持续时间：",
+    ):
+        assert forbidden not in prompt
+    assert "Duration:" not in prompt
+
+
+def test_build_full_tooltip_prompt_en_buff_rows_use_english_labels() -> None:
+    from pelican_town_specials.domain.common import Language
+    from pelican_town_specials.domain.dish import BuffAttributes, BuffSpec
+    from pelican_town_specials.generation.blueprint import (
+        build_full_tooltip_prompt,
+    )
+
+    presentation, gameplay = _en_presentation_and_gameplay()
+    gameplay = gameplay.model_copy(
+        update={
+            "buff": BuffSpec(
+                id="buff-en",
+                durationMinutes=490,
+                attributes=BuffAttributes(
+                    farmingLevel=1,
+                    fishingLevel=-2,
+                    miningLevel=3,
+                    combatLevel=5,
+                    speed=1,
+                ),
+            )
+        }
+    )
+    prompt = build_full_tooltip_prompt(
+        presentation, gameplay, language=Language.EN_US
+    )
+    for row in (
+        "Farming +1",
+        "Fishing -2",
+        "Mining +3",
+        "Combat +5",
+        "Speed +1",
+        "Duration:8:10",
+    ):
+        assert row in prompt
+    for forbidden in ("耕种", "钓鱼", "采矿", "战斗", "速度", "持续时间："):
+        assert forbidden not in prompt
+    for guidance in (
+        "pixel icons left of the recovery",
+        "divider after buffs",
+        "clock icon left of the duration row",
+        "coin icon left of the price row",
+    ):
+        assert guidance in prompt
+
+
+def test_build_blueprint_visual_brief_en() -> None:
+    from pelican_town_specials.domain.common import Language
+    from pelican_town_specials.generation.blueprint import (
+        build_blueprint_visual_brief,
+    )
+
+    presentation, gameplay = _en_presentation_and_gameplay()
+    brief = build_blueprint_visual_brief(
+        presentation, gameplay, language=Language.EN_US
+    )
+    assert "Stardew Valley-style dish illustration:" in brief
+    assert "category Main Course" in brief
+    assert "Main ingredients: Parsnip" in brief
+    assert "pixel art style" in brief
+    assert "星露谷" not in brief
+
+
+def test_blueprint_icon_prompt_en() -> None:
+    from pelican_town_specials.domain.common import Language
+    from pelican_town_specials.generation.blueprint import blueprint_icon_prompt
+
+    presentation, _gameplay = _en_presentation_and_gameplay()
+    prompt = blueprint_icon_prompt(presentation, language=Language.EN_US)
+    assert prompt.startswith(
+        "Stardew Valley-style 16×16 game icon: Spring Noodle Bowl"
+    )
+    assert "magenta background" in prompt
+    assert "no shadows, no reflections, no text, no borders" in prompt
+    assert "星露谷" not in prompt
+
+
+async def test_blueprint_en_draft_uses_english_prompts(
+    harness: GenerationHarness, blueprint_stale_en
+) -> None:
+    events = await _collect(
+        harness.orchestrator.run(blueprint_preview_command(blueprint_stale_en))
+    )
+    assert events[-1].type == "attempt.succeeded"
+    icon_request, preview_request = harness.gateway.image_requests
+    assert "Stardew Valley-style 16×16 game icon" in icon_request.prompt
+    assert "星露谷风格的 16×16 游戏图标" not in icon_request.prompt
+    for required_text in (
+        "item hover tooltip",
+        "not a poster",
+        "Title:",
+        "Category:",
+        "Description:",
+        "Energy:",
+        "Health:",
+        "Price:",
+    ):
+        assert required_text in preview_request.prompt
+    for forbidden in (
+        "标题：",
+        "类别：",
+        "描述：",
+        "能量：",
+        "生命：",
+        "售价：",
+        "无 Buff：",
+        "持续时间：",
+    ):
+        assert forbidden not in preview_request.prompt
+    restored = harness.orchestrator.drafts.get(blueprint_stale_en.draft_id)
+    assert restored.visuals is not None
+    assert restored.visuals.prompt_version == "visual-v3-multi-image-edit-en"
+    # Provenance stays user-authored (no AGENT_ASSIGNED, no cache eligibility)
+    # but records which visual prompt template produced the preview (R-03).
+    assert (
+        restored.provenance.authority_by_field
+        == blueprint_stale_en.provenance.authority_by_field
+    )
+    assert restored.provenance.cache_eligibility is False
+    assert restored.provenance.prompt_versions == {
+        "visual": "visual-v3-multi-image-edit-en"
+    }

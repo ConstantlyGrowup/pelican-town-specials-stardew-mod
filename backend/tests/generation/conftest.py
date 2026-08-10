@@ -16,7 +16,7 @@ from PIL import Image
 
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
-from pelican_town_specials.domain.common import DraftMode, GenerationStage
+from pelican_town_specials.domain.common import DraftMode, GenerationStage, Language
 from pelican_town_specials.domain.dish import (
     DishAnalysis,
     FieldAuthority,
@@ -273,6 +273,11 @@ def _draft_with_source(
     return draft.model_copy(update={"source": source})
 
 
+def _draft_with_language(draft: DraftRecord, language: Language) -> DraftRecord:
+    source = draft.source.model_copy(update={"language": language})
+    return draft.model_copy(update={"source": source})
+
+
 @pytest.fixture
 def ready_draft(
     harness: GenerationHarness, orchestrator: GenerationOrchestrator
@@ -283,6 +288,23 @@ def ready_draft(
             mode=DraftMode.ASK_GUS, status=DraftStatus.READY, revision=1
         ),
         ref.asset_id,
+    )
+    return orchestrator.drafts.save(draft, expected_revision=None)
+
+
+@pytest.fixture
+def ready_draft_en(
+    harness: GenerationHarness, orchestrator: GenerationOrchestrator
+) -> DraftRecord:
+    ref = put_original_image(harness)
+    draft = _draft_with_language(
+        _draft_with_source(
+            make_domain_draft(
+                mode=DraftMode.ASK_GUS, status=DraftStatus.READY, revision=1
+            ),
+            ref.asset_id,
+        ),
+        Language.EN_US,
     )
     return orchestrator.drafts.save(draft, expected_revision=None)
 
@@ -363,6 +385,28 @@ def blueprint_stale(
             visual_source_revision=1,
         ),
         ref.asset_id,
+    )
+    draft = draft.model_copy(update={"provenance": _blueprint_provenance_fixture()})
+    return orchestrator.drafts.save(draft, expected_revision=None)
+
+
+@pytest.fixture
+def blueprint_stale_en(
+    harness: GenerationHarness, orchestrator: GenerationOrchestrator
+) -> DraftRecord:
+    """BLUEPRINT draft in STALE_PREVIEW with en-US source language."""
+    ref = put_original_image(harness)
+    draft = _draft_with_language(
+        _draft_with_source(
+            make_domain_draft(
+                mode=DraftMode.BLUEPRINT,
+                status=DraftStatus.STALE_PREVIEW,
+                revision=2,
+                visual_source_revision=1,
+            ),
+            ref.asset_id,
+        ),
+        Language.EN_US,
     )
     draft = draft.model_copy(update={"provenance": _blueprint_provenance_fixture()})
     return orchestrator.drafts.save(draft, expected_revision=None)

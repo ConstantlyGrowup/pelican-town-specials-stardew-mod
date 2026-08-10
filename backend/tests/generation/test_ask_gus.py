@@ -78,7 +78,11 @@ async def test_ask_gus_stage_order(
         assert required_text in preview_request.prompt
     assert "持续时间：" not in preview_request.prompt
     saved = harness.orchestrator.drafts.get(ready_draft.draft_id)
-    assert saved.provenance.prompt_versions["ask-gus"] == "ask-gus-v3"
+    assert saved.provenance.prompt_versions["analysis"] == "analysis-v1-zh"
+    assert saved.provenance.prompt_versions["ask-gus"] == "ask-gus-v3-zh"
+    assert saved.provenance.prompt_versions["visual"] == "visual-v3-multi-image-edit-zh"
+    assert saved.visuals is not None
+    assert saved.visuals.prompt_version == "visual-v3-multi-image-edit-zh"
     assert saved.visuals is not None
     assert saved.visuals.generated_art_asset_id is None
     assert saved.visuals.preview_asset_id is not None
@@ -266,6 +270,64 @@ async def test_initial_generation_rejects_reviewable_draft(
         ):
             pass
     assert excinfo.value.code == "PTS_STATE_ILLEGAL_TRANSITION"
+
+
+async def test_en_draft_uses_english_visual_and_icon_prompts(
+    harness: GenerationHarness, ready_draft_en
+) -> None:
+    """An en-US draft threads its language into the icon and preview prompts:
+    English tooltip labels, English icon phrasing, and no Chinese field
+    labels. Ingredient display names stay mapped to the vanilla English item
+    identity; provenance records the language-suffixed prompt versions."""
+    events = [
+        event
+        async for event in harness.orchestrator.run(initial_command(ready_draft_en))
+    ]
+    assert events[-1].type == "attempt.succeeded"
+    assert harness.gateway.calls == ["analyze", "design", "image", "image"]
+    icon_request, preview_request = harness.gateway.image_requests
+
+    # Icon prompt is English and carries no Chinese icon phrasing.
+    assert "Stardew Valley-style 16×16 game icon" in icon_request.prompt
+    assert "星露谷风格的 16×16 游戏图标" not in icon_request.prompt
+
+    # Preview tooltip prompt uses English field labels and layout guidance.
+    for required_text in (
+        "item hover tooltip",
+        "not a poster",
+        "Title:",
+        "Category:",
+        "Description:",
+        "Energy:",
+        "Health:",
+        "Price:",
+    ):
+        assert required_text in preview_request.prompt
+    for forbidden in (
+        "标题：",
+        "类别：",
+        "描述：",
+        "能量：",
+        "生命：",
+        "售价：",
+        "无 Buff：",
+    ):
+        assert forbidden not in preview_request.prompt
+
+    saved = harness.orchestrator.drafts.get(ready_draft_en.draft_id)
+    assert saved.provenance.prompt_versions["analysis"] == "analysis-v1-en"
+    assert saved.provenance.prompt_versions["ask-gus"] == "ask-gus-v3-en"
+    assert saved.provenance.prompt_versions["visual"] == "visual-v3-multi-image-edit-en"
+    assert saved.visuals is not None
+    assert saved.visuals.prompt_version == "visual-v3-multi-image-edit-en"
+    # Ingredient display names follow the en-US mapping language while the
+    # item_id identity stays authoritative.
+    assert saved.gameplay is not None
+    for ingredient in saved.gameplay.ingredients:
+        assert (
+            ingredient.display_name
+            == harness.catalog.require(ingredient.item_id).display_name_en
+        )
 
 
 async def test_unmatched_ingredient_uses_catalog_fallback(

@@ -682,6 +682,107 @@ async def test_design_ask_gus_routes_new_calls_through_v3_prompt(
     assert "不得用抬高售价来补偿没有 Buff" in prompt
 
 
+def _analysis_request_en() -> DishAnalysisRequest:
+    return DishAnalysisRequest(
+        image=ProviderImageInput(data=b"png-bytes", media_type=ImageMediaType.PNG),
+        context_text=None,
+        language=Language.EN_US,
+        requestId=uuid4(),
+    )
+
+
+def _ask_gus_design_request_en() -> AskGusDesignRequest:
+    return AskGusDesignRequest(
+        analysis=DishAnalysis.model_validate(_ANALYSIS_JSON),
+        context_text=None,
+        language=Language.EN_US,
+        requestId=uuid4(),
+    )
+
+
+@respx.mock
+async def test_analyze_dish_en_us_uses_english_prompt(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON, ensure_ascii=False))
+    )
+
+    await gateway.analyze_dish(_analysis_request_en())
+
+    outbound = json.loads(route.calls[0].request.content.decode())
+    prompt = outbound["messages"][0]["content"][0]["text"]
+    assert "Identify this dish from the provided photo" in prompt
+    assert "recognizedDish" in prompt
+    assert "Return only a single JSON object, with no code blocks or extra text." in prompt
+    assert "菜品识别助手" not in prompt
+    assert "只返回一个 JSON 对象" not in prompt
+
+
+@respx.mock
+async def test_design_ask_gus_en_us_uses_english_prompt_and_analysis_prefix(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    payload = {
+        "presentation": {
+            "displayName": "Spring Noodle Bowl",
+            "internalName": "SpringNoodleBowl",
+            "categoryLabel": "Main Course",
+            "description": "A warm bowl of spring noodles.",
+            "tags": ["spring", "noodles"],
+        },
+        "ingredients": [{"name": "Egg", "normalizedName": "egg"}],
+        "recovery": {"edibility": 40},
+        "buff": None,
+        "sellPrice": 220,
+        "isDrink": False,
+        "visualBrief": "A warm spring noodle bowl.",
+    }
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(payload, ensure_ascii=False))
+    )
+
+    await gateway.design_ask_gus(_ask_gus_design_request_en())
+
+    outbound = json.loads(route.calls[0].request.content.decode())
+    prompt = outbound["messages"][0]["content"][0]["text"]
+    assert "You are Gus, the chef of the Pelican Town restaurant" in prompt
+    assert "Dish analysis:" in prompt
+    assert "ordinary dishes 80..250g" in prompt
+    assert "do not compensate for having no Buff by raising the price" in prompt
+    assert "Return only a single JSON object, with no code blocks or extra text." in prompt
+    assert "菜品分析：" not in prompt
+    assert "你是鹈鹕镇餐厅的大厨 Gus" not in prompt
+
+
+def test_repair_prompt_is_localized_to_request_language() -> None:
+    from pelican_town_specials.providers.openai_compatible import (
+        _repair_prompt,
+        _repair_prompt_plain,
+    )
+
+    en = _repair_prompt(
+        "p",
+        "i",
+        [{"loc": ["a"], "type": "value_error"}],
+        language=Language.EN_US,
+    )
+    assert "previous output failed validation" in en
+    assert "Validation issues:" in en
+    zh = _repair_prompt(
+        "p",
+        "i",
+        [{"loc": ["a"], "type": "value_error"}],
+        language=Language.ZH_CN,
+    )
+    assert "上次输出未通过校验" in zh
+    assert "校验问题：" in zh
+    en_plain = _repair_prompt_plain("p", "i", language=Language.EN_US)
+    assert "not a valid pure JSON object" in en_plain
+    zh_plain = _repair_prompt_plain("p", "i", language=Language.ZH_CN)
+    assert "不是合法的纯 JSON 对象" in zh_plain
+
+
 def _image_generation_request() -> ImageGenerationRequest:
     return ImageGenerationRequest(
         operation=ImageOperation.GENERATION,

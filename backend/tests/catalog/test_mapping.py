@@ -7,6 +7,7 @@ import pytest
 from pelican_town_specials.catalog.mapping import ensure_main_protein, map_ingredient
 from pelican_town_specials.catalog.models import CatalogCandidate
 from pelican_town_specials.catalog.repository import VanillaCatalog
+from pelican_town_specials.domain.common import Language
 from pelican_town_specials.domain.dish import GameIngredient, SemanticIngredient
 from pelican_town_specials.domain.errors import AppError
 
@@ -52,7 +53,7 @@ def test_mapping_empty_candidates_returns_fallback(
     mapped = map_ingredient(semantic, [], catalog)
 
     assert mapped.item_id == "176"
-    assert mapped.display_name == catalog.require("176").display_name_en
+    assert mapped.display_name == catalog.require("176").display_name_zh
     assert mapped.quantity == 1
     assert mapped.catalog_version == catalog.version
     assert "catalog fallback" in mapped.mapping_reason
@@ -68,7 +69,7 @@ def test_mapping_unusable_candidate_returns_fallback(
     )
 
     assert mapped.item_id == "176"
-    assert mapped.display_name == catalog.require("176").display_name_en
+    assert mapped.display_name == catalog.require("176").display_name_zh
     assert mapped.quantity == 1
     assert mapped.catalog_version == catalog.version
     assert "catalog fallback" in mapped.mapping_reason
@@ -86,7 +87,7 @@ def test_mapping_two_unmatched_candidates_get_distinct_fallbacks(
     assert second.item_id != first.item_id
     assert "catalog fallback" in first.mapping_reason
     assert "catalog fallback" in second.mapping_reason
-    assert second.display_name == catalog.require(second.item_id).display_name_en
+    assert second.display_name == catalog.require(second.item_id).display_name_zh
 
 
 def test_mapping_unmatched_after_egg_uses_non_egg_fallback(
@@ -121,7 +122,7 @@ def test_mapping_selects_highest_score_and_catalog_facts(
     )
 
     assert mapped.item_id == "Broccoli"
-    assert mapped.display_name == catalog.require("Broccoli").display_name_en
+    assert mapped.display_name == catalog.require("Broccoli").display_name_zh
     assert mapped.quantity == 1
     assert mapped.catalog_version == catalog.version
     assert 1 <= len(mapped.mapping_reason) <= 200
@@ -141,7 +142,7 @@ def test_mapping_breaks_score_ties_by_item_id(
     )
 
     assert mapped.item_id == "24"
-    assert mapped.display_name == catalog.require("24").display_name_en
+    assert mapped.display_name == catalog.require("24").display_name_zh
 
 
 def _unchecked_candidate(score: float) -> CatalogCandidate:
@@ -192,7 +193,7 @@ def test_mapping_all_unusable_candidates_return_fallback(
     )
 
     assert mapped.item_id == "176"
-    assert mapped.display_name == catalog.require("176").display_name_en
+    assert mapped.display_name == catalog.require("176").display_name_zh
     assert mapped.quantity == 1
     assert mapped.catalog_version == catalog.version
     assert "catalog fallback" in mapped.mapping_reason
@@ -282,3 +283,88 @@ def test_full_list_without_fallback_is_unchanged(catalog: VanillaCatalog) -> Non
     result = ensure_main_protein("红烧鱼", ingredients, catalog)
 
     assert [item.item_id for item in result] == [item.item_id for item in ingredients]
+
+
+# --- Task 26: display-name language selection ---------------------------------
+
+
+def test_mapping_zh_uses_chinese_display_name(
+    semantic: SemanticIngredient, catalog: VanillaCatalog
+) -> None:
+    mapped = map_ingredient(semantic, [], catalog)
+
+    assert mapped.item_id == "176"
+    assert mapped.display_name == catalog.require("176").display_name_zh
+    assert mapped.display_name != catalog.require("176").display_name_en
+
+
+def test_mapping_en_uses_english_display_name(
+    semantic: SemanticIngredient, catalog: VanillaCatalog
+) -> None:
+    mapped = map_ingredient(semantic, [], catalog, language=Language.EN_US)
+
+    assert mapped.item_id == "176"
+    assert mapped.display_name == catalog.require("176").display_name_en
+
+
+def test_mapping_selected_candidate_display_name_follows_language(
+    semantic: SemanticIngredient, catalog: VanillaCatalog
+) -> None:
+    candidates = [
+        CatalogCandidate(item_id="Broccoli", score=0.95),
+        CatalogCandidate(item_id="256", score=0.8),
+    ]
+
+    zh = map_ingredient(semantic, candidates, catalog)
+    en = map_ingredient(
+        semantic, candidates, catalog, language=Language.EN_US
+    )
+
+    assert zh.item_id == en.item_id == "Broccoli"
+    assert zh.display_name == catalog.require("Broccoli").display_name_zh
+    assert en.display_name == catalog.require("Broccoli").display_name_en
+
+
+def test_ensure_main_protein_inserted_fish_follows_language(
+    catalog: VanillaCatalog,
+) -> None:
+    ingredients = [
+        _game_ingredient("24", catalog),
+        _game_ingredient("256", catalog),
+    ]
+
+    zh = ensure_main_protein("香煎鲑鱼排", ingredients, catalog)
+    en = ensure_main_protein(
+        "香煎鲑鱼排", ingredients, catalog, language=Language.EN_US
+    )
+
+    assert zh[0].item_id == en[0].item_id == "139"
+    assert zh[0].display_name == catalog.require("139").display_name_zh
+    assert en[0].display_name == catalog.require("139").display_name_en
+
+
+def test_en_dish_text_triggers_fish_insert_with_english_display_name(
+    catalog: VanillaCatalog,
+) -> None:
+    """en-US dish text reaches the R15 main-protein guard case-insensitively,
+    and the inserted fish keeps the authoritative item_id plus the English
+    display name (M7-T26-GEN-003)."""
+    ingredients = [
+        _game_ingredient("24", catalog),
+        _game_ingredient("256", catalog),
+    ]
+
+    result = ensure_main_protein(
+        "Pan-seared Salmon with lemon butter",
+        ingredients,
+        catalog,
+        language=Language.EN_US,
+    )
+
+    assert len(result) == 3
+    inserted = catalog.require(result[0].item_id)
+    assert inserted.category == "-4"
+    assert inserted.display_name_en == "Salmon"
+    assert result[0].display_name == inserted.display_name_en
+    assert result[0].mapping_reason.startswith("main-protein consistency")
+    assert [item.item_id for item in result[1:]] == ["24", "256"]

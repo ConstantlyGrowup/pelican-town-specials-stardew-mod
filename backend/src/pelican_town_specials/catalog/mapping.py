@@ -6,11 +6,23 @@ from collections.abc import Sequence
 from math import isfinite
 from typing import Protocol
 
+from pelican_town_specials.domain.common import Language
 from pelican_town_specials.domain.dish import GameIngredient
 from pelican_town_specials.domain.errors import AppError
 
 from .models import CatalogCandidate, CatalogItem
 from .repository import VanillaCatalog
+
+
+def _display_name(item: CatalogItem, language: Language) -> str:
+    """Pick the catalog display name for the target language.
+
+    ``item_id`` stays the authoritative vanilla identity; the display name is
+    only the user-visible label for the target language.
+    """
+    if language is Language.EN_US:
+        return item.display_name_en
+    return item.display_name_zh
 
 _FALLBACK_INGREDIENT_ID = "176"
 _FALLBACK_REASON_PREFIX = "catalog fallback"
@@ -19,9 +31,11 @@ _FALLBACK_REASON_PREFIX = "catalog fallback"
 # main-protein consistency guard (R15).
 _FISH_CATEGORY = "-4"
 
-# Chinese substrings that imply a fish/seafood main ingredient. Ordered from
-# specific to generic so the targeted catalog search tries the most precise
-# term first.
+# Substrings that imply a fish/seafood main ingredient, in both supported
+# languages. Ordered from specific to generic so the targeted catalog search
+# tries the most precise term first. English terms are matched
+# case-insensitively so en-US draft text (e.g. "Pan-seared Salmon") reaches
+# the same main-protein consistency guard as zh-CN drafts (R15).
 _SEAFOOD_KEYWORDS: tuple[str, ...] = (
     "金枪鱼",
     "沙丁鱼",
@@ -46,6 +60,37 @@ _SEAFOOD_KEYWORDS: tuple[str, ...] = (
     "虾",
     "蟹",
     "鱼",
+    "salmon",
+    "tuna",
+    "sardine",
+    "anchovy",
+    "herring",
+    "mackerel",
+    "trout",
+    "carp",
+    "catfish",
+    "eel",
+    "snapper",
+    "perch",
+    "bass",
+    "pike",
+    "sunfish",
+    "flounder",
+    "halibut",
+    "tilapia",
+    "sturgeon",
+    "albacore",
+    "squid",
+    "octopus",
+    "lobster",
+    "crab",
+    "shrimp",
+    "prawn",
+    "scallop",
+    "clam",
+    "oyster",
+    "fish",
+    "seafood",
 )
 
 
@@ -59,6 +104,8 @@ def ensure_main_protein(
     dish_text: str,
     ingredients: Sequence[GameIngredient],
     catalog: VanillaCatalog,
+    *,
+    language: Language = Language.ZH_CN,
 ) -> list[GameIngredient]:
     """Guarantee a seafood main ingredient when the dish text mentions one.
 
@@ -69,7 +116,10 @@ def ensure_main_protein(
     otherwise replacing the first fallback-mapped ingredient. If neither is
     possible the list is returned unchanged.
     """
-    mentioned = [keyword for keyword in _SEAFOOD_KEYWORDS if keyword in dish_text]
+    lower_text = dish_text.casefold()
+    mentioned = [
+        keyword for keyword in _SEAFOOD_KEYWORDS if keyword.casefold() in lower_text
+    ]
     if not mentioned:
         return list(ingredients)
 
@@ -98,7 +148,7 @@ def ensure_main_protein(
 
     inserted = GameIngredient(
         itemId=fish_item.item_id,
-        displayName=fish_item.display_name_en,
+        displayName=_display_name(fish_item, language),
         quantity=1,
         mappingReason=(
             "main-protein consistency: dish mentions "
@@ -122,12 +172,14 @@ def map_ingredient(
     catalog: VanillaCatalog,
     *,
     used_item_ids: frozenset[str] = frozenset(),
+    language: Language = Language.ZH_CN,
 ) -> GameIngredient:
     """Map one semantic ingredient using only validated catalog candidates.
 
     ``used_item_ids`` lists item IDs already assigned earlier in the same dish;
     the catalog-fallback path uses it to avoid selecting an item that would
-    duplicate an existing mapped ingredient.
+    duplicate an existing mapped ingredient. ``language`` selects the
+    user-visible display name; ``item_id`` is authoritative regardless.
     """
 
     del semantic
@@ -136,6 +188,7 @@ def map_ingredient(
             catalog,
             "catalog fallback: no candidate matched the ingredient",
             used_item_ids,
+            language=language,
         )
 
     resolved: list[tuple[CatalogCandidate, CatalogItem]] = []
@@ -162,6 +215,7 @@ def map_ingredient(
             catalog,
             "catalog fallback: no candidate is usable as an ingredient",
             used_item_ids,
+            language=language,
         )
 
     candidate, item = min(
@@ -171,7 +225,7 @@ def map_ingredient(
     del candidate
     return GameIngredient(
         itemId=item.item_id,
-        displayName=item.display_name_en,
+        displayName=_display_name(item, language),
         quantity=1,
         mappingReason="selected validated vanilla candidate",
         catalogVersion=catalog.version,
@@ -182,11 +236,13 @@ def _fallback_ingredient(
     catalog: VanillaCatalog,
     reason: str,
     used_item_ids: frozenset[str],
+    *,
+    language: Language = Language.ZH_CN,
 ) -> GameIngredient:
     item = _fallback_catalog_item(catalog, used_item_ids)
     return GameIngredient(
         itemId=item.item_id,
-        displayName=item.display_name_en,
+        displayName=_display_name(item, language),
         quantity=1,
         mappingReason=reason,
         catalogVersion=catalog.version,

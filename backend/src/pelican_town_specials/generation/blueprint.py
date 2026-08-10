@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from pelican_town_specials.domain.common import GenerationStage
+from pelican_town_specials.domain.common import GenerationStage, Language
 from pelican_town_specials.domain.dish import GameplaySpec, PresentationSpec
 from pelican_town_specials.domain.draft import GenerationAttemptKind
 from pelican_town_specials.domain.errors import AppError
@@ -28,7 +28,7 @@ BLUEPRINT_STAGE_ORDER: tuple[GenerationStage, ...] = (
 
 _PROMPT_MAX_CHARS = 1500
 
-_BUFF_ATTRIBUTE_LABELS: tuple[tuple[str, str], ...] = (
+_BUFF_ATTRIBUTE_LABELS_ZH: tuple[tuple[str, str], ...] = (
     ("farming_level", "耕种"),
     ("fishing_level", "钓鱼"),
     ("mining_level", "采矿"),
@@ -42,6 +42,29 @@ _BUFF_ATTRIBUTE_LABELS: tuple[tuple[str, str], ...] = (
     ("max_stamina", "最大体力"),
     ("speed", "速度"),
 )
+
+_BUFF_ATTRIBUTE_LABELS_EN: tuple[tuple[str, str], ...] = (
+    ("farming_level", "Farming"),
+    ("fishing_level", "Fishing"),
+    ("mining_level", "Mining"),
+    ("foraging_level", "Foraging"),
+    ("combat_level", "Combat"),
+    ("luck_level", "Luck"),
+    ("attack", "Attack"),
+    ("defense", "Defense"),
+    ("immunity", "Immunity"),
+    ("magnetic_radius", "Magnetic"),
+    ("max_stamina", "Max Energy"),
+    ("speed", "Speed"),
+)
+
+
+def _buff_attribute_labels(
+    language: Language,
+) -> tuple[tuple[str, str], ...]:
+    if language is Language.EN_US:
+        return _BUFF_ATTRIBUTE_LABELS_EN
+    return _BUFF_ATTRIBUTE_LABELS_ZH
 
 
 def enforce_preview_prompt_budget(prompt: str) -> None:
@@ -66,8 +89,18 @@ def enforce_preview_prompt_budget(prompt: str) -> None:
 def build_blueprint_visual_brief(
     presentation: PresentationSpec,
     gameplay: GameplaySpec,
+    *,
+    language: Language = Language.ZH_CN,
 ) -> str:
     """Deterministically derive a visual brief from user-owned Blueprint fields."""
+    if language is Language.EN_US:
+        ingredients = ", ".join(item.display_name for item in gameplay.ingredients)
+        return (
+            f"Stardew Valley-style dish illustration: {presentation.display_name}, "
+            f"category {presentation.category_label}, "
+            f"{presentation.description} Main ingredients: {ingredients}. "
+            "Warm colors, rustic tavern table, pixel art style."
+        )
     ingredients = "、".join(item.display_name for item in gameplay.ingredients)
     return (
         f"星露谷风格菜品插画：{presentation.display_name}，"
@@ -77,7 +110,17 @@ def build_blueprint_visual_brief(
     )
 
 
-def blueprint_icon_prompt(presentation: PresentationSpec) -> str:
+def blueprint_icon_prompt(
+    presentation: PresentationSpec,
+    *,
+    language: Language = Language.ZH_CN,
+) -> str:
+    if language is Language.EN_US:
+        return (
+            f"Stardew Valley-style 16×16 game icon: {presentation.display_name}"
+            ". Single item centered, solid magenta background (#FF00FF), no shadows, "
+            "no reflections, no text, no borders"
+        )
     return (
         f"星露谷风格的 16×16 游戏图标：{presentation.display_name}"
         "。单个物品居中，纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
@@ -87,14 +130,18 @@ def blueprint_icon_prompt(presentation: PresentationSpec) -> str:
 def blueprint_preview_prompt(
     presentation: PresentationSpec,
     gameplay: GameplaySpec,
+    *,
+    language: Language = Language.ZH_CN,
 ) -> str:
     """Blueprint alias of the shared full-tooltip edit prompt."""
-    return build_full_tooltip_prompt(presentation, gameplay)
+    return build_full_tooltip_prompt(presentation, gameplay, language=language)
 
 
 def build_full_tooltip_prompt(
     presentation: PresentationSpec,
     gameplay: GameplaySpec,
+    *,
+    language: Language = Language.ZH_CN,
 ) -> str:
     """Shared hard-anchor prompt for Ask Gus and Blueprint preview edits.
 
@@ -106,27 +153,68 @@ def build_full_tooltip_prompt(
     """
     recovery = gameplay.recovery
     buff = gameplay.buff
+    english = language is Language.EN_US
     if buff is None:
         buff_rows = ""
         duration_row = ""
-        row_guidance = (
-            "恢复值行左侧使用匹配的星露谷式像素状态图标；"
-            "售价行左侧使用金币像素图标，售价作为最后一行。"
-            "无 Buff：不要生成增益行和持续时间行。"
-        )
+        if english:
+            row_guidance = (
+                "Stardew pixel icons left of the recovery rows and a gold coin icon left "
+                "of the price row (last). "
+                "No Buff: do not generate a buff row or a duration row. "
+            )
+        else:
+            row_guidance = (
+                "恢复值行左侧使用匹配的星露谷式像素状态图标；"
+                "售价行左侧使用金币像素图标，售价作为最后一行。"
+                "无 Buff：不要生成增益行和持续时间行。"
+            )
     else:
+        labels = _buff_attribute_labels(language)
         buff_rows = "".join(
             f"{label} {value:+d}\n"
-            for field_name, label in _BUFF_ATTRIBUTE_LABELS
+            for field_name, label in labels
             if (value := getattr(buff.attributes, field_name)) != 0
         )
         hours, minutes = divmod(buff.duration_minutes, 60)
-        duration_row = f"持续时间：{hours}:{minutes:02d}\n"
-        row_guidance = (
-            "恢复值和每条增益行左侧使用匹配的星露谷式像素状态图标；"
-            "增益行后添加一条游戏式分隔线；"
-            "持续时间行左侧使用时钟像素图标；"
-            "售价行左侧使用金币像素图标，售价作为最后一行。"
+        if english:
+            duration_row = f"Duration:{hours}:{minutes:02d}\n"
+            row_guidance = (
+                "Stardew pixel icons left of the recovery and each buff row, a divider "
+                "after buffs, a clock icon left of the duration row, a coin icon left of "
+                "the price row (last). "
+            )
+        else:
+            duration_row = f"持续时间：{hours}:{minutes:02d}\n"
+            row_guidance = (
+                "恢复值和每条增益行左侧使用匹配的星露谷式像素状态图标；"
+                "增益行后添加一条游戏式分隔线；"
+                "持续时间行左侧使用时钟像素图标；"
+                "售价行左侧使用金币像素图标，售价作为最后一行。"
+            )
+    if english:
+        header = (
+            "Input 1 = real dish photo (irreplaceable base); input 2 = pixel icon "
+            "(reproduce exactly). Keep the photo's crop, table, background, lighting, "
+            "perspective and texture unchanged; do not redraw, recolor, extend or "
+            "pixelate. Add a Stardew Valley item hover tooltip box in a blank area clear "
+            "of the subject; it must look like the in-game tooltip, not a poster or web "
+            "card. Place the pixel icon above or overlapping the box top edge; keep all "
+            "else identical. "
+            f"{row_guidance}"
+            "Text must come only from the fields below (no additions, deletions or "
+            "invented Buffs):\n"
+        )
+        return (
+            header
+            + f"Title:{presentation.display_name}\n"
+            + f"Category:{presentation.category_label}\n"
+            + f"Description:{presentation.description}\n"
+            + f"Energy:+{recovery.energy_restore}\n"
+            + f"Health:+{recovery.health_restore}\n"
+            + buff_rows
+            + duration_row
+            + f"Price:{gameplay.sell_price}g"
         )
     return (
         "输入图1是真实菜品原图，必须作为不可替换的摄影底图保留。"
