@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | origin `feat/mvp-implementation` 位于 `4e9d739`（含 M7 收尾 docs commit `7c0afd3`）；tag `v1.1.0` 位于 `b39b50d`；M7 正式关闭记录 docs commit 已提交本地（待推送授权） |
-| 远端操作 | Milestone 7 已推送至 `4e9d739`（`feat/mvp-implementation`）；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。M7 正式关闭 docs commit 已提交本地（待推送授权）。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
+| 最新提交 | origin `feat/mvp-implementation` 位于 `e72decc`（M7 正式关闭 docs commit，已推送）；tag `v1.1.0` 位于 `b39b50d` |
+| 远端操作 | Milestone 7 已推送至 `e72decc`（`feat/mvp-implementation`，含 M7 关闭记录）；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过，M7 正式关闭。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
 | 当前工作树范围 | M7 全部提交完成，tracked 工作树干净（仅保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件）。 |
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
