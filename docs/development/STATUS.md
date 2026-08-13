@@ -7,14 +7,15 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_8_active |
-| project_phase | Milestone 8（三路并发生成、不排队）实施中：用户 2026-08-14 确认轻量方案；Task 27 已创建实施 Session 与 Context Packet |
+| project_phase | Milestone 8（三路并发生成、不排队）实施中：Task 27 三槽 AttemptRegistry 已 auto_accepted；下一步 Task 28 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-14-milestone-8-task-27-slot-registry` |
-| active_session_state | active（实施中；Task 27 三槽 AttemptRegistry） |
-| active_session_type | milestone-8-task-27-implementation |
-| current_task | Task 27：把单一可归属槽扩展为最多三个彼此隔离的 owner；不接触领域 schema 和前端 |
+| active_session_id | `2026-08-14-milestone-8-task-28-generation-lifecycle` |
+| active_session_state | planned（Task 27 已 auto_accepted；Task 28 待创建 Context Packet） |
+| active_session_type | milestone-8-task-28-implementation |
+| current_task | Task 28：orchestrator/取消/删除/activity monitor/API 接入三槽 registry，busy 携带 activeCount/maxConcurrent |
 | blocker | 无 |
-| next_action | 实施 Task 27 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Task 28 |
+| next_action | 生成 Task 28 Context Packet → 实施 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Task 29 |
+| collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
@@ -38,11 +39,14 @@
 - Task：27 三槽 AttemptRegistry；28 生成生命周期与 API 上限提示；29 前端提示与完整并发验收。
 - 规划文档：`docs/plans/2026-08-13-milestone-8-generation-concurrency.md`（gitignored）。规划期仅更新控制面，未修改产品源码。
 
-## 当前 Milestone 8 Task 27 实施 Session（active）
+## 当前 Milestone 8 Task 27 实施 Session（auto_accepted）
 
-- `2026-08-14-milestone-8-task-27-slot-registry`：本 Session 只处理 Task 27（三槽 AttemptRegistry）。用户 2026-08-14 确认 M8 并授权不间断开发，Task 27 经闭包检查后生成 Context Packet，base_commit `33dd204`。
-- 范围：仅 `generation/attempt_registry.py` 及其单元测试；不接触领域 schema、orchestrator、API、前端。Task 28 负责 orchestrator/删除/activity/API 上限提示接线，Task 29 负责前端提示与完整并发验收。
-- 待验证：前三个不同 attempt 均能保留槽、第四个被拒绝；owner/task/cancel 按 attemptId 隔离；释放/重复/迟到释放与陈旧 owner 对账不误伤其他任务；active count 永不超过 3；`semaphore()` 提升为 3 并发。
+- `2026-08-14-milestone-8-task-27-slot-registry`：本 Session 只处理 Task 27（三槽 AttemptRegistry）。用户 2026-08-14 确认 M8 并授权不间断开发。Context Packet：`mvp-m8-task-27-slot-registry-v1`（`docs/plans/2026-08-14-task-27-slot-registry-packet.md`，gitignored），base_commit `c9a0af6`，revise_round 0。
+- 闭包裁决：仅 `attempt_registry.py` + 单元测试；现有 `test_cancellation.py` 的并发 busy 用例全部用同一草稿，在 M8-D04 同草稿单 active attempt 规则下依然成立，全量回归不因本 Task 翻红。
+- 实现（仅 2 个 allowed_files）：`_holder` → `_owners: dict[UUID, SlotOwner]`（插入序、按 attemptId 隔离）；模块常量 `MAX_CONCURRENT_GENERATIONS = 3`；新增 `owners()`/`active_count()`；`owner()` 保留返回首个 owner 供 orchestrator busy error 兼容；`semaphore()` 提升为 `asyncio.Semaphore(3)`；`reserve_slot` 顺序为「对账陈旧 owner（终态/缺失回收、RUNNING 保留）→ 同草稿唯一性 → 容量」；`release_slot` 只删匹配 attempt_id；register/unregister/request_cancel/await_task/is_cancelled/cancellation_reason 签名与语义不变。
+- 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **PASS**（7/7 criterion，无 MUST_FIX，scope_delta none）。OPTIONAL_HARDENING 2 条非阻塞（barrier 端到端重叠留 Task 28/29；未来跨线程调用时才需给 `_tasks/_cancellations` 补锁）。
+- 验证（包工复跑）：focused `test_attempt_registry.py` **20 passed**；全量 backend **665 passed / 2 skipped**（zip 重复条目警告为预存、无关）；ruff **All checks passed**；mypy（attempt_registry.py）clean；`git diff --check` clean。RED 先行确认（10 个预期失败）。
+- 范围：未改 orchestrator/删除/activity/API/前端；busy details 的 activeCount/maxConcurrent 属 Task 28。
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 

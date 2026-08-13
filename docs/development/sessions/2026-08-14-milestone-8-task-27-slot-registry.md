@@ -28,8 +28,15 @@ Task 28 承接 orchestrator/删除/activity/API 上限提示接线；Task 29 承
 
 ## 验证记录
 
-（由包工在 PASS 后填写 focused 测试、全量回归、ruff/mypy、diff-check 结果）
+- focused `backend/tests/generation/test_attempt_registry.py`：**20 passed**（RED 先行 10 个预期失败：ImportError MAX_CONCURRENT_GENERATIONS、AttributeError active_count/owners、单槽语义翻转、Semaphore(1) 下容量测试 TimeoutError）。
+- 全量 backend：**665 passed / 2 skipped**（zip 重复条目警告为预存、无关）。
+- ruff `python -m ruff check backend`：All checks passed。
+- mypy（`attempt_registry.py`）：Success, no issues。
+- `git diff --check`：clean（仅 Windows LF→CRLF 提示）。
+- 包工复跑确认：改动仅限两个 allowed_files；orchestrator 调用点（reserve_slot/owner()/release_slot/register/unregister/request_cancel/await_task/semaphore）兼容。
 
 ## 审阅记录
 
-（round 0 / round 1 PASS 结论与 MUST_FIX 处理由包工填写）
+- Codex（gpt-5.6-luna/max，新 thread，只读）：round 0 **PASS**，7/7 criterion（T27-001..T27-007），无 MUST_FIX，scope_delta none。
+- OPTIONAL_HARDENING（非阻塞）：① T27-006 单元测试直接验证 Semaphore(3) 容量，生成阶段 barrier 端到端重叠验证按计划留 Task 28/29；② 若未来允许跨线程调用，可为 `_tasks/_cancellations` 补锁，当前同步事件循环路径按 attemptId 隔离且接口未变。
+- 结论：auto_accepted → 本地 focused commit（不 push）。
