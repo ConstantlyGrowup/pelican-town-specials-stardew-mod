@@ -10,11 +10,11 @@
 | project_phase | Milestone 8（三路并发生成、不排队）实施中：Task 27 三槽 AttemptRegistry 已 auto_accepted；下一步 Task 28 |
 | product_implementation_started | true |
 | active_session_id | `2026-08-14-milestone-8-task-28-generation-lifecycle` |
-| active_session_state | planned（Task 27 已 auto_accepted；Task 28 待创建 Context Packet） |
+| active_session_state | active（Task 28 Context Packet 已冻结并派发实施；auto-compact 已启用，里程碑内不停顿） |
 | active_session_type | milestone-8-task-28-implementation |
 | current_task | Task 28：orchestrator/取消/删除/activity monitor/API 接入三槽 registry，busy 携带 activeCount/maxConcurrent |
 | blocker | 无 |
-| next_action | 生成 Task 28 Context Packet → 实施 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Task 29 |
+| next_action | Task 28 实施 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Task 29 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
