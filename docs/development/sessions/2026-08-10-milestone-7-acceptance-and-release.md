@@ -1,4 +1,4 @@
-# Session｜Milestone 7 全量验收与 v1.0.0 Release
+# Session｜Milestone 7 全量验收与 v1.0.0 / v1.1.0 Release
 
 | 字段 | 值 |
 |---|---|

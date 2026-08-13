@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-当前项目已完成 Milestone 6；Task 20（Windows CI、用户 README、.env 参考与发布检查）和 Task 21（视觉精修、无障碍与用户反馈修订）均已通过验收，并在 `ae5b320` 提交、推送。当前处于 Milestone 7（Refine）实施：Task 22–26 已拆分并获用户授权（2026-08-10），按 `22 → 23 → 24 → 25 → 26` 串行推进；本阶段实现完成后拉取 Codex 审阅，本地 focused commit，不自动 push。
+Milestone 6 与 Milestone 7 均已完成：Milestone 7 的 Task 22–26 已通过验收，v1.1.0 已发布并经用户 fresh-install 复验。Milestone 8（三路并发生成、不排队）已完成可行性评估和 Task 27–29 拆分，当前停留在 `planned / awaiting_user_confirmation`，不得提前进入产品开发或创建 Task 27 Context Packet。后续完整队列待在线化或分布式消息队列架构时另行规划；macOS/Linux 本地安装器不属于 Milestone 8。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 

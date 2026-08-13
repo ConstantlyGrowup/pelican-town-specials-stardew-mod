@@ -6,15 +6,16 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_7_closed |
-| project_phase | Milestone 7（Refine）正式关闭：Task 22–26 全部通过验收并发布；v1.1.0 已发布并经用户 fresh-install 复验通过（2026-08-11）；双语 UI + 双语生成前后端交付完成 |
+| overall_state | milestone_8_active |
+| project_phase | Milestone 8（三路并发生成、不排队）实施中：用户 2026-08-14 确认轻量方案；Task 27 已创建实施 Session 与 Context Packet |
 | product_implementation_started | true |
-| active_session_id | `2026-08-10-milestone-7-acceptance-and-release` |
-| active_session_state | closed（M7 五 Task 用户验收通过；v1.1.0 已由 GitHub Actions 实际发布并核验产物；2026-08-11 用户确认 fresh-install 复验通过，M7 正式关闭） |
-| active_session_type | milestone-7-full-acceptance-and-release |
-| current_task | M7 关闭收尾：状态记录同步完成；无新工作 |
+| active_session_id | `2026-08-14-milestone-8-task-27-slot-registry` |
+| active_session_state | active（实施中；Task 27 三槽 AttemptRegistry） |
+| active_session_type | milestone-8-task-27-implementation |
+| current_task | Task 27：把单一可归属槽扩展为最多三个彼此隔离的 owner；不接触领域 schema 和前端 |
 | blocker | 无 |
-| next_action | M7 已正式关闭；等待用户开启下一里程碑或新需求；如需修正 v1.1.0 发布版则按验收即发布流程重发 |
+| next_action | 实施 Task 27 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Task 28 |
+| collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -25,9 +26,23 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | origin `feat/mvp-implementation` 位于 `e72decc`（M7 正式关闭 docs commit，已推送）；tag `v1.1.0` 位于 `b39b50d` |
-| 远端操作 | Milestone 7 已推送至 `e72decc`（`feat/mvp-implementation`，含 M7 关闭记录）；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过，M7 正式关闭。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
-| 当前工作树范围 | M7 全部提交完成，tracked 工作树干净（仅保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件）。 |
+| 最新提交 | `feat/mvp-implementation` 的本地与 origin 均位于 `33dd204`（M7 关闭后的 Git 状态同步）；tag `v1.1.0` 位于 `b39b50d` |
+| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
+| 当前工作树范围 | M8 规划与此前状态文档回退尚未提交；没有产品源码改动。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
+
+## 已关闭 Milestone 8 规划 Session（planned → 已授权）
+
+- `2026-08-13-milestone-8-generation-concurrency-planning`：用户最终要求只做轻量并发，不做排队；最多同时运行 3 个任务，第 4 个直接提示并中断发起。用户 2026-08-14 确认 M8 轻量方案，规划 Session 使命完成并关闭，进入 Task 27 实施。
+- 可行性：可行，属于小到中等改造；复用现有服务端任务、持久化 attempt、进度、取消和删除机制，将单 owner 扩展为最多 3 个彼此隔离的 owner。
+- 核心裁决：固定 3 个运行槽；第 4 个请求不创建 attempt、不改草稿状态、不调用 Provider；保留 `PTS_GEN_BUSY` 并提供明确双语提示。M8 不新增 QUEUED、队列 API、排位、自动补位或持久化迁移。
+- Task：27 三槽 AttemptRegistry；28 生成生命周期与 API 上限提示；29 前端提示与完整并发验收。
+- 规划文档：`docs/plans/2026-08-13-milestone-8-generation-concurrency.md`（gitignored）。规划期仅更新控制面，未修改产品源码。
+
+## 当前 Milestone 8 Task 27 实施 Session（active）
+
+- `2026-08-14-milestone-8-task-27-slot-registry`：本 Session 只处理 Task 27（三槽 AttemptRegistry）。用户 2026-08-14 确认 M8 并授权不间断开发，Task 27 经闭包检查后生成 Context Packet，base_commit `33dd204`。
+- 范围：仅 `generation/attempt_registry.py` 及其单元测试；不接触领域 schema、orchestrator、API、前端。Task 28 负责 orchestrator/删除/activity/API 上限提示接线，Task 29 负责前端提示与完整并发验收。
+- 待验证：前三个不同 attempt 均能保留槽、第四个被拒绝；owner/task/cancel 按 attemptId 隔离；释放/重复/迟到释放与陈旧 owner 对账不误伤其他任务；active count 永不超过 3；`semaphore()` 提升为 3 并发。
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 

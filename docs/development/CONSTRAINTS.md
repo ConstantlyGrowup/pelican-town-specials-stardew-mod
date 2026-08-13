@@ -6,8 +6,8 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.5 | MVP 运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论；含 2026-08-08 三操作/导航/首页冻结 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.7 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界，以及 Yibu 证据如何进入 Task 11；含 2026-08-08 产品合同同步 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.6 | MVP 运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论；含 Milestone 8 三路并发、超限即拒绝设计 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v0.9 | 文件、依赖、Task、测试、人工验证、里程碑和提交边界；含 Milestone 8 Task 27–29 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
 | `design docs/StarValleyCook_第二期产品体验与品牌化设计_v1.1.docx` | 二期体验、首页/导航与品牌叙事（Git ignored） |
 | `StarValleyCook_项目设计源索引与状态快照.md` | 设计源索引、产品命名、阶段状态和文档同步线索；保持 ignored |
@@ -23,7 +23,9 @@
 - 用户发布媒介冻结为 PyInstaller onedir：发布包自带 Python 运行时与依赖，普通用户不安装 uv、Python、Node.js 或包管理器。开发态使用 backend/pyproject.toml 和当前 Python 环境；uv 仅为可选开发便利，不作为产品或功能 Task 的依赖。
 - 默认工作区为 `%LOCALAPPDATA%\\PelicanTownSpecials\\workspace`；浏览器不直接访问任意本地文件路径。
 - 为降低小白用户配置门槛，应用维护当前 Windows 用户级环境变量 PTS_OPENAI_API_KEY；支持新增、更新和删除，不写机器级环境变量，不要求管理员权限。Key 不得进入 JSON、日志、错误正文、前端状态、测试快照、Context Packet 或 Git。
-- MVP 使用同步请求和 NDJSON 阶段事件；不提前引入数据库、登录、队列、全局 Registry 或跨用户缓存。
+- Milestone 8 将生成执行扩展为进程级固定 3 个并行运行槽；第 4 个请求在创建 attempt、改变草稿状态和调用 Provider 前返回 `PTS_GEN_BUSY`，提示最多同时运行 3 个任务并由用户稍后手动重试。
+- 三个运行任务必须按 draftId/attemptId 隔离 owner、task、cancel、NDJSON 和进度；完成、失败、取消、删除或异常 cleanup 只释放自己的槽。
+- M8 不实现 QUEUED 状态、排队、排位、自动补位或队列持久化。完整队列留到未来在线化或数据库/分布式消息队列/worker 架构时重新设计。
 - 问问 Gus 结果页仅三操作：接受并存档、完整重新生成、拒绝；使用完整原子重生成；不提供进入料理蓝图。
 - 料理蓝图仅从首页 / 开始创作等独立入口创建并加载基础模板；不提供 Ask Gus → Blueprint 产品转换路径；代码中历史 convert 端点若存在则不得在 UI 暴露。
 - 一级导航冻结为 首页 / 开始创作 / 收集品 / 设置（`/` `/create` `/cookbook` `/settings`）；「使用与安装说明」不作为一级导航；Bring It In-Game 保持导出后流程页；Pack the Menu 由收集品驱动。
