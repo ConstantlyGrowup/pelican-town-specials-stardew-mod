@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-14-milestone-8-acceptance-and-release` |
-| status | `active`（v1.2.0 Release 发布中） |
+| status | `closed`（2026-08-14 v1.2.0 Release 已发布并核验） |
 | date | 2026-08-14 |
 | scope | Milestone 8 用户验收记录 + 「验收即发布」v1.2.0 版本提升、本地全量验证、推送与 GitHub Release |
 
@@ -44,11 +44,18 @@ OpenAPI 契约再生成：`scripts/export_openapi.py` 重写 `frontend/openapi.j
 | build_installer.ps1 | exit 0：setup exe icon gate（`3FE51DEB…`）→ ProductName/1.2.0 → SHA-256 `1A8CC5FB19E0908C2BF6CBDE420E104513FF6270AC126B9C6F30319FA59AD3F3` |
 | smoke_installer.ps1 | **全流程通过**：silent install（程序 + 开始菜单快捷方式，桌面快捷方式正确缺席）→ 安装版 health OK → silent reinstall（升级路径，app 与 workspace 保留）→ silent uninstall（程序 + 快捷方式移除，workspace 保留）。M8 期间唯一遗留门禁已解除 |
 
-## 发布（进行中）
+## 发布（已完成，2026-08-14）
 
-1. push `feat/mvp-implementation`（含 M8 全部 Task 提交 + `3b6ea33` + 本控制面记录）——用户已授权。
-2. `git tag -a v1.2.0` → push tag 触发 `release.yml`：resolve-version → verify-and-build（build.yml 全门禁 + 漂移门）→ create-release（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes）。
-3. 核验 GitHub Release v1.2.0 产物与 SHA256SUMS 一致性。
+1. push `feat/mvp-implementation`（33dd204..3604713，11 提交：M8 全部 Task + `3b6ea33` 版本提升 + 控制面记录）——用户已授权。
+2. `git tag -a v1.2.0` → push tag 触发 `release.yml`（run **31769766198 success**）：resolve-version → verify-and-build（build.yml 全门禁 + 漂移门）→ create-release（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes）。
+3. GitHub Release **v1.2.0** 已发布（2026-08-14 04:37 UTC，title「Pelican Town Specials v1.2.0」），产物：
+   - `PelicanTownSpecials-Setup-v1.2.0.exe`（42,705,029 B）
+   - `PelicanTownSpecials-windows-x64-v1.2.0.zip`（47,485,062 B）
+   - `SHA256SUMS.txt`（212 B）
+4. 产物核验：经 API `Accept: application/octet-stream` 下载三个资产（本机无 gh CLI、私有仓库、github.com 直链 404，改走 API 端点成功），`Get-FileHash` 与 SHA256SUMS.txt 比对 **两个产物均 OK**。
+5. 分支 push 触发的 CI run 31769757384 亦 success。
+
+Session 关闭。用户可选：从 GitHub Release v1.2.0 下载 fresh-install 复验（setup.exe，SHA256SUMS 已核验一致）。
 
 ## 范围
 

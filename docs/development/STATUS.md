@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_8_accepted（v1.2.0 Release 发布中） |
-| project_phase | Milestone 8（三路并发生成、不排队）已通过用户验收（2026-08-14）；v1.2.0 版本提升与本地全量验证完成，正在推送并发布 GitHub Release |
+| overall_state | milestone_8_accepted（v1.2.0 Release 已发布） |
+| project_phase | Milestone 8（三路并发生成、不排队）已通过用户验收（2026-08-14）；v1.2.0 已推送并发布 GitHub Release（产物已核验） |
 | product_implementation_started | true |
 | active_session_id | `2026-08-14-milestone-8-acceptance-and-release` |
-| active_session_state | active（发布流程：版本提升已提交、本地验证全过、推送 + tag v1.2.0 + GitHub Release 进行中） |
+| active_session_state | closed（v1.2.0 Release 已发布并核验；用户可选 fresh-install 复验） |
 | active_session_type | milestone-8-acceptance-and-release |
-| current_task | v1.2.0 Release：版本提升（11 处 + 契约再生成）已提交 `3b6ea33`；push 分支 + tag v1.2.0 + release.yml → GitHub Release（用户已授权） |
+| current_task | v1.2.0 Release 已完成：版本提升 `3b6ea33` → 本地全量验证 → push + tag v1.2.0 → release.yml success → GitHub Release 产物核验通过 |
 | blocker | 无 |
-| next_action | push `feat/mvp-implementation` → tag v1.2.0 → push tag 触发 release.yml → 核验 GitHub Release 产物（setup.exe + 便携 ZIP + SHA256SUMS + notes） |
+| next_action | 无阻塞项。用户可选：从 GitHub Release v1.2.0 下载安装 fresh-install 复验（Setup-v1.2.0.exe，SHA256SUMS 已核验一致） |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -26,8 +26,8 @@
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | `feat/mvp-implementation` 本地领先 origin：M8 控制面激活 `c9a0af6`、Task 27 `c3289d2`/`cdef3e6`、Task 28 `1e2a842`/`81524b1`/`d0a3701`、Task 29 `f060f75`/`efcdb12`/`07345b5`、v1.2.0 版本提升 `3b6ea33`、M8 验收与 Release 记录（本 Session）；origin 仍位于 `33dd204`（M7 关闭后同步）；tag `v1.1.0` 位于 `b39b50d` |
-| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**进行中**：v1.2.0 推送与发布（用户 2026-08-14 授权，见本 Session）。 |
-| 当前工作树范围 | M8 全部 Task 已实施并本地提交（不 push）；v1.2.0 版本提升已提交（`3b6ea33`）；M8 验收与 Release 控制面记录待提交。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
+| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。 |
+| 当前工作树范围 | 已提交：M8 全部 Task + v1.2.0 版本提升（`3b6ea33`）+ M8 验收与 Release 记录（`3604713`）+ 本发布核验记录。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 
@@ -75,7 +75,7 @@
 - `2026-08-14-milestone-8-acceptance-and-release`：用户 2026-08-14 明确「Milestone 8 验收通过」「我已卸载成功，你可以发布新的安装包，并同步发布新的 release 至我们的仓库」——M8 正式进入 accepted，并授权按「验收即发布」执行 v1.2.0 Release（push 分支 + tag + GitHub Release）。
 - 版本提升（commit `3b6ea33`，11 文件 +16/-15）：`version_info.txt`（FileVersion/ProductVersion）→ app.py / diagnostics.py / .iss / README.txt / build_installer.ps1 默认值 / build.yml / release.yml / 锁定测试（test_release.py、test_app_icon.py）；`scripts/export_openapi.py` + `pnpm --dir frontend contract:generate` 再生成 `frontend/openapi.json`（`"version": "1.2.0"`）与 `schema.d.ts`。
 - 本地全量验证：版本锁定测试 11 passed；backend+repo+integration **724 passed / 2 skipped**；ruff clean；mypy 87 源文件 clean；`build_windows.ps1` 全门禁通过（backend 690 + Vitest 122 + frontend build + OpenAPI drift + repo ignore + PyInstaller onedir + EXE icon gate 3FE51DEB + EXE 版本身份 1.2.0 + content gate）；`smoke_windows_bundle.ps1` Phase A+B OK；`build_installer.ps1` OK（setup icon gate 3FE51DEB、ProductName/1.2.0、SHA-256 `1A8CC5FB…`）；`smoke_installer.ps1` **全流程通过**（install → health → reinstall → uninstall，workspace 保留）——用户卸载 v1.1.0 复验安装后此前唯一遗留门禁解除。
-- 下一步：push `feat/mvp-implementation` → tag `v1.2.0` → push tag 触发 `release.yml` → 核验 GitHub Release 产物（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes）。
+- 发布执行与核验（全部完成）：push `feat/mvp-implementation`（33dd204..3604713，11 提交）；`git tag -a v1.2.0` → push tag；`release.yml` run **31769766198 success**（resolve-version → verify-and-build 全门禁 → create-release）；GitHub Release **v1.2.0** 已发布（title「Pelican Town Specials v1.2.0」，中文 release notes，2026-08-14 04:37 UTC）；产物逐一核验：`PelicanTownSpecials-Setup-v1.2.0.exe`（42,705,029 B）+ `PelicanTownSpecials-windows-x64-v1.2.0.zip`（47,485,062 B）+ `SHA256SUMS.txt`，API 下载后 `Get-FileHash` 与 SHA256SUMS 比对 **两个产物均一致**；分支 push 触发的 CI run 31769757384 亦 success。Session 关闭。用户可选 fresh-install 复验 v1.2.0。
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
