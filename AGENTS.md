@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-Milestone 6 与 Milestone 7 均已完成：Milestone 7 的 Task 22–26 已通过验收，v1.1.0 已发布并经用户 fresh-install 复验。Milestone 8（三路并发生成、不排队）已全部实施完成（Task 27 三槽 AttemptRegistry、Task 28 生命周期与 API 上限提示、Task 29 前端提示与完整并发验收），全量验证通过并等待用户验收；唯一遗留项为 smoke_installer.ps1 因本机存在用户 v1.1.0 复验安装而按设计拒绝（需用户卸载后重跑）。用户验收通过后统一 push，并按「验收即发布」重建 installer 发布 GitHub Release（tag/Release 均需用户单独授权）。后续完整队列待在线化或分布式消息队列架构时另行规划；macOS/Linux 本地安装器不属于 Milestone 8。
+Milestone 6 与 Milestone 7 均已完成：Milestone 7 的 Task 22–26 已通过验收，v1.1.0 已发布并经用户 fresh-install 复验。Milestone 8（三路并发生成、不排队）已全部实施完成（Task 27 三槽 AttemptRegistry、Task 28 生命周期与 API 上限提示、Task 29 前端提示与完整并发验收），用户 2026-08-14 验收通过；v1.2.0 已按「验收即发布」完成版本提升与本地全量验证（含此前唯一遗留的 smoke_installer 门禁，用户卸载 v1.1.0 复验安装后已通过），正在推送与发布 GitHub Release。后续完整队列待在线化或分布式消息队列架构时另行规划；macOS/Linux 本地安装器不属于 Milestone 8。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 
