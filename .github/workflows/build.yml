@@ -15,9 +15,9 @@ on:
   workflow_call:
     inputs:
       version:
-        description: Release version without a leading v (e.g. 1.1.0)
+        description: Release version without a leading v (e.g. 1.2.0)
         required: false
-        default: '1.1.0'
+        default: '1.2.0'
         type: string
 
 permissions:

@@ -18,12 +18,12 @@ VSVersionInfo(
           [
             StringStruct('CompanyName', 'Pelican Town Specials'),
             StringStruct('FileDescription', 'Pelican Town Specials'),
-            StringStruct('FileVersion', '1.1.0'),
+            StringStruct('FileVersion', '1.2.0'),
             StringStruct('InternalName', 'PelicanTownSpecials'),
             StringStruct('LegalCopyright', 'Copyright (c) 2026'),
             StringStruct('OriginalFilename', 'PelicanTownSpecials.exe'),
             StringStruct('ProductName', 'Pelican Town Specials'),
-            StringStruct('ProductVersion', '1.1.0')
+            StringStruct('ProductVersion', '1.2.0')
           ]
         )
       ]

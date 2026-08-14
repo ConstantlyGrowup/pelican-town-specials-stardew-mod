@@ -4,12 +4,13 @@
 # is only ever assembled from a fully verified build on a clean Windows runner.
 # Only the create-release job holds contents: write (the minimum needed to
 # publish); CI itself stays read-only and no workflow references any secret or
-# API key. The version is resolved from the tag (v1.1.0) or the manual input,
+# API key. The version is resolved from the tag (v1.2.0) or the manual input,
 # must match packaging/pyinstaller/version_info.txt (drift gate in build.yml),
 # and drives the installer / portable ZIP / checksum / release title so they
 # can never disagree. The release job knows its repository via GH_REPO and
 # creates the Release if absent, or edits and re-uploads (--clobber) if the tag
 # already has one, so re-running a tag flow is repeatable instead of failing.
+# v1.2.0 (2026-08-14): Milestone 8 — three-slot concurrent generation.
 name: release
 
 on:
@@ -19,9 +20,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to release (with or without a leading v), e.g. v1.1.0
+        description: Version to release (with or without a leading v), e.g. v1.2.0
         required: false
-        default: 'v1.1.0'
+        default: 'v1.2.0'
 
 permissions:
   contents: read

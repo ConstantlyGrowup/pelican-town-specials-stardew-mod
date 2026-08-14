@@ -7,7 +7,7 @@
 安装与启动
 ----------
 
-推荐使用安装程序：双击 `PelicanTownSpecials-Setup-v1.1.0.exe` 完成安装。
+推荐使用安装程序：双击 `PelicanTownSpecials-Setup-v1.2.0.exe` 完成安装。
 - 应用安装到 `%LOCALAPPDATA%\Programs\PelicanTownSpecials`，无需管理员权限，
   不需要 Python、Node.js 或 Git。
 - 安装会在开始菜单创建「Pelican Town Specials」快捷方式（可选择创建桌面快捷方式）。
