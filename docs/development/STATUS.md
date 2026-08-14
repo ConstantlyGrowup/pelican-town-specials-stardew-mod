@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_8_active |
-| project_phase | Milestone 8（三路并发生成、不排队）实施中：Task 27/28 已 auto_accepted；下一步 Task 29 前端提示与完整并发验收 |
+| project_phase | Milestone 8（三路并发生成、不排队）实施中：Task 27/28 已 auto_accepted；Task 29 前端提示与完整并发验收实施中 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-14-milestone-8-task-28-generation-lifecycle` |
-| active_session_state | auto_accepted（Task 28 已完成、Codex PASS、本地 focused commit 已创建；auto-compact 已启用，里程碑内不停顿） |
-| active_session_type | milestone-8-task-28-implementation |
-| current_task | Task 28：orchestrator/取消/删除/activity monitor/API 接入三槽 registry，busy 携带 activeCount/maxConcurrent（已完成） |
+| active_session_id | `2026-08-14-milestone-8-task-29-frontend-concurrency` |
+| active_session_state | active（Task 29 Context Packet 已冻结并派发实施；auto-compact 已启用，里程碑内不停顿） |
+| active_session_type | milestone-8-task-29-implementation |
+| current_task | Task 29：前端 PTS_GEN_BUSY 双语上限提示 + 三草稿并行验证 + frontend/backend/OpenAPI/E2E 全量回归 + bundle/installer smoke |
 | blocker | 无 |
-| next_action | Task 29 规划（Context Packet）→ 实施 → Codex 审阅 → PASS 后 auto_accepted + 本地 focused commit → Milestone 8 全量验证 → 通知用户验收 |
+| next_action | Task 29 实施 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Milestone 8 全量验证 → 通知用户验收 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
@@ -56,6 +56,12 @@
 - 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **PASS**（5/5 criterion，无 MUST_FIX，scope_delta none，R-01..R-03 全过）。OPTIONAL_HARDENING 2 条非阻塞（只读环境无法复跑 pytest——包工已复跑；规划索引状态同步——AGENTS.md 与 M8 规划文档头部已更新为 ACTIVE）。
 - 验证（包工复跑）：全量 backend **674 passed / 2 skipped**；ruff **All checks passed**；mypy（2 个改动源文件）clean（全 src 87 文件亦 clean）；`git diff --check` clean。RED 先行确认（`KeyError: 'activeCount'`）。
 - 范围：错误消息文案、HTTP 状态不变；前端提示与完整并发验收属 Task 29；未越出 6 个 allowed_files。
+
+## 当前 Milestone 8 Task 29 实施 Session（active）
+
+- `2026-08-14-milestone-8-task-29-frontend-concurrency`：M8 最后一个 Task（前端提示与完整并发验收）。Context Packet：`mvp-m8-task-29-frontend-concurrency-v1`（`docs/plans/2026-08-14-task-29-frontend-concurrency-packet.md`，gitignored），base_commit `d0a3701`，revise_round 0。
+- 规划裁决 R-01..R-05：busy 提示按 code 分支显示本地化静态文案（copy key `generationBusyLimit`，zh/en），不解析 details；复用既有 GenerationError 横幅与重试按钮；E2E 用 route 拦截 + 多 page；不重新生成 OpenAPI（drift 为回归门）；版本号不提升（Release 发布留待用户验收授权）。
+- 范围：仅 5 个 allowed_files（copy.ts、GenerationError.tsx、GenerationError.test.tsx 新建、useGeneration.test.tsx、e2e/generation.spec.ts）；无后端/API/OpenAPI 改动。
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
