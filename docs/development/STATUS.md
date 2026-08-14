@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_8_active |
-| project_phase | Milestone 8（三路并发生成、不排队）实施中：Task 27/28 已 auto_accepted；Task 29 前端提示与完整并发验收实施中 |
+| overall_state | milestone_8_awaiting_acceptance |
+| project_phase | Milestone 8（三路并发生成、不排队）全部 Task（27/28/29）已 auto_accepted 并本地提交；全量验证完成，等待用户验收 |
 | product_implementation_started | true |
 | active_session_id | `2026-08-14-milestone-8-task-29-frontend-concurrency` |
-| active_session_state | active（Task 29 Context Packet 已冻结并派发实施；auto-compact 已启用，里程碑内不停顿） |
+| active_session_state | auto_accepted（Task 29 已完成、Codex round 1 PASS、本地 focused commit 已创建；Milestone 8 全量验证完成，待用户验收） |
 | active_session_type | milestone-8-task-29-implementation |
-| current_task | Task 29：前端 PTS_GEN_BUSY 双语上限提示 + 三草稿并行验证 + frontend/backend/OpenAPI/E2E 全量回归 + bundle/installer smoke |
-| blocker | 无 |
-| next_action | Task 29 实施 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Milestone 8 全量验证 → 通知用户验收 |
+| current_task | Task 29：前端 PTS_GEN_BUSY 双语上限提示 + 三草稿并行验证 + 全量回归 + bundle/installer smoke（已完成） |
+| blocker | 无（唯一遗留项：smoke_installer.ps1 因本机存在用户 v1.1.0 复验安装而按设计拒绝，需用户卸载后重跑或接受延后） |
+| next_action | 通知用户 Milestone 8 验收：确认后统一 push + 按「验收即发布」重建 installer 并发布 GitHub Release（tag/Release 均需用户单独授权） |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
@@ -62,6 +62,15 @@
 - `2026-08-14-milestone-8-task-29-frontend-concurrency`：M8 最后一个 Task（前端提示与完整并发验收）。Context Packet：`mvp-m8-task-29-frontend-concurrency-v1`（`docs/plans/2026-08-14-task-29-frontend-concurrency-packet.md`，gitignored），base_commit `d0a3701`，revise_round 0。
 - 规划裁决 R-01..R-05：busy 提示按 code 分支显示本地化静态文案（copy key `generationBusyLimit`，zh/en），不解析 details；复用既有 GenerationError 横幅与重试按钮；E2E 用 route 拦截 + 多 page；不重新生成 OpenAPI（drift 为回归门）；版本号不提升（Release 发布留待用户验收授权）。
 - 范围：仅 5 个 allowed_files（copy.ts、GenerationError.tsx、GenerationError.test.tsx 新建、useGeneration.test.tsx、e2e/generation.spec.ts）；无后端/API/OpenAPI 改动。
+
+## 当前 Milestone 8 Task 29 实施 Session（auto_accepted）
+
+- `2026-08-14-milestone-8-task-29-frontend-concurrency`：M8 最后一个 Task（前端提示与完整并发验收）。Context Packet：`mvp-m8-task-29-frontend-concurrency-v1`（`docs/plans/2026-08-14-task-29-frontend-concurrency-packet.md`，gitignored），base_commit `d0a3701`，revise_round 0→1。
+- 规划裁决 R-01..R-05：busy 提示按 code 分支显示本地化静态文案（copy key `generationBusyLimit`，zh/en），不解析 details；复用既有 GenerationError 横幅与重试按钮；E2E route 拦截 + 多 page；不重新生成 OpenAPI（drift 为回归门）；版本号不提升（Release 发布留待用户验收授权）。
+- 实现（仅 5 个 allowed_files）：copy.ts +2 键（zh/en）；GenerationError.tsx PTS_GEN_BUSY 分支；GenerationError.test.tsx 新建（4 条，zh/en/非 busy/按钮）；useGeneration.test.tsx +2 条（busy 包络、三 draftId 并发隔离）；e2e/generation.spec.ts +2 用例（busy 409 提示与重试、三 page 并发），RouteState 最小扩展 generateBusyOnceFor/generateBodyFor，既有 26 条零改动。
+- 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **REVISE**（2 项 MUST_FIX 同一根因：409 busy 分支判断前调用 onGenerate，mock 草稿被提前推进）→ round 1 修复（busy 分支前置、拒绝路径零 onGenerate、草稿对象引用断言 zh/en）→ round 1 **PASS**（5/5 criterion，无 MUST_FIX，scope_delta none）。
+- 验证（包工复跑）：frontend Vitest **122 passed**；E2E **28 passed**；backend 全量 **724 passed / 2 skipped**；lint/build/ruff/drift/diff-check clean；build_windows.ps1 + smoke_windows_bundle.ps1 + build_installer.ps1 全门禁通过（版本 1.1.0 未提升）。**唯一缺口**：smoke_installer.ps1 因本机存在用户 2026-08-11 自装 v1.1.0 复验安装（D:\ProgramTesting\PelicanTownSpecials）而按设计拒绝，需用户卸载后重跑或接受延后。
+- Milestone 8 至此全部完成：Task 27（三槽 registry）+ Task 28（生命周期与 API 上限提示）+ Task 29（前端提示与并发验收）已 auto_accepted 并本地提交（不 push），进入用户验收。
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
