@@ -247,6 +247,56 @@ async def test_idle_monitor_keeps_alive_during_generation(
     registry.release_slot(attempt_id)
 
 
+async def test_idle_monitor_keeps_alive_with_three_occupied_slots(
+    tmp_path: Path,
+) -> None:
+    """M8 Task 28 (M8-D07): while any active attempt exists the app is treated
+    as active; with all three generation slots occupied the idle monitor must
+    not request shutdown, and it exits normally once every slot is released."""
+    from uuid import uuid4
+
+    from pelican_town_specials.generation.attempt_registry import AttemptRegistry
+
+    clock = FakeClock()
+    shutdown_event = Event()
+    registry = AttemptRegistry()
+    tracker = ActivityTracker(
+        clock=clock,
+        poll_interval_seconds=0.001,
+        shutdown_callback=shutdown_event.set,
+    )
+    security = SecurityState(
+        config=SecurityConfig(
+            allowed_hosts=frozenset({"testserver"}), expected_port=None
+        ),
+        clock=clock,
+    )
+    application = create_app(
+        workspace_paths=WorkspacePaths.create(tmp_path / "workspace"),
+        security_state=security,
+        activity_tracker=tracker,
+        attempt_registry=registry,
+    )
+
+    held_attempt_ids = []
+    for _ in range(3):
+        draft_id = uuid4()
+        attempt_id = uuid4()
+        assert registry.reserve_slot(draft_id, attempt_id) is True
+        held_attempt_ids.append(attempt_id)
+
+    with TestClient(application, raise_server_exceptions=False):
+        clock.now += 600
+        await asyncio.sleep(0.05)
+        assert shutdown_event.is_set() is False
+        # All three slots are released: the app is idle again and exits.
+        for attempt_id in held_attempt_ids:
+            registry.release_slot(attempt_id)
+        assert shutdown_event.wait(timeout=1)
+
+    assert tracker.shutdown_requested is True
+
+
 def test_missing_index_returns_stable_safe_error_for_static_requests(
     tmp_path: Path,
 ) -> None:

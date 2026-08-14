@@ -8,6 +8,8 @@ PTS_GEN_BUSY forever.
 
 from __future__ import annotations
 
+import asyncio
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -196,6 +198,74 @@ async def test_discard_generating_draft_marks_attempt_terminal(
     assert not (
         harness["workspace"].staging_dir / f"attempt-{attempt_id}"
     ).exists()
+
+
+async def test_discard_one_of_three_releases_only_its_slot(harness) -> None:
+    """M8 Task 28 (M8-D05): deleting one of three running drafts cancels only
+    its attempt and frees only its slot; the other two keep running and a
+    fourth draft can start generating immediately."""
+    draft_a = _ready_draft(harness)
+    draft_b = _ready_draft(harness)
+    draft_c = _ready_draft(harness)
+    draft_d = _ready_draft(harness)
+    harness["gateway"].delay = 0.5
+    streams = [
+        harness["orchestrator"].run(_initial_command(draft))
+        for draft in (draft_a, draft_b, draft_c)
+    ]
+    holders: list[list] = [[], [], []]
+
+    async def consume(stream, holder):
+        async for event in stream:
+            holder.append(event)
+
+    tasks = [
+        asyncio.create_task(consume(stream, holder))
+        for stream, holder in zip(streams, holders)
+    ]
+    try:
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            if all(h and h[0].attempt_id is not None for h in holders):
+                break
+            await asyncio.sleep(0.01)
+        else:
+            pytest.fail("three generations never started")
+
+        attempt_a = holders[0][0].attempt_id
+        attempt_b = holders[1][0].attempt_id
+        attempt_c = holders[2][0].attempt_id
+        assert len({attempt_a, attempt_b, attempt_c}) == 3
+
+        # Delete only the first draft while all three are running.
+        await harness["draft_service"].discard_draft(draft_a.draft_id)
+        await tasks[0]
+
+        # Only the deleted draft's slot was released.
+        assert harness["registry"].active_count() == 2
+        for attempt_id in (attempt_b, attempt_c):
+            persisted = harness["attempt_repository"].get(attempt_id)
+            assert persisted.status is AttemptStatus.RUNNING
+        for draft in (draft_b, draft_c):
+            saved = harness["draft_repository"].get(draft.draft_id)
+            assert saved.status is DraftStatus.GENERATING
+
+        # The freed slot admits a fourth draft immediately.
+        harness["gateway"].delay = 0.0
+        events4 = []
+        async for event in harness["orchestrator"].run(_initial_command(draft_d)):
+            events4.append(event)
+        assert events4[-1].type == "attempt.succeeded"
+
+        await asyncio.gather(tasks[1], tasks[2])
+        assert harness["registry"].active_count() == 0
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        for stream in streams:
+            await stream.aclose()
 
 
 async def test_cookbook_cascade_releases_slot(harness) -> None:

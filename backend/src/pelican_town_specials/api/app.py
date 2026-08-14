@@ -404,7 +404,7 @@ async def _monitor_activity(
         # Task 19.6 (D5.1-3): an occupied generation slot counts as activity, so
         # the app never idle-shuts-down mid-generation. The server owns the
         # generation task independently of any browser heartbeat.
-        tracker.set_busy(attempt_registry.owner() is not None)
+        tracker.set_busy(attempt_registry.active_count() > 0)
         if tracker.should_shutdown():
             tracker.request_shutdown()
             return

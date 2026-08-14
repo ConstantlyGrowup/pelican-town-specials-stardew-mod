@@ -72,7 +72,7 @@ from pelican_town_specials.providers.contracts import (
     ProviderImageInput,
 )
 
-from .attempt_registry import AttemptRegistry, SlotOwner
+from .attempt_registry import MAX_CONCURRENT_GENERATIONS, AttemptRegistry
 from .blueprint import (
     BLUEPRINT_STAGE_ORDER,
     blueprint_icon_prompt,
@@ -350,15 +350,16 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
     )
 
 
-def _busy_error(owner: SlotOwner | None = None) -> AppError:
-    details: dict[str, object] = {}
-    if owner is not None:
-        details["draftId"] = str(owner.draft_id)
+def _busy_error(registry: AttemptRegistry, draft_id: UUID) -> AppError:
     return AppError(
         code="PTS_GEN_BUSY",
         message="当前已有一个生成任务在运行，请稍后重试。",
         http_status=409,
-        details=details,
+        details={
+            "activeCount": registry.active_count(),
+            "maxConcurrent": MAX_CONCURRENT_GENERATIONS,
+            "draftId": str(draft_id),
+        },
         retryable=False,
     )
 
@@ -583,7 +584,7 @@ class GenerationOrchestrator:
         # its owning draft and attempt before any stream begins.
         attempt_id = uuid4()
         if not self._registry.reserve_slot(command.draft_id, attempt_id):
-            raise _busy_error(self._registry.owner())
+            raise _busy_error(self._registry, command.draft_id)
         return _ServerOwnedStream(self, command, attempt_id, self._registry)
 
     def cancel(self, attempt_id: UUID) -> bool:

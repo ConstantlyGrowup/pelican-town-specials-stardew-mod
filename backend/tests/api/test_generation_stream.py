@@ -405,6 +405,101 @@ async def test_cancel_orphaned_attempt_rolls_back(
     assert events[-1]["type"] == "attempt.succeeded"
 
 
+async def test_fourth_concurrent_generation_returns_409_busy_with_details(
+    gen_services: GenServices,
+) -> None:
+    """M8 Task 28 (M8-D02/D03): with three generations in flight the fourth
+    generate request is rejected with a stable 409 PTS_GEN_BUSY carrying
+    activeCount/maxConcurrent, before any attempt record, draft change or
+    provider call."""
+    from pelican_town_specials.domain.assets import AssetKind
+
+    app = gen_services.client.app
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        launch_token = gen_services.security.issue_launch_token()
+        bootstrap = await client.post(
+            "/session/bootstrap",
+            json={"launchToken": launch_token},
+            headers={"Host": "testserver"},
+        )
+        assert bootstrap.status_code == 204
+        csrf = bootstrap.headers["x-pts-csrf"]
+        mutation_headers = {
+            "Host": "testserver",
+            "Origin": "http://testserver",
+            "X-PTS-CSRF": csrf,
+        }
+
+        draft_ids = []
+        for _ in range(4):
+            ref = put_png(gen_services.asset_store, kind=AssetKind.ORIGINAL_IMAGE)
+            create = await client.post(
+                "/api/v1/drafts",
+                json={
+                    "mode": "ASK_GUS",
+                    "language": "zh-CN",
+                    "source": {"originalImageAssetId": str(ref.asset_id)},
+                },
+                headers=mutation_headers,
+            )
+            assert create.status_code == 201
+            draft_ids.append(create.json()["draftId"])
+
+        gen_services.gateway.delay = 0.5
+        generate_tasks = [
+            asyncio.create_task(
+                client.post(
+                    f"/api/v1/drafts/{draft_id}/generate",
+                    headers=mutation_headers,
+                )
+            )
+            for draft_id in draft_ids[:3]
+        ]
+        try:
+            # Wait until all three attempts are inside their first provider
+            # call; the snapshot below is then stable for the rejection.
+            deadline = time.monotonic() + 5.0
+            while time.monotonic() < deadline:
+                if gen_services.gateway.calls.count("analyze") >= 3:
+                    break
+                await asyncio.sleep(0.01)
+            else:
+                pytest.fail("three generations never reached the provider")
+
+            analyze_before = gen_services.gateway.calls.count("analyze")
+            calls_before = len(gen_services.gateway.calls)
+            staging = gen_services.client.app.state.workspace_paths.staging_dir
+            attempt_dirs_before = len(list(staging.glob("attempt-*")))
+
+            fourth = await client.post(
+                f"/api/v1/drafts/{draft_ids[3]}/generate",
+                headers=mutation_headers,
+            )
+            assert fourth.status_code == 409
+            body = fourth.json()
+            assert body["error"]["code"] == "PTS_GEN_BUSY"
+            assert body["error"]["details"]["activeCount"] == 3
+            assert body["error"]["details"]["maxConcurrent"] == 3
+
+            # Zero side effects: no new attempt record, draft unchanged, no
+            # additional provider call.
+            assert len(list(staging.glob("attempt-*"))) == attempt_dirs_before
+            saved = gen_services.draft_repository.get(draft_ids[3])
+            assert saved.status.value == "DRAFT"
+            assert saved.active_attempt_id is None
+            assert gen_services.gateway.calls.count("analyze") == analyze_before
+            assert len(gen_services.gateway.calls) == calls_before
+        finally:
+            for task in generate_tasks:
+                if not task.done():
+                    task.cancel()
+                    with suppress(BaseException):
+                        await task
+
+
 # --- Task 19.3: read-only generation progress endpoint -----------------------
 
 
