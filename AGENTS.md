@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-Milestone 6 与 Milestone 7 均已完成：Milestone 7 的 Task 22–26 已通过验收，v1.1.0 已发布并经用户 fresh-install 复验。Milestone 8（三路并发生成、不排队）已完成可行性评估和 Task 27–29 拆分，当前停留在 `planned / awaiting_user_confirmation`，不得提前进入产品开发或创建 Task 27 Context Packet。后续完整队列待在线化或分布式消息队列架构时另行规划；macOS/Linux 本地安装器不属于 Milestone 8。
+Milestone 6 与 Milestone 7 均已完成：Milestone 7 的 Task 22–26 已通过验收，v1.1.0 已发布并经用户 fresh-install 复验。Milestone 8（三路并发生成、不排队）实施中：Task 27（三槽 AttemptRegistry）与 Task 28（生命周期与 API 上限提示）已 auto_accepted 并本地提交，Task 29（前端提示与完整并发验收）进行中；用户已启用 auto-compact，Milestone 内不停顿，完成后一次性通知用户验收。后续完整队列待在线化或分布式消息队列架构时另行规划；macOS/Linux 本地安装器不属于 Milestone 8。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 

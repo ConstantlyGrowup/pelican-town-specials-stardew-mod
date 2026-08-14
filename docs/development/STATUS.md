@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | milestone_8_active |
-| project_phase | Milestone 8（三路并发生成、不排队）实施中：Task 27 三槽 AttemptRegistry 已 auto_accepted；下一步 Task 28 |
+| project_phase | Milestone 8（三路并发生成、不排队）实施中：Task 27/28 已 auto_accepted；下一步 Task 29 前端提示与完整并发验收 |
 | product_implementation_started | true |
 | active_session_id | `2026-08-14-milestone-8-task-28-generation-lifecycle` |
-| active_session_state | active（Task 28 Context Packet 已冻结并派发实施；auto-compact 已启用，里程碑内不停顿） |
+| active_session_state | auto_accepted（Task 28 已完成、Codex PASS、本地 focused commit 已创建；auto-compact 已启用，里程碑内不停顿） |
 | active_session_type | milestone-8-task-28-implementation |
-| current_task | Task 28：orchestrator/取消/删除/activity monitor/API 接入三槽 registry，busy 携带 activeCount/maxConcurrent |
+| current_task | Task 28：orchestrator/取消/删除/activity monitor/API 接入三槽 registry，busy 携带 activeCount/maxConcurrent（已完成） |
 | blocker | 无 |
-| next_action | Task 28 实施 → Codex 审阅（gpt-5.6-luna/max，新 thread）→ PASS 后 auto_accepted + 本地 focused commit → Task 29 |
+| next_action | Task 29 规划（Context Packet）→ 实施 → Codex 审阅 → PASS 后 auto_accepted + 本地 focused commit → Milestone 8 全量验证 → 通知用户验收 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
@@ -27,9 +27,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `feat/mvp-implementation` 的本地与 origin 均位于 `33dd204`（M7 关闭后的 Git 状态同步）；tag `v1.1.0` 位于 `b39b50d` |
+| 最新提交 | `feat/mvp-implementation` 本地领先 origin：M8 控制面激活 `c9a0af6`、Task 27 feat `c3289d2` + docs `cdef3e6`、Task 28 激活 `1e2a842`、Task 28 feat 与 docs 记录（本 Session）；origin 仍位于 `33dd204`（M7 关闭后同步）；tag `v1.1.0` 位于 `b39b50d` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。 |
-| 当前工作树范围 | M8 规划与此前状态文档回退尚未提交；没有产品源码改动。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
+| 当前工作树范围 | M8 Task 27/28 已实施并本地提交（不 push）；Task 29 尚未开始。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 
@@ -47,6 +47,15 @@
 - 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **PASS**（7/7 criterion，无 MUST_FIX，scope_delta none）。OPTIONAL_HARDENING 2 条非阻塞（barrier 端到端重叠留 Task 28/29；未来跨线程调用时才需给 `_tasks/_cancellations` 补锁）。
 - 验证（包工复跑）：focused `test_attempt_registry.py` **20 passed**；全量 backend **665 passed / 2 skipped**（zip 重复条目警告为预存、无关）；ruff **All checks passed**；mypy（attempt_registry.py）clean；`git diff --check` clean。RED 先行确认（10 个预期失败）。
 - 范围：未改 orchestrator/删除/activity/API/前端；busy details 的 activeCount/maxConcurrent 属 Task 28。
+
+## 当前 Milestone 8 Task 28 实施 Session（auto_accepted）
+
+- `2026-08-14-milestone-8-task-28-generation-lifecycle`：本 Session 只处理 Task 28（生成生命周期与 API 上限提示）。Context Packet：`mvp-m8-task-28-generation-lifecycle-v1`（`docs/plans/2026-08-14-task-28-generation-lifecycle-packet.md`，gitignored），base_commit `cdef3e6`，revise_round 0。
+- 规划裁决 R-01..R-03：`_busy_error(registry, draft_id)` 恒定输出 activeCount（active_count()）/maxConcurrent（MAX_CONCURRENT_GENERATIONS）/draftId（被拒请求草稿）；`run()` 调用点改 `raise _busy_error(self._registry, command.draft_id)`（同草稿场景值与 Task 27 断言一致）；`app.py:407` 改 `tracker.set_busy(attempt_registry.active_count() > 0)`；其余接线经验证已满足 M8-D02/D05/D06，最小改动不动。
+- 实现（仅 6 个 allowed_files）：orchestrator `_busy_error` 签名与 details 扩展 + `MAX_CONCURRENT_GENERATIONS` 导入（`SlotOwner` 导入移除）；app.py activity 行；新建 `test_m8_concurrency.py`（6 条：barrier 三路真实重叠、第四拒绝零副作用、完成/取消/失败/断开只释放对应槽）；`test_generation_stream.py` 增 API 层 409+details 测试；`test_draft_generation_reclaim.py` 增删除三路之一测试；`test_static_frontend.py` 增三槽 idle monitor 测试。
+- 审阅：Codex（gpt-5.6-luna/max，新 thread）round 0 **PASS**（5/5 criterion，无 MUST_FIX，scope_delta none，R-01..R-03 全过）。OPTIONAL_HARDENING 2 条非阻塞（只读环境无法复跑 pytest——包工已复跑；规划索引状态同步——AGENTS.md 与 M8 规划文档头部已更新为 ACTIVE）。
+- 验证（包工复跑）：全量 backend **674 passed / 2 skipped**；ruff **All checks passed**；mypy（2 个改动源文件）clean（全 src 87 文件亦 clean）；`git diff --check` clean。RED 先行确认（`KeyError: 'activeCount'`）。
+- 范围：错误消息文案、HTTP 状态不变；前端提示与完整并发验收属 Task 29；未越出 6 个 allowed_files。
 
 ## 当前 Milestone 7 Task 23 实施 Session（auto_accepted）
 
