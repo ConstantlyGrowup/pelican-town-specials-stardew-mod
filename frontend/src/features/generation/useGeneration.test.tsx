@@ -82,6 +82,161 @@ describe("useGeneration", () => {
     expect(result.current.error?.message).toBe("当前已有一个生成任务在运行。");
   });
 
+  it("passes the full PTS_GEN_BUSY envelope (with activeCount details) through on a busy 409", async () => {
+    server.use(
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "PTS_GEN_BUSY",
+              message: "当前已有一个生成任务在运行，请稍后重试。",
+              retryable: false,
+              requestId: "req-busy",
+              recommendedAction: "",
+              details: { activeCount: 3, maxConcurrent: 3, draftId: "draft-1" },
+            },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    const { result } = renderHook(() => useGeneration({ draftId: "draft-1" }), {
+      wrapper,
+    });
+
+    act(() => result.current.begin());
+
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+    expect(result.current.error?.code).toBe("PTS_GEN_BUSY");
+    expect(result.current.error?.message).toBe(
+      "当前已有一个生成任务在运行，请稍后重试。",
+    );
+    // The API layer keeps details opaque (never surfaced to the UI): only the
+    // envelope's known fields pass through, unchanged.
+    expect(result.current.error?.retryable).toBe(false);
+    expect(result.current.error?.requestId).toBe("req-busy");
+  });
+
+  it("keeps three concurrent draft streams isolated per draftId", async () => {
+    // Controlled per-draft NDJSON streams: stage progress and terminal
+    // outcomes are released independently so the three drafts can be
+    // observed mid-flight without cross-contamination (M8 Task 29).
+    type StreamHandle = {
+      enqueue: (chunk: string) => void;
+      close: () => void;
+    };
+    const streams: Record<string, StreamHandle> = {};
+    const encoder = new TextEncoder();
+    const streamFor = (key: string): Response => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          streams[key] = {
+            enqueue: (chunk) => controller.enqueue(encoder.encode(chunk)),
+            close: () => controller.close(),
+          };
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: { "Content-Type": "application/x-ndjson" },
+      });
+    };
+    server.use(
+      http.post("/api/v1/drafts/draft-a/generate", () => streamFor("a")),
+      http.post("/api/v1/drafts/draft-b/generate", () => streamFor("b")),
+      http.post("/api/v1/drafts/draft-c/generate", () => streamFor("c")),
+    );
+
+    const a = renderHook(() => useGeneration({ draftId: "draft-a" }), {
+      wrapper,
+    });
+    const b = renderHook(() => useGeneration({ draftId: "draft-b" }), {
+      wrapper,
+    });
+    const c = renderHook(() => useGeneration({ draftId: "draft-c" }), {
+      wrapper,
+    });
+    act(() => {
+      a.result.current.begin();
+      b.result.current.begin();
+      c.result.current.begin();
+    });
+
+    await waitFor(() => {
+      expect(streams.a).toBeDefined();
+      expect(streams.b).toBeDefined();
+      expect(streams.c).toBeDefined();
+    });
+
+    act(() => {
+      streams.a.enqueue(
+        '{"type":"attempt.started","attemptId":"a-1"}\n' +
+          '{"type":"stage.started","stage":"DISH_ANALYSIS","ordinal":2,"total":9}\n',
+      );
+      streams.b.enqueue(
+        '{"type":"attempt.started","attemptId":"b-1"}\n' +
+          '{"type":"stage.started","stage":"INGREDIENT_MAPPING","ordinal":4,"total":9}\n',
+      );
+      streams.c.enqueue(
+        '{"type":"attempt.started","attemptId":"c-1"}\n' +
+          '{"type":"stage.started","stage":"GAMEPLAY_DESIGN","ordinal":3,"total":9}\n',
+      );
+    });
+
+    // Each draft observes only its own stage progress.
+    await waitFor(() =>
+      expect(a.result.current.currentStage).toBe("DISH_ANALYSIS"),
+    );
+    await waitFor(() =>
+      expect(b.result.current.currentStage).toBe("INGREDIENT_MAPPING"),
+    );
+    await waitFor(() =>
+      expect(c.result.current.currentStage).toBe("GAMEPLAY_DESIGN"),
+    );
+    expect(a.result.current.totalStages).toBe(9);
+
+    act(() => {
+      streams.a.enqueue(
+        '{"type":"stage.succeeded","stage":"INPUT_VALIDATION","ordinal":1,"total":9}\n',
+      );
+    });
+    await waitFor(() =>
+      expect(a.result.current.succeededStages).toEqual(["INPUT_VALIDATION"]),
+    );
+    // b and c never see draft-a's succeeded stage.
+    expect(b.result.current.succeededStages).toEqual([]);
+    expect(c.result.current.succeededStages).toEqual([]);
+
+    // Terminal outcomes are released per draft: a and c succeed while b fails
+    // with its own envelope; none of the others observe it.
+    act(() => {
+      streams.a.enqueue(
+        '{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":2,"draft":{}}\n',
+      );
+      streams.b.enqueue(
+        '{"type":"attempt.failed","attemptId":"b-1","error":{"code":"PTS_GEN_VALIDATION_FAILED","message":"生成结果未通过校验。","retryable":false,"requestId":"req-b","recommendedAction":""}}\n',
+      );
+      streams.c.enqueue(
+        '{"type":"attempt.succeeded","attemptId":"c-1","draftRevision":2,"draft":{}}\n',
+      );
+      streams.a.close();
+      streams.b.close();
+      streams.c.close();
+    });
+
+    await waitFor(() => expect(a.result.current.phase).toBe("success"));
+    await waitFor(() => expect(b.result.current.phase).toBe("error"));
+    await waitFor(() => expect(c.result.current.phase).toBe("success"));
+    expect(b.result.current.error?.code).toBe("PTS_GEN_VALIDATION_FAILED");
+    expect(b.result.current.error?.message).toBe("生成结果未通过校验。");
+    expect(a.result.current.error).toBeNull();
+    expect(c.result.current.error).toBeNull();
+
+    a.unmount();
+    b.unmount();
+    c.unmount();
+  });
+
   it("awaits the backend cancel before clearing streaming state", async () => {
     let releaseCancel!: () => void;
     const cancelGate = new Promise<void>((resolve) => {
