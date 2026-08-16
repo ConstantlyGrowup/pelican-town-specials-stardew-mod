@@ -10,11 +10,11 @@
 | project_phase | Milestone 8/v1.2.0 已发布；用户 2026-08-16 明确要求实现 Task 30 新手试用入口（覆盖此前 deferred 状态）；第三期全局生成记忆仍为独立需求发现（暂停等待用户回答，Task 30 期间不开发） |
 | product_implementation_started | true |
 | active_session_id | `2026-08-16-task-30-trial-entry-impl` |
-| active_session_state | active（Context Packet `mvp-task-30-trial-entry-v1` 已 READY_FOR_IMPLEMENTATION） |
+| active_session_state | awaiting_user_acceptance（Context Packet `mvp-task-30-trial-entry-v1`；round 0 REVISE→round 1 PASS；auto_accepted；本地 focused commit `96e9988` 已创建，未 push） |
 | active_session_type | task-30-implementation |
 | current_task | 实施 Task 30 新手试用入口：隐藏试用档案 + trial-state.json 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + CI Secret 注入试用资源 |
 | blocker | 无 |
-| next_action | Codex round-0 **REVISE**（2 项 MUST_FIX：T30-TRIAL-006 workflow_call 未声明/未转发 trial secret；T30-TRIAL-001 试用 gateway AppError details 泄漏 provider 回显；另 1 项阻塞门禁：test_release.py `secrets.` 全禁门已因注入步骤翻红）→ REVISE round-1 修复完成，包工复跑全绿（focused 39、repo 36、backend 708/2、ruff/mypy/diff-check clean）→ Codex round-1 复审（新 thread，gpt-5.6-luna/max）进行中 → PASS → auto_accepted → 本地 focused commit → 提示用户验收 |
+| next_action | Codex round-0 **REVISE**（2 项 MUST_FIX + 1 阻塞门禁）→ round-1 修复完成、包工复跑全绿（focused 39、repo 36、backend 708/2、ruff/mypy/diff-check clean）→ Codex round-1 **PASS**（无 MUST_FIX，scope_delta none）→ **auto_accepted** → 本地 focused commit `96e9988`（32 文件，+2286/−41，不 push）→ **awaiting_user_acceptance**：提示用户验收 Task 30 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实

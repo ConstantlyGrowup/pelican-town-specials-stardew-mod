@@ -32,6 +32,8 @@
 - **round 1 已派发**新实施子代理：FIX 1 workflow secret 转发（build.yml `workflow_call.secrets` + ci/release 显式转发，保留无 secret → 无资源 → available=false）；FIX 2 test_release.py 门禁改写（禁 PTS_OPENAI_API_KEY/SUPER_SECRET，正向断言试用 Key 声明与转发，权限断言不变）；FIX 3 试用 gateway 边界脱敏（`TrialSafeGateway` 实现 ModelGateway 三方法，捕获 AppError 以空 details 重抛，个人路径不动）+ 回归测试。
 - **round 1 实施完成**（新实施子代理，scope_delta none，仅 round-1 allowed_files）：build.yml 声明 `workflow_call.secrets.PTS_TRIAL_API_KEY`（required: false）+ ci/release 转发；test_release.py 门禁放行试用 Key 转发仍禁个人 Key；`application/trial.py` 增 `TrialSafeGateway`/`_trial_safe_error`，`app.py` 试用 gateway 工厂包一层；test_trial.py 增 3 条单元测试（全协议方法：AppError details 剥空、happy path 透传、非 AppError 透传），test_trial_generation.py 增回显错误不泄漏集成测试（`attempt.failed` details=={}，个人路径零调用）。
 - **包工复跑验收（round 1）**：focused 39 passed；repo 36 passed；全量 backend **708 passed / 2 skipped**；ruff clean；mypy clean（88 files）；`git diff --check` exit 0。→ 桥接 Codex round-1 复审（新 thread，gpt-5.6-luna/max）。
+- **Codex round-1 复审：PASS**（checked T30-TRIAL-006/001，无 MUST_FIX，optional_hardening/new_design none，scope_delta none，planning_rulings R-01..R-08 全过）。→ **auto_accepted** → 本地 focused commit `96e9988`（32 文件 +2286/−41，不 push）→ 进入 **awaiting_user_acceptance**。
+- 建议提交边界：Task 30 实现（backend trial/errors/orchestrator/app/settings + 前端 SettingsPage/GenerationError/copy/OpenAPI/E2E + workflows + .gitignore + repo 测试）+ 控制面文档（STATUS/本 Session/AGENTS.md/CONSTRAINTS.md/三期 Session 追加）。用户明确验收后可授权 push。
 
 ## 不做
 
