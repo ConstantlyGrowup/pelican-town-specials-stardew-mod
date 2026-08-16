@@ -66,6 +66,18 @@
 
 用户 2026-08-17 明确「验收通过，可以push」，并在仓库设置中配置好试用 Key（`PTS_TRIAL_API_KEY` secret）。Task 30（含 R-09 扩展）整体进入 **accepted**；已授权 push 当前分支。本轮不自动构建新 installer/Release（tag 推送与 Release 发布需用户单独授权）。
 
-## 下一步
+## 推送、发布与核验（2026-08-17）
 
-按用户授权 push `feat/mvp-implementation`（4 个本地提交：`96e9988` Task 30 feat、`9d1a245` docs、`9cb35a8` R-09 feat、`9b1f705` docs）→ 核验推送结果。若用户要求发布新版本，则执行「验收即发布」：升版本 → 本地 build_windows.ps1 + build_installer.ps1 全量验证 → 用户授权 tag → push tag 触发 release.yml → 核验 GitHub Release 产物（试用 Key 由 `PTS_TRIAL_API_KEY` secret 注入）。
+用户验收 Task 30（含 R-09）并授权 push + 发布 v1.3.0。实际执行：
+- 推送 `feat/mvp-implementation` 至 `1a0c53a`（docs 记录验收与推送授权）。分支 CI（run 31952234049）曾因 **M8 并发 flaky 测试** `test_fourth_concurrent_generation_returns_409_busy_with_details` 失败一次（`AssertionError: assert 5 == 3`）。诊断：与 R-09 无关——该测试 fixture 用默认 `personal_configured=lambda: False`、无 trial access，R-09 双路由未进入；FakeGateway 在每次调用**开始**时记录调用，三个并发生成在 0.5s delay 内持续推进，快照后继续追加 design 调用 → 计数断言竞态。
+- 版本提升 commit `4de82ad`（11 文件 +16/−15，v1.2.0→v1.3.0）；本地全量门禁全绿（build_windows.ps1 / build_installer.ps1 / smoke_windows_bundle.ps1：EXE+setup icon `3FE51DEB`、版本身份 1.3.0、installer SHA-256 `DC548314…`）。
+- push branch + tag **v1.3.0** → release.yml run 31952659305 **success**（resolve-version → verify-and-build 10m48s → create-release 17s）。`gh release view v1.3.0` 核验：tag `v1.3.0`、非 draft/pre-release、产物 `PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + `SHA256SUMS.txt`。
+- 用户最初报告「仍显示 1.2」系因检查时 verify-and-build 尚未完成（约需 10+ 分钟），并非发布失败。
+
+## 维护修复：M8 并发 flaky 测试确定性化（2026-08-17）
+
+分支 CI 曾因上文竞态失败一次，虽 release run 恰好通过，仍做确定性修复避免后续 CI 抖动：
+- `backend/tests/generation/conftest.py`：FakeGateway 增可选 `hold: asyncio.Event | None = None`（默认 None 不影响既有测试）；`analyze_dish` 在记录 `analyze` 调用后、delay 前 `await hold.wait()`，可把在途生成冻结在首次 Provider 调用内。
+- `backend/tests/api/test_generation_stream.py`：并发 409 测试设置 `hold`，冻结三个在途生成后快照；断言期间在途生成无法追加新调用，`len(calls) == calls_before` 由竞态变为确定；finally 先 `hold.set()` 再取消任务。
+- 验证：generation + stream 全量 73 passed；flaky 测试连续 8/8 通过；全量 CI 命令 `python -m pytest backend/tests tests/repo tests/integration -q` 全绿。
+- 状态：测试-only、无用户可见行为变化、测试全覆盖 → 按自动审批例外本地维护 commit（未 push）。

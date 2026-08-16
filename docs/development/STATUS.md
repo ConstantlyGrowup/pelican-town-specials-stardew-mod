@@ -10,11 +10,11 @@
 | project_phase | Milestone 8/v1.2.0 已发布；用户 2026-08-16 明确要求实现 Task 30 新手试用入口（覆盖此前 deferred 状态）；第三期全局生成记忆仍为独立需求发现（暂停等待用户回答，Task 30 期间不开发） |
 | product_implementation_started | true |
 | active_session_id | `2026-08-16-task-30-trial-entry-impl` |
-| active_session_state | accepted（用户 2026-08-17 验收 Task 30 含 R-09 并授权 push；提交 `96e9988`/`9d1a245`/`9cb35a8`/`9b1f705` 推送中；本轮不自动发布新版本） |
+| active_session_state | accepted（用户 2026-08-17 验收 Task 30 含 R-09，授权 push + 发布 v1.3.0；分支已推送至 `4de82ad`，tag `v1.3.0` 已推送，**GitHub Release v1.3.0 已发布并核验**：setup.exe + windows-x64 ZIP + SHA256SUMS.txt，release run 31952659305 全绿） |
 | active_session_type | task-30-implementation |
 | current_task | 实施 Task 30 新手试用入口：隐藏试用档案 + trial-state.json 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + CI Secret 注入试用资源 |
 | blocker | 无 |
-| next_action | 用户 2026-08-17 验收 Task 30（含 R-09）通过并授权 push，已在仓库设置配置 `PTS_TRIAL_API_KEY` secret → **推送中**（4 提交：`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`）。推送后：本机已重启应用则 Settings 试用可用（已配置用户显示优先消耗提示）。若要发布新版本（installer + GitHub Release），需用户另行授权，按「验收即发布」执行（升版本 → 本地全量构建验证 → tag → release.yml → 核验产物）。此前链路：验收阻塞已解除（gitignored 本地试用 Key 资源 `available=true`）；R-09 扩展 Codex round 0 **PASS** → **auto_accepted** → `9cb35a8`；Task 30 整体 round 0 REVISE → round 1 修复 → Codex **PASS** → **auto_accepted** → `96e9988` |
+| next_action | **v1.3.0 已发布并核验**（release run 31952659305 全绿：resolve-version → verify-and-build 10m48s → create-release 17s；`gh release view v1.3.0` 确认产物 setup.exe + windows-x64 ZIP + SHA256SUMS.txt，非 draft/pre-release）。发布期间分支 CI（run 31952234049）曾因 M8 并发 flaky 测试 `test_fourth_concurrent_generation_returns_409_busy_with_details` 失败一次（`assert 5 == 3`）——已诊断与 R-09 无关，为在途生成在快照后继续追加 design 调用的时间竞态，并用 FakeGateway `hold` 门控做了确定性修复（generation/stream 73 测试通过，flaky 测试 8/8 通过），作为维护 commit 本地提交（未 push）。此前链路：Task 30（含 R-09）验收通过并授权 push（`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）。 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -25,8 +25,8 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `feat/mvp-implementation` 本地与 origin 均位于 `b6df1f3`（记录 v1.2.0 Release 产物核验）；v1.2.0 版本提升为 `3b6ea33`，验收/发布记录为 `3604713`，annotated tag `v1.2.0` 指向该验收发布链路；tag `v1.1.0` 位于 `b39b50d` |
-| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。 |
+| 最新提交 | `feat/mvp-implementation` 本地与 origin 均位于 `4de82ad`（release: bump version to 1.3.0，Task 30 发布链路）；v1.3.0 版本提升为 `4de82ad`，验收/发布记录为 `1a0c53a`，annotated tag `v1.3.0` 指向该链路；v1.2.0 链路（`3b6ea33`/`3604713`/tag `v1.2.0`）、tag `v1.1.0` 位于 `b39b50d` |
+| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。 |
 | 当前工作树范围 | Task 30 实施改动（backend `application/trial.py`、orchestrator/errors/app/settings 路由、新测试、前端 SettingsPage/GenerationError/copy、OpenAPI 契约、E2E、build.yml、.gitignore）＋控制面文档（STATUS.md、Task 30 Session、AGENTS.md、CONSTRAINTS.md）。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
 
 ## 已 deferred 的 Task 30 规划 Session
