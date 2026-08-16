@@ -3,12 +3,12 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-16-task-30-trial-entry-impl` |
-| status | `active` |
+| status | `accepted` |
 | session_type | `task-30-implementation` |
 | owner | Codex 主会话（包工） |
 | started_at | `2026-08-16` |
 | implementation_started | `true` |
-| user_acceptance | `pending` |
+| user_acceptance | `accepted` |
 | base_commit | `b6df1f3 docs: record v1.2.0 release published and artifacts verified` |
 | acceptance_contract_id | `mvp-task-30-trial-entry-v1` |
 | revise_round | 0 |
@@ -62,6 +62,10 @@
 - 不扫描/重写/删除用户草稿；不修改 Draft/Cookbook schema；不新增队列/数据库/账号/服务端代理。
 - 不开发第三期全局生成记忆；`2026-08-16-phase-3-global-memory-planning` 保持暂停。
 
+## 用户验收与推送（2026-08-17）
+
+用户 2026-08-17 明确「验收通过，可以push」，并在仓库设置中配置好试用 Key（`PTS_TRIAL_API_KEY` secret）。Task 30（含 R-09 扩展）整体进入 **accepted**；已授权 push 当前分支。本轮不自动构建新 installer/Release（tag 推送与 Release 发布需用户单独授权）。
+
 ## 下一步
 
-用户重启开发服务器 → Settings「不想配置，先试试效果」入口显示可用 → 完成 Task 30 验收 → 授权 push（及可选安装包重建/Release）。
+按用户授权 push `feat/mvp-implementation`（4 个本地提交：`96e9988` Task 30 feat、`9d1a245` docs、`9cb35a8` R-09 feat、`9b1f705` docs）→ 核验推送结果。若用户要求发布新版本，则执行「验收即发布」：升版本 → 本地 build_windows.ps1 + build_installer.ps1 全量验证 → 用户授权 tag → push tag 触发 release.yml → 核验 GitHub Release 产物（试用 Key 由 `PTS_TRIAL_API_KEY` secret 注入）。

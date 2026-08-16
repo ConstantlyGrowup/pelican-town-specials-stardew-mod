@@ -10,11 +10,11 @@
 | project_phase | Milestone 8/v1.2.0 已发布；用户 2026-08-16 明确要求实现 Task 30 新手试用入口（覆盖此前 deferred 状态）；第三期全局生成记忆仍为独立需求发现（暂停等待用户回答，Task 30 期间不开发） |
 | product_implementation_started | true |
 | active_session_id | `2026-08-16-task-30-trial-entry-impl` |
-| active_session_state | awaiting_user_acceptance（Context Packet `mvp-task-30-trial-entry-v1`；round 0 REVISE→round 1 PASS→auto_accepted→本地 focused commit `96e9988`；用户授权扩展 R-09「已配置用户优先试用」round 0 PASS→auto_accepted→本地 focused commit `9cb35a8`；均未 push） |
+| active_session_state | accepted（用户 2026-08-17 验收 Task 30 含 R-09 并授权 push；提交 `96e9988`/`9d1a245`/`9cb35a8`/`9b1f705` 推送中；本轮不自动发布新版本） |
 | active_session_type | task-30-implementation |
 | current_task | 实施 Task 30 新手试用入口：隐藏试用档案 + trial-state.json 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + CI Secret 注入试用资源 |
 | blocker | 无 |
-| next_action | 验收阻塞已解除：用户报告试用 `available:false`（安全降级，非缺陷）；已在 gitignored `resources/trial/trial_api_key.txt` 落地用户提供的真实试用 Key（额度已设兜底），验证全新实例 `available=true`；`FileTrialKeyProvider` 缓存首次读取，**须重启应用**。R-09 扩展（用户新增规则「已配置且有试用机会时优先用掉试用机会」）已完成：Codex round 0 **PASS** → **auto_accepted** → 本地 focused commit `9cb35a8`（9 文件 +346/−22，不 push），实现配置用户自动优先消耗试用额度、耗尽/竞争失败静默回退个人 Provider；未配置用户 opt-in 流程不变。下一步：用户重启开发服务器 → Settings「不想配置，先试试效果」试用可用（已配置用户显示优先消耗提示）→ 验收 Task 30（含 R-09 规则）→ 授权 push（及可选安装包重建/Release，需在 GitHub 设 `PTS_TRIAL_API_KEY` secret）。此前链路：round 0 REVISE → round 1 修复、包工复跑全绿 → Codex round-1 **PASS** → **auto_accepted** → 本地 focused commit `96e9988`（32 文件，+2286/−41，不 push）→ **awaiting_user_acceptance** |
+| next_action | 用户 2026-08-17 验收 Task 30（含 R-09）通过并授权 push，已在仓库设置配置 `PTS_TRIAL_API_KEY` secret → **推送中**（4 提交：`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`）。推送后：本机已重启应用则 Settings 试用可用（已配置用户显示优先消耗提示）。若要发布新版本（installer + GitHub Release），需用户另行授权，按「验收即发布」执行（升版本 → 本地全量构建验证 → tag → release.yml → 核验产物）。此前链路：验收阻塞已解除（gitignored 本地试用 Key 资源 `available=true`）；R-09 扩展 Codex round 0 **PASS** → **auto_accepted** → `9cb35a8`；Task 30 整体 round 0 REVISE → round 1 修复 → Codex **PASS** → **auto_accepted** → `96e9988` |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
