@@ -13,6 +13,7 @@ import {
 } from "./providerForm";
 
 type ProviderKeyStatus = components["schemas"]["ProviderKeyStatus"];
+type TrialStatus = components["schemas"]["TrialStatus"];
 
 // Transient status/error messages store a catalog key so a live message
 // re-localizes when the user switches the UI language (M7-T25-I18N-001).
@@ -20,7 +21,9 @@ type SettingsMessageKey =
   | "settingsLoadFailed"
   | "settingsSaved"
   | "saveFailed"
-  | "deleteFailed";
+  | "deleteFailed"
+  | "trialEnableFailed"
+  | "trialExitFailed";
 
 export function SettingsPage() {
   const copy = useCopy();
@@ -39,6 +42,11 @@ export function SettingsPage() {
   const keyInputRef = useRef<HTMLInputElement>(null);
   const [keyStatus, setKeyStatus] = useState<ProviderKeyStatus | null>(null);
   const [keyMessage, setKeyMessage] = useState<SettingsMessageKey | null>(null);
+  // `null` means "still loading or the trial status endpoint failed"; the
+  // panel simply stays quiet so a transient network failure never crashes the
+  // Settings page or masks the personal provider form.
+  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
+  const [trialMessage, setTrialMessage] = useState<SettingsMessageKey | null>(null);
 
   const form = useForm<ProviderSettingsValues>({
     defaultValues: {
@@ -71,6 +79,39 @@ export function SettingsPage() {
       return data;
     },
   });
+
+  useQuery({
+    queryKey: ["trial-status"],
+    queryFn: async () => {
+      const { data, error } = await apiClient.GET("/api/v1/settings/provider/trial");
+      if (error || !data) {
+        setTrialStatus(null);
+        throw new Error("trial status load failed");
+      }
+      setTrialStatus(data);
+      return data;
+    },
+  });
+
+  async function onEnableTrial() {
+    const { data, error } = await apiClient.POST("/api/v1/settings/provider/trial");
+    if (error || !data) {
+      setTrialMessage("trialEnableFailed");
+      return;
+    }
+    setTrialStatus(data);
+    setTrialMessage(null);
+  }
+
+  async function onExitTrial() {
+    const { data, error } = await apiClient.DELETE("/api/v1/settings/provider/trial");
+    if (error || !data) {
+      setTrialMessage("trialExitFailed");
+      return;
+    }
+    setTrialStatus(data);
+    setTrialMessage(null);
+  }
 
   function onLocaleKeyDown(event: KeyboardEvent<HTMLElement>) {
     const currentIndex = localeOptions.findIndex((option) => option.value === locale);
@@ -120,6 +161,8 @@ export function SettingsPage() {
     }
     setSaveMessage("settingsSaved");
     await queryClient.invalidateQueries({ queryKey: ["provider-settings"] });
+    // Saving personal provider params auto-exits trial mode (T30-TRIAL-004).
+    await queryClient.invalidateQueries({ queryKey: ["trial-status"] });
   }
 
   async function onSaveKey() {
@@ -139,6 +182,8 @@ export function SettingsPage() {
       keyInputRef.current.value = "";
     }
     setKeyMessage("settingsSaved");
+    // Saving a personal API key also auto-exits trial mode (T30-TRIAL-004).
+    await queryClient.invalidateQueries({ queryKey: ["trial-status"] });
   }
 
   async function onDeleteKey() {
@@ -321,6 +366,48 @@ export function SettingsPage() {
             );
           })}
         </div>
+      </section>
+
+      <section
+        className="paper-panel settings-trial-panel"
+        aria-labelledby="trial-section-title"
+      >
+        <div className="panel-section-heading">
+          <div>
+            <p className="eyebrow">{copy.eyebrowTrial}</p>
+            <h2 id="trial-section-title">{copy.trialSectionTitle}</h2>
+          </div>
+          {trialStatus && <span className="field-counter">{copy.localOnly}</span>}
+        </div>
+        <p className="settings-trial-description">{copy.trialSectionDescription}</p>
+        {trialStatus && (
+          <div className="settings-trial-controls">
+            {!trialStatus.available ? (
+              <p className="status-banner status-warning" role="status">
+                {copy.trialUnavailable}
+              </p>
+            ) : trialStatus.enabled ? (
+              <>
+                <p className="status-banner status-error" role="status">
+                  {trialStatus.remaining > 0
+                    ? copy.trialEnabledStatus.replace(
+                        "{remaining}",
+                        String(trialStatus.remaining),
+                      )
+                    : copy.trialLimitReached}
+                </p>
+                <button className="btn btn-ghost" type="button" onClick={onExitTrial}>
+                  {copy.trialExitButton}
+                </button>
+              </>
+            ) : (
+              <button className="btn btn-primary" type="button" onClick={onEnableTrial}>
+                {copy.trialEnableButton}
+              </button>
+            )}
+          </div>
+        )}
+        {trialMessage && <p role="status">{copy[trialMessage]}</p>}
       </section>
     </main>
   );

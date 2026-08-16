@@ -364,6 +364,19 @@ async function installApiRoutes(page: Page, state: JourneyState): Promise<void> 
       body: JSON.stringify({ apiKeyConfigured: true, apiKeySource: "ENVIRONMENT" }),
     });
   });
+  await page.route("/api/v1/settings/provider/trial", (route: Route) => {
+    void route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: true,
+        enabled: false,
+        claimedAttempts: 0,
+        limit: 2,
+        remaining: 2,
+      }),
+    });
+  });
 
   await page.route("/api/v1/assets/images", (route: Route) => {
     state.assetSeq += 1;

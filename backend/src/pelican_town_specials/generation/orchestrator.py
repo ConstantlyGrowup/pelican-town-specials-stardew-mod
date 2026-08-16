@@ -6,6 +6,7 @@ import asyncio
 import io
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from time import monotonic
+from typing import Protocol
 from uuid import UUID, uuid4
 
 from PIL import Image
@@ -41,7 +42,12 @@ from pelican_town_specials.domain.draft import (
     StageAttempt,
     StageStatus,
 )
-from pelican_town_specials.domain.errors import AppError, ErrorPayload, ErrorSummary
+from pelican_town_specials.domain.errors import (
+    AppError,
+    ErrorPayload,
+    ErrorSummary,
+    trial_limit_error,
+)
 from pelican_town_specials.domain.state_machine import DraftAction, transition
 from pelican_town_specials.domain.validation import ValidationSeverity, validate_draft
 from pelican_town_specials.images import (
@@ -126,7 +132,7 @@ class _RunState:
     command: GenerationCommand
     draft: DraftRecord
     candidate: DraftRecord
-    gateway: ModelGateway
+    gateway: ModelGateway | None
     attempt: GenerationAttempt
     staged: DraftRecord
     analysis: DishAnalysis | None
@@ -146,7 +152,7 @@ class _RunState:
         command: GenerationCommand,
         draft: DraftRecord,
         candidate: DraftRecord,
-        gateway: ModelGateway,
+        gateway: ModelGateway | None = None,
         attempt: GenerationAttempt,
         staged: DraftRecord,
     ) -> None:
@@ -479,6 +485,14 @@ class GenerationCommand(StrictModel):
 GatewayFactory = Callable[[], ModelGateway]
 
 
+class TrialAccess(Protocol):
+    """Trial enrollment hook consulted before the first provider call."""
+
+    def is_active(self) -> bool: ...
+
+    def claim_attempt(self) -> bool: ...
+
+
 _STREAM_END = object()
 
 
@@ -569,12 +583,16 @@ class GenerationOrchestrator:
         registry: AttemptRegistry,
         min_confidence: float,
         clock: Callable[[], float] = monotonic,
+        trial_access: TrialAccess | None = None,
+        trial_gateway_factory: GatewayFactory | None = None,
     ) -> None:
         self._drafts = draft_repository
         self._attempts = attempt_repository
         self._assets = asset_store
         self._catalog = catalog
         self._gateway_factory = gateway_factory
+        self._trial_access = trial_access
+        self._trial_gateway_factory = trial_gateway_factory
         self._registry = registry
         self._min_confidence = min_confidence
         self._clock = clock
@@ -710,7 +728,6 @@ class GenerationOrchestrator:
             draft = self._drafts.get(command.draft_id)
         except (FileNotFoundError, OSError) as exc:
             raise _draft_not_found_error() from exc
-        gateway = self._gateway_factory()
         if command.kind is GenerationAttemptKind.INITIAL:
             if draft.status is DraftStatus.DRAFT:
                 ready = transition(draft, DraftAction.FIELDS_READY)
@@ -754,7 +771,6 @@ class GenerationOrchestrator:
             command=command,
             draft=draft,
             candidate=draft.model_copy(),
-            gateway=gateway,
             attempt=attempt,
             staged=staged,
         )
@@ -809,8 +825,29 @@ class GenerationOrchestrator:
             promoted.model_dump(by_alias=True, mode="json"),
         )
 
+    def _ensure_gateway(self, state: _RunState) -> ModelGateway:
+        """Build the per-attempt gateway lazily at the first provider call.
+
+        Idempotent: the first call caches the gateway on the run state so a
+        single attempt claims at most one trial generation. When the trial is
+        active the trial gateway is built after an atomic claim; an exhausted
+        trial raises ``PTS_TRIAL_LIMIT_REACHED`` before any provider call.
+        """
+        if state.gateway is not None:
+            return state.gateway
+        if (
+            self._trial_access is not None
+            and self._trial_gateway_factory is not None
+            and self._trial_access.is_active()
+        ):
+            if not self._trial_access.claim_attempt():
+                raise trial_limit_error()
+            state.gateway = self._trial_gateway_factory()
+            return state.gateway
+        state.gateway = self._gateway_factory()
+        return state.gateway
+
     async def _execute_stage(self, state: _RunState, stage: GenerationStage) -> None:
-        gateway = state.gateway
         draft = state.draft
         if stage is GenerationStage.INPUT_VALIDATION:
             self._assets.stat(draft.source.original_image_asset_id)
@@ -818,7 +855,7 @@ class GenerationOrchestrator:
             vision_data, vision_media = _prepare_vision_input(
                 _read_source_image(self._assets, draft)
             )
-            state.analysis = await gateway.analyze_dish(
+            state.analysis = await self._ensure_gateway(state).analyze_dish(
                 DishAnalysisRequest(
                     image=ProviderImageInput(
                         data=vision_data,
@@ -834,7 +871,7 @@ class GenerationOrchestrator:
             self._update_candidate(state, analysis=state.analysis)
         elif stage is GenerationStage.GAMEPLAY_DESIGN:
             assert state.analysis is not None
-            state.core = await gateway.design_ask_gus(
+            state.core = await self._ensure_gateway(state).design_ask_gus(
                 AskGusDesignRequest(
                     analysis=state.analysis,
                     context_text=draft.source.context_text,
@@ -873,7 +910,7 @@ class GenerationOrchestrator:
                 icon_prompt = _icon_prompt(
                     state.core, language=draft.source.language
                 )
-            generated_icon = await gateway.generate_image(
+            generated_icon = await self._ensure_gateway(state).generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.GENERATION,
                     prompt=icon_prompt,
@@ -942,7 +979,7 @@ class GenerationOrchestrator:
             enforce_preview_prompt_budget(prompt)
             assert state.icon_source_asset_id is not None
             assert state.icon_source is not None
-            _ensure_image_edit_capability(gateway)
+            _ensure_image_edit_capability(self._ensure_gateway(state))
             original_image = _read_source_image(self._assets, draft)
             edit_image, edit_media_type = _prepare_vision_input(
                 original_image, min_pixels=EDIT_MIN_PIXELS
@@ -950,7 +987,7 @@ class GenerationOrchestrator:
             icon_source_ref = self._assets.stat(state.icon_source_asset_id)
             with self._assets.open(icon_source_ref) as handle:
                 icon_source = handle.read()
-            generated_preview = await gateway.generate_image(
+            generated_preview = await self._ensure_gateway(state).generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.EDIT,
                     prompt=prompt,

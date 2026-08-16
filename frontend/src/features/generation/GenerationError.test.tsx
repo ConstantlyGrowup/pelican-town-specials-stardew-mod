@@ -10,6 +10,11 @@ import { GenerationError } from "./GenerationError";
  * component must replace it with the localized limit hint, not echo it. */
 const BACKEND_BUSY_MESSAGE = "当前已有一个生成任务在运行，请稍后重试。";
 
+/** The backend PTS_TRIAL_LIMIT_REACHED message is frozen in Chinese
+ * (Task 30); the component must replace it with the localized hint, not
+ * echo it. */
+const BACKEND_TRIAL_LIMIT_MESSAGE = "你已经达到试用额度，请配置自己的服务。";
+
 function envelope(code: string, message: string): GenerationErrorEnvelope {
   return {
     code,
@@ -45,6 +50,29 @@ describe("GenerationError", () => {
     );
     expect(screen.getByText(catalogs["en-US"].generationBusyLimit)).toBeVisible();
     expect(screen.queryByText(BACKEND_BUSY_MESSAGE)).toBeNull();
+  });
+
+  it("shows the localized trial-limit hint for PTS_TRIAL_LIMIT_REACHED", () => {
+    render(
+      <GenerationError
+        error={envelope("PTS_TRIAL_LIMIT_REACHED", BACKEND_TRIAL_LIMIT_MESSAGE)}
+      />,
+    );
+    expect(screen.getByText(catalogs["zh-CN"].trialLimitReached)).toBeVisible();
+    expect(screen.queryByText(BACKEND_TRIAL_LIMIT_MESSAGE)).toBeNull();
+  });
+
+  it("shows the English trial-limit hint when the locale is en-US", () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    render(
+      <LocaleProvider>
+        <GenerationError
+          error={envelope("PTS_TRIAL_LIMIT_REACHED", BACKEND_TRIAL_LIMIT_MESSAGE)}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText(catalogs["en-US"].trialLimitReached)).toBeVisible();
+    expect(screen.queryByText(BACKEND_TRIAL_LIMIT_MESSAGE)).toBeNull();
   });
 
   it("keeps showing the backend message for non-busy codes", () => {

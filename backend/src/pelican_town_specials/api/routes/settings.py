@@ -10,6 +10,7 @@ from pelican_town_specials.application.settings import (
     ProviderSettingsUpdate,
     ProviderSettingsView,
 )
+from pelican_town_specials.application.trial import TrialAccessService, TrialStatus
 from pelican_town_specials.domain.common import StrictModel
 from pelican_town_specials.persistence.secret_store import (
     ApiKeySource,
@@ -46,6 +47,10 @@ def _secret_store(request: Request) -> ProviderKeyStore:
     return cast(ProviderKeyStore, request.app.state.secret_store)
 
 
+def _trial_service(request: Request) -> TrialAccessService:
+    return cast(TrialAccessService, request.app.state.trial_service)
+
+
 def _key_status(secret_store: ProviderKeyStore) -> ProviderKeyStatus:
     api_key = secret_store.get_api_key()
     return ProviderKeyStatus(
@@ -74,7 +79,10 @@ def put_provider_settings(
     settings: ProviderSettingsUpdate,
     request: Request,
 ) -> ProviderSettingsView:
-    return _settings_service(request).save_provider_settings(settings)
+    saved = _settings_service(request).save_provider_settings(settings)
+    # R-05: saving personal provider settings auto-exits trial mode.
+    _trial_service(request).disable()
+    return saved
 
 
 @router.put(
@@ -88,6 +96,8 @@ def put_provider_key(
 ) -> ProviderKeyStatus:
     secret_store = _secret_store(request)
     secret_store.set_api_key(update.api_key)
+    # R-05: saving an API key auto-exits trial mode.
+    _trial_service(request).disable()
     return _key_status(secret_store)
 
 
@@ -100,3 +110,30 @@ def delete_provider_key(request: Request) -> ProviderKeyStatus:
     secret_store = _secret_store(request)
     secret_store.delete_api_key()
     return _key_status(secret_store)
+
+
+@router.get(
+    "/settings/provider/trial",
+    response_model=TrialStatus,
+    response_model_by_alias=True,
+)
+def get_trial_status(request: Request) -> TrialStatus:
+    return _trial_service(request).status()
+
+
+@router.post(
+    "/settings/provider/trial",
+    response_model=TrialStatus,
+    response_model_by_alias=True,
+)
+def enable_trial(request: Request) -> TrialStatus:
+    return _trial_service(request).enable()
+
+
+@router.delete(
+    "/settings/provider/trial",
+    response_model=TrialStatus,
+    response_model_by_alias=True,
+)
+def disable_trial(request: Request) -> TrialStatus:
+    return _trial_service(request).disable()

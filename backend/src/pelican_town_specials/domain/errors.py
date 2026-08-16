@@ -56,6 +56,8 @@ def recommended_action(code: str) -> str:
         return "REOPEN_APPLICATION"
     if code.startswith("PTS_EXPORT_"):
         return "REVIEW_INPUT"
+    if code.startswith("PTS_TRIAL_"):
+        return "CHECK_LOCAL_CONFIGURATION"
     return "RETRY_OR_CONTACT_SUPPORT"
 
 
@@ -133,3 +135,23 @@ class AppError(Exception):
         self.http_status = http_status
         self.details: dict[str, AppDetail] = _ensure_app_error_details(details)
         self.retryable = retryable
+
+
+def trial_limit_error() -> AppError:
+    return AppError(
+        code="PTS_TRIAL_LIMIT_REACHED",
+        message="你已经达到试用额度，请配置自己的服务。",
+        http_status=409,
+        details={},
+        retryable=False,
+    )
+
+
+def trial_unavailable_error() -> AppError:
+    return AppError(
+        code="PTS_TRIAL_UNAVAILABLE",
+        message="试用功能暂时不可用，请配置自己的服务。",
+        http_status=409,
+        details={},
+        retryable=False,
+    )

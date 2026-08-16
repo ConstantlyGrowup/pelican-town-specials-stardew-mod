@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-Milestone 6 与 Milestone 7 均已完成：Milestone 7 的 Task 22–26 已通过验收，v1.1.0 已发布并经用户 fresh-install 复验。Milestone 8（三路并发生成、不排队）已全部实施完成（Task 27 三槽 AttemptRegistry、Task 28 生命周期与 API 上限提示、Task 29 前端提示与完整并发验收），用户 2026-08-14 验收通过；v1.2.0 已按「验收即发布」完成版本提升与本地全量验证（含此前唯一遗留的 smoke_installer 门禁，用户卸载 v1.1.0 复验安装后已通过），正在推送与发布 GitHub Release。后续完整队列待在线化或分布式消息队列架构时另行规划；macOS/Linux 本地安装器不属于 Milestone 8。
+Milestone 6–8 均已完成并发布，当前正式版本为 v1.2.0。当前唯一规划活动是第三期“全局生成记忆与 Canonical 召回”的需求发现：先在本地版验证召回与可复用资产边界，在线后端后移第四期，管理端后移第五期；尚未创建 Context Packet、开发分支或修改产品源码。Task 30（新手试用入口）因阶段重排曾为 `deferred` backlog，2026-08-16 用户明确指令“实现完 task30 并更新相关文档”后恢复实施（Session `2026-08-16-task-30-trial-entry-impl`，Context Packet `mvp-task-30-trial-entry-v1`），实现完成并进入验收，仍不属于第三期。后续完整队列、Redis、夜间批处理和多用户在线架构不属于第三期。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 

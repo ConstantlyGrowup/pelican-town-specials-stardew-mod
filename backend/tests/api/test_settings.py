@@ -10,6 +10,32 @@ from pelican_town_specials.application.settings import (
     ProviderSettingsUpdate,
     ProviderSettingsView,
 )
+from pelican_town_specials.application.trial import (
+    TRIAL_GENERATION_LIMIT,
+    TrialStatus,
+)
+
+
+class FakeTrialService:
+    def __init__(self) -> None:
+        self.disable_calls = 0
+        self.status_value = TrialStatus(
+            available=True,
+            enabled=False,
+            claimed_attempts=0,
+            limit=TRIAL_GENERATION_LIMIT,
+            remaining=TRIAL_GENERATION_LIMIT,
+        )
+
+    def status(self) -> TrialStatus:
+        return self.status_value
+
+    def enable(self) -> TrialStatus:
+        return self.status_value
+
+    def disable(self) -> TrialStatus:
+        self.disable_calls += 1
+        return self.status_value
 
 
 class FakeProviderSettingsService:
@@ -67,6 +93,7 @@ def _app(
     secrets = secret_store or FakeSecretStore()
     app.state.provider_settings_service = settings_service
     app.state.secret_store = secrets
+    app.state.trial_service = FakeTrialService()
     app.include_router(router, prefix="/api/v1")
     return app, settings_service, secrets
 

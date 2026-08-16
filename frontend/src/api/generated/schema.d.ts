@@ -133,6 +133,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/provider/trial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Trial Status */
+        get: operations["get_trial_status_api_v1_settings_provider_trial_get"];
+        put?: never;
+        /** Enable Trial */
+        post: operations["enable_trial_api_v1_settings_provider_trial_post"];
+        /** Disable Trial */
+        delete: operations["disable_trial_api_v1_settings_provider_trial_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/images": {
         parameters: {
             query?: never;
@@ -1380,6 +1399,22 @@ export interface components {
          * @enum {string}
          */
         StageStatus: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "SKIPPED";
+        /**
+         * TrialStatus
+         * @description Safe public trial status exposed to the Settings UI.
+         */
+        TrialStatus: {
+            /** Available */
+            available: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Claimedattempts */
+            claimedAttempts: number;
+            /** Limit */
+            limit: number;
+            /** Remaining */
+            remaining: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1663,6 +1698,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderKeyStatus"];
+                };
+            };
+        };
+    };
+    get_trial_status_api_v1_settings_provider_trial_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialStatus"];
+                };
+            };
+        };
+    };
+    enable_trial_api_v1_settings_provider_trial_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialStatus"];
+                };
+            };
+        };
+    };
+    disable_trial_api_v1_settings_provider_trial_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialStatus"];
                 };
             };
         };

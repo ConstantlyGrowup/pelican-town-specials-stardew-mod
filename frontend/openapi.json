@@ -206,6 +206,56 @@
         }
       }
     },
+    "/api/v1/settings/provider/trial": {
+      "get": {
+        "summary": "Get Trial Status",
+        "operationId": "get_trial_status_api_v1_settings_provider_trial_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Enable Trial",
+        "operationId": "enable_trial_api_v1_settings_provider_trial_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Disable Trial",
+        "operationId": "disable_trial_api_v1_settings_provider_trial_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/images": {
       "post": {
         "summary": "Upload Image",
@@ -3413,6 +3463,41 @@
           "SKIPPED"
         ],
         "title": "StageStatus"
+      },
+      "TrialStatus": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "claimedAttempts": {
+            "type": "integer",
+            "title": "Claimedattempts"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "available",
+          "enabled",
+          "claimedAttempts",
+          "limit",
+          "remaining"
+        ],
+        "title": "TrialStatus",
+        "description": "Safe public trial status exposed to the Settings UI."
       },
       "ValidationError": {
         "properties": {

@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_8_accepted（v1.2.0 Release 已发布） |
-| project_phase | Milestone 8（三路并发生成、不排队）已通过用户验收（2026-08-14）；v1.2.0 已推送并发布 GitHub Release（产物已核验） |
+| overall_state | task30_implementation |
+| project_phase | Milestone 8/v1.2.0 已发布；用户 2026-08-16 明确要求实现 Task 30 新手试用入口（覆盖此前 deferred 状态）；第三期全局生成记忆仍为独立需求发现（暂停等待用户回答，Task 30 期间不开发） |
 | product_implementation_started | true |
-| active_session_id | `2026-08-14-milestone-8-acceptance-and-release` |
-| active_session_state | closed（v1.2.0 Release 已发布并核验；用户可选 fresh-install 复验） |
-| active_session_type | milestone-8-acceptance-and-release |
-| current_task | v1.2.0 Release 已完成：版本提升 `3b6ea33` → 本地全量验证 → push + tag v1.2.0 → release.yml success → GitHub Release 产物核验通过 |
+| active_session_id | `2026-08-16-task-30-trial-entry-impl` |
+| active_session_state | active（Context Packet `mvp-task-30-trial-entry-v1` 已 READY_FOR_IMPLEMENTATION） |
+| active_session_type | task-30-implementation |
+| current_task | 实施 Task 30 新手试用入口：隐藏试用档案 + trial-state.json 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + CI Secret 注入试用资源 |
 | blocker | 无 |
-| next_action | 无阻塞项。用户可选：从 GitHub Release v1.2.0 下载安装 fresh-install 复验（Setup-v1.2.0.exe，SHA256SUMS 已核验一致） |
+| next_action | Codex round-0 **REVISE**（2 项 MUST_FIX：T30-TRIAL-006 workflow_call 未声明/未转发 trial secret；T30-TRIAL-001 试用 gateway AppError details 泄漏 provider 回显；另 1 项阻塞门禁：test_release.py `secrets.` 全禁门已因注入步骤翻红）→ REVISE round-1 修复完成，包工复跑全绿（focused 39、repo 36、backend 708/2、ruff/mypy/diff-check clean）→ Codex round-1 复审（新 thread，gpt-5.6-luna/max）进行中 → PASS → auto_accepted → 本地 focused commit → 提示用户验收 |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,30 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `feat/mvp-implementation` 本地领先 origin：M8 控制面激活 `c9a0af6`、Task 27 `c3289d2`/`cdef3e6`、Task 28 `1e2a842`/`81524b1`/`d0a3701`、Task 29 `f060f75`/`efcdb12`/`07345b5`、v1.2.0 版本提升 `3b6ea33`、M8 验收与 Release 记录（本 Session）；origin 仍位于 `33dd204`（M7 关闭后同步）；tag `v1.1.0` 位于 `b39b50d` |
+| 最新提交 | `feat/mvp-implementation` 本地与 origin 均位于 `b6df1f3`（记录 v1.2.0 Release 产物核验）；v1.2.0 版本提升为 `3b6ea33`，验收/发布记录为 `3604713`，annotated tag `v1.2.0` 指向该验收发布链路；tag `v1.1.0` 位于 `b39b50d` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。 |
-| 当前工作树范围 | 已提交：M8 全部 Task + v1.2.0 版本提升（`3b6ea33`）+ M8 验收与 Release 记录（`3604713`）+ 本发布核验记录。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
+| 当前工作树范围 | Task 30 实施改动（backend `application/trial.py`、orchestrator/errors/app/settings 路由、新测试、前端 SettingsPage/GenerationError/copy、OpenAPI 契约、E2E、build.yml、.gitignore）＋控制面文档（STATUS.md、Task 30 Session、AGENTS.md、CONSTRAINTS.md）。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
+
+## 已 deferred 的 Task 30 规划 Session
+
+- `2026-08-16-task-30-trial-entry-planning`：曾规划为不会配置中转站/API Key 的小白用户增加“**不想配置，先试试效果**”入口。
+- 推荐方案：个人设置不动；按钮启用独立隐藏试用档案。每次试用生成在第一次可能付费调用前从 `trial-state.json` 原子领取一次额度，不扫描草稿、不在各阶段重复检查。
+- 推荐 N=2；本地输入失败不扣，进入 Provider 链路后计一次。耗尽返回 `PTS_TRIAL_LIMIT_REACHED`；保存个人参数或 Key 自动退出试用但不重置次数。
+- 边界：这是本机软限制，删除应用数据可重置；桌面客户端随包分发的专用 Key 可被有意提取，供应商控制台总消费上限是硬兜底。若要求不可绕过，必须改为服务端代理，不再属于轻量本地 Task。
+- 2026-08-16 用户将当前工作重排为第三期全局生成记忆规划；Task 30 保留为 deferred backlog。规划文件仍保留（gitignored），未创建 Context Packet、未修改产品源码、未接触真实 Key。
+- **2026-08-16 用户明确指令“实现完 task30 并更新相关文档”，覆盖 deferred 状态**：规划 Session 使命完成并关闭；批准启用本机软额度 N=2、接受“删除应用数据可绕过”的软限制、接受“桌面包内专用 Key 可被有意提取、供应商控制台消费上限为硬兜底”边界（即规划 §9 三项待确认，均按计划推荐值接受，无需再打断用户）。
+
+## 当前 Task 30 实施 Session（active）
+
+- `2026-08-16-task-30-trial-entry-impl`：本 Session 只处理 Task 30（新手试用入口）。Context Packet：`mvp-task-30-trial-entry-v1`（`docs/plans/2026-08-16-task-30-trial-entry-packet.md`，gitignored），base_commit `b6df1f3`，revise_round 0，规划裁决 R-01..R-08。
+- 方案：独立隐藏试用档案 + `app-state/trial-state.json`（`claimedAttempts` 本机软限额，N=2）；试用 gateway 在首次 Provider 调用（Ask Gus `DISH_ANALYSIS` / Blueprint `ICON_GENERATION`）前原子 claim 一次，`INPUT_VALIDATION` 本地失败不扣；保存个人 Provider 参数或 Key 自动退出且不重置次数；耗尽返回 `PTS_TRIAL_LIMIT_REACHED`；试用 Key 由 `build.yml` 从 `secrets.PTS_TRIAL_API_KEY` 注入 `resources/trial/trial_api_key.txt`（gitignored），本地/测试只用 fake key。
+- 第三期发现 Session `2026-08-16-phase-3-global-memory-planning` 保持存在但不修改源码，暂停等待用户回答，Task 30 期间不开发第三期。
+
+## 当前第三期需求发现 Session
+
+- `2026-08-16-phase-3-global-memory-planning`：第三期只规划全局生成记忆与 Canonical 召回，先在本地版验证。
+- 已冻结：最终预览必须使用当前用户原图重新生成；允许候选复用结构化词条和像素图标；夜间批处理/Redis 后移第四期；在线后端后移第四期；管理端后移第五期。
+- 当前无产品源码、分支、提交或外部部署操作。等待用户统一回答需求清单后再更新设计。
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 

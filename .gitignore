@@ -12,6 +12,8 @@
 .venv/
 workspace/
 *.log
+# Trial API key injected from the CI secret at build time (Task 30)
+/resources/trial/trial_api_key.txt
 
 # Python
 __pycache__/

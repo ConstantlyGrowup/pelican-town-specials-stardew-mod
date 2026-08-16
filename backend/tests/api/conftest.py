@@ -16,6 +16,7 @@ from pelican_town_specials.api.security import SecurityConfig, SecurityState
 from pelican_town_specials.application.assets import AssetService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
+from pelican_town_specials.application.trial import TrialAccessService
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
 from pelican_town_specials.domain.draft import DraftRecord
@@ -49,6 +50,7 @@ class ApiServices:
     attempt_repository: GenerationAttemptRepository
     catalog: VanillaCatalog
     security: SecurityState
+    trial_service: TrialAccessService
     client: TestClient
 
 
@@ -78,6 +80,11 @@ def services(tmp_path: Path) -> ApiServices:
     )
     cookbook_service = CookbookService(archive_repository)
 
+    trial_service = TrialAccessService(
+        workspace,
+        key_provider=lambda: "sk-test-trial",
+    )
+
     security = SecurityState(
         config=SecurityConfig(
             allowed_hosts=frozenset({"testserver"}),
@@ -96,6 +103,7 @@ def services(tmp_path: Path) -> ApiServices:
             archive_repository=archive_repository,
             vanilla_catalog=catalog,
             security_state=security,
+            trial_access_service=trial_service,
         )
     )
     return ApiServices(
@@ -106,6 +114,7 @@ def services(tmp_path: Path) -> ApiServices:
         attempt_repository=attempt_repository,
         catalog=catalog,
         security=security,
+        trial_service=trial_service,
         client=client,
     )
 

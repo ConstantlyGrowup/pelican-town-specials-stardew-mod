@@ -150,6 +150,19 @@ export async function installTask21Routes(page: Page): Promise<void> {
       }),
     }),
   );
+  await page.route("**/api/v1/settings/provider/trial", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: true,
+        enabled: false,
+        claimedAttempts: 0,
+        limit: 2,
+        remaining: 2,
+      }),
+    }),
+  );
   await page.route("**/api/v1/drafts", (route) =>
     route.fulfill({
       status: 200,

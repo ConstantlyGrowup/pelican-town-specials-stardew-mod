@@ -95,7 +95,12 @@ def test_release_repeatable_and_repo_scoped() -> None:
 def test_minimal_write_permissions_and_no_secrets() -> None:
     for path in (BUILD, CI, RELEASE):
         text = _text(path)
-        for needle in ("PTS_OPENAI_API_KEY", "secrets.", "SUPER_SECRET"):
+        # The personal provider key must never be referenced from any workflow,
+        # and SUPER_SECRET is a generic leak probe. The bare "secrets." needle
+        # is no longer a blanket ban: Task 30 intentionally forwards the trial
+        # API key as a workflow-call secret (locked by the positive assertions
+        # below), which is the single exception to the no-secret rule.
+        for needle in ("PTS_OPENAI_API_KEY", "SUPER_SECRET"):
             assert needle not in text, f"{path.name} must not reference {needle!r}"
         if path == RELEASE:
             # The workflow default stays read-only; contents: write is granted
@@ -111,6 +116,26 @@ def test_minimal_write_permissions_and_no_secrets() -> None:
             assert "permissions:\n  contents: read" in text, (
                 f"{path.name} must declare read-only permissions"
             )
+
+    # Task 30 trial-key forwarding contract (T30-TRIAL-006): build.yml declares
+    # the trial key as an optional workflow-call secret (so an unset repo secret
+    # keeps the gitignored trial resource absent and the trial safely reports
+    # unavailable), and both callers forward it on the reusable-pipeline call.
+    build = _text(BUILD)
+    assert "workflow_call" in build, "build.yml must remain a reusable workflow"
+    assert "PTS_TRIAL_API_KEY" in build, (
+        "build.yml must declare the trial key secret"
+    )
+    assert "required: false" in build, (
+        "trial key secret must stay optional so an unset repo secret is safe"
+    )
+    assert "secrets.PTS_TRIAL_API_KEY" in build, (
+        "the injection step must read the forwarded trial key secret"
+    )
+    for caller in (CI, RELEASE):
+        assert "PTS_TRIAL_API_KEY" in _text(caller), (
+            f"{caller.name} must forward the trial key secret to build.yml"
+        )
 
 
 def test_release_assets_checksum_and_notes_consistent() -> None:

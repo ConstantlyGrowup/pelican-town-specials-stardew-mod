@@ -50,6 +50,11 @@ from pelican_town_specials.application.settings import (
     ProviderSettingsService,
     SecretStore,
 )
+from pelican_town_specials.application.trial import (
+    FileTrialKeyProvider,
+    TrialAccessService,
+    TrialSafeGateway,
+)
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.config import AppConfig
 from pelican_town_specials.domain.draft import AttemptStatus, DraftStatus
@@ -100,6 +105,7 @@ def create_app(
     attempt_registry: AttemptRegistry | None = None,
     generation_service: GenerationService | None = None,
     export_service: ExportService | None = None,
+    trial_access_service: TrialAccessService | None = None,
 ) -> FastAPI:
     app_config = config if config is not None else AppConfig()
     resolved_workspace = workspace_paths or WorkspacePaths.create(
@@ -156,6 +162,11 @@ def create_app(
         resolved_secret_store,
     )
 
+    resolved_trial_service = trial_access_service or TrialAccessService(
+        workspace=resolved_workspace,
+        key_provider=FileTrialKeyProvider(_resolve_trial_key_path()),
+    )
+
     resolved_activity_tracker = activity_tracker or ActivityTracker()
 
     resolved_generation_service = generation_service or GenerationService(
@@ -170,6 +181,8 @@ def create_app(
             ),
             registry=attempt_registry,
             min_confidence=app_config.ask_gus_min_confidence,
+            trial_access=resolved_trial_service,
+            trial_gateway_factory=_trial_gateway_factory(resolved_trial_service),
         ),
         draft_repository=resolved_draft_repository,
     )
@@ -228,6 +241,7 @@ def create_app(
     app.state.activity_tracker = resolved_activity_tracker
     app.state.enforce_local_host = enforce_local_host
     app.state.provider_settings_service = resolved_provider_settings_service
+    app.state.trial_service = resolved_trial_service
     app.state.asset_store = resolved_asset_store
     app.state.draft_repository = resolved_draft_repository
     app.state.archive_repository = resolved_archive_repository
@@ -335,15 +349,28 @@ def _attempt_status_resolver(
     return _resolve
 
 
-def _load_default_catalog() -> VanillaCatalog:
+def _resolve_repo_root() -> Path:
+    """Resolve the application data root in dev and in the frozen bundle.
+
+    PyInstaller onedir (contents_directory disabled): application data lives
+    next to the executable (sys._MEIPASS == exe directory). In dev the root is
+    the repository checkout.
+    """
     if getattr(sys, "frozen", False):
-        # PyInstaller onedir (contents_directory disabled): application data
-        # lives next to the executable (sys._MEIPASS == exe directory).
         meipass = getattr(sys, "_MEIPASS", None)
-        repo_root = Path(meipass) if meipass else Path(sys.executable).resolve().parent
-    else:
-        repo_root = Path(__file__).resolve().parents[4]
-    return VanillaCatalog.from_json(repo_root / _CATALOG_RELATIVE_PATH)
+        return Path(meipass) if meipass else Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[4]
+
+
+_TRIAL_KEY_RELATIVE_PATH = Path("resources") / "trial" / "trial_api_key.txt"
+
+
+def _resolve_trial_key_path() -> Path:
+    return _resolve_repo_root() / _TRIAL_KEY_RELATIVE_PATH
+
+
+def _load_default_catalog() -> VanillaCatalog:
+    return VanillaCatalog.from_json(_resolve_repo_root() / _CATALOG_RELATIVE_PATH)
 
 
 def _default_open_folder() -> Callable[[Path], None] | None:
@@ -372,6 +399,27 @@ def _gateway_factory(
         return OpenAICompatibleGateway(
             settings=settings,
             secret_store=secret_store,
+        )
+
+    return _build
+
+
+def _trial_gateway_factory(
+    trial_service: TrialAccessService,
+) -> Callable[[], ModelGateway]:
+    """Build a gateway fixed to the frozen trial preset and the injected key.
+
+    The gateway is wrapped in ``TrialSafeGateway`` so provider internals (the
+    trial Base URL, model ID, or key echoes) can never reach the client: any
+    ``AppError`` raised on the trial path is re-raised with empty ``details``.
+    """
+
+    def _build() -> ModelGateway:
+        return TrialSafeGateway(
+            OpenAICompatibleGateway(
+                settings=trial_service.trial_provider_settings(),
+                secret_store=trial_service.trial_secret_store(),
+            )
         )
 
     return _build

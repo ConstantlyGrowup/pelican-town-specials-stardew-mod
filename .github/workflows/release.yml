@@ -3,11 +3,15 @@
 # The verify-and-build job reuses the shared pipeline (build.yml), so a Release
 # is only ever assembled from a fully verified build on a clean Windows runner.
 # Only the create-release job holds contents: write (the minimum needed to
-# publish); CI itself stays read-only and no workflow references any secret or
-# API key. The version is resolved from the tag (v1.2.0) or the manual input,
-# must match packaging/pyinstaller/version_info.txt (drift gate in build.yml),
-# and drives the installer / portable ZIP / checksum / release title so they
-# can never disagree. The release job knows its repository via GH_REPO and
+# publish); CI itself stays read-only. The single exception to the no-secret
+# rule is the trial API key: build.yml declares PTS_TRIAL_API_KEY as an
+# optional workflow-call secret and both callers forward it, so the gitignored
+# trial bundle resource can be injected for the newcomer trial (Task 30); when
+# the repo secret is unset the resource stays absent and the trial safely
+# reports unavailable. The version is resolved from the tag (v1.2.0) or the
+# manual input, must match packaging/pyinstaller/version_info.txt (drift gate
+# in build.yml), and drives the installer / portable ZIP / checksum / release
+# title so they can never disagree. The release job knows its repository via GH_REPO and
 # creates the Release if absent, or edits and re-uploads (--clobber) if the tag
 # already has one, so re-running a tag flow is repeatable instead of failing.
 # v1.2.0 (2026-08-14): Milestone 8 — three-slot concurrent generation.
@@ -47,6 +51,8 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.resolve-version.outputs.version }}
+    secrets:
+      PTS_TRIAL_API_KEY: ${{ secrets.PTS_TRIAL_API_KEY }}
 
   create-release:
     needs: [resolve-version, verify-and-build]

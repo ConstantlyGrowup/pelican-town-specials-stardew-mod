@@ -28,6 +28,14 @@ const keyStatus = {
   apiKeySource: "ENVIRONMENT",
 };
 
+const trialStatusAvailable = {
+  available: true,
+  enabled: false,
+  claimedAttempts: 0,
+  limit: 2,
+  remaining: 2,
+};
+
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -62,6 +70,9 @@ describe("settings page", () => {
   beforeEach(() => {
     server.use(
       http.get("/api/v1/settings/provider", () => HttpResponse.json(settingsView)),
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json(trialStatusAvailable),
+      ),
     );
   });
 
@@ -137,6 +148,9 @@ describe("settings language toggle", () => {
   beforeEach(() => {
     server.use(
       http.get("/api/v1/settings/provider", () => HttpResponse.json(settingsView)),
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json(trialStatusAvailable),
+      ),
     );
   });
 
@@ -205,5 +219,113 @@ describe("settings language toggle", () => {
     expect(english).toHaveAttribute("tabindex", "0");
     expect(chinese).toHaveAttribute("tabindex", "-1");
     expect(document.activeElement).toBe(english);
+  });
+});
+
+describe("settings trial panel", () => {
+  beforeEach(() => {
+    server.use(
+      http.get("/api/v1/settings/provider", () => HttpResponse.json(settingsView)),
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json(trialStatusAvailable),
+      ),
+    );
+  });
+
+  it("shows the enable button when the trial is available and off", async () => {
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    expect(screen.getByRole("button", { name: copy.trialEnableButton })).toBeVisible();
+  });
+
+  it("enables the trial and shows the remaining-quota status plus exit", async () => {
+    server.use(
+      http.post("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          available: true,
+          enabled: true,
+          claimedAttempts: 0,
+          limit: 2,
+          remaining: 2,
+        }),
+      ),
+    );
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    fireEvent.click(screen.getByRole("button", { name: copy.trialEnableButton }));
+
+    expect(await screen.findByText("试用模式已开启，还可生成 2 次")).toBeVisible();
+    expect(screen.getByRole("button", { name: copy.trialExitButton })).toBeVisible();
+  });
+
+  it("shows the exhausted hint when the quota is used up", async () => {
+    server.use(
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          available: true,
+          enabled: true,
+          claimedAttempts: 2,
+          limit: 2,
+          remaining: 0,
+        }),
+      ),
+    );
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    expect(screen.getByText(copy.trialLimitReached)).toBeVisible();
+    expect(screen.getByRole("button", { name: copy.trialExitButton })).toBeVisible();
+  });
+
+  it("shows the unavailable hint when the trial resource is missing", async () => {
+    server.use(
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          available: false,
+          enabled: false,
+          claimedAttempts: 0,
+          limit: 2,
+          remaining: 2,
+        }),
+      ),
+    );
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    expect(screen.getByText(copy.trialUnavailable)).toBeVisible();
+    expect(screen.queryByRole("button", { name: copy.trialEnableButton })).toBeNull();
+  });
+
+  it("exits the trial via DELETE and restores the enable button", async () => {
+    server.use(
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          available: true,
+          enabled: true,
+          claimedAttempts: 1,
+          limit: 2,
+          remaining: 1,
+        }),
+      ),
+      http.delete("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          available: true,
+          enabled: false,
+          claimedAttempts: 1,
+          limit: 2,
+          remaining: 1,
+        }),
+      ),
+    );
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    fireEvent.click(screen.getByRole("button", { name: copy.trialExitButton }));
+
+    expect(
+      await screen.findByRole("button", { name: copy.trialEnableButton }),
+    ).toBeVisible();
   });
 });
