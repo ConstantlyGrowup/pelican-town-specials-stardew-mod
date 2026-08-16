@@ -10,11 +10,11 @@
 | project_phase | Milestone 8/v1.2.0 已发布；用户 2026-08-16 明确要求实现 Task 30 新手试用入口（覆盖此前 deferred 状态）；第三期全局生成记忆仍为独立需求发现（暂停等待用户回答，Task 30 期间不开发） |
 | product_implementation_started | true |
 | active_session_id | `2026-08-16-task-30-trial-entry-impl` |
-| active_session_state | awaiting_user_acceptance（Context Packet `mvp-task-30-trial-entry-v1`；round 0 REVISE→round 1 PASS；auto_accepted；本地 focused commit `96e9988` 已创建，未 push） |
+| active_session_state | awaiting_user_acceptance（Context Packet `mvp-task-30-trial-entry-v1`；round 0 REVISE→round 1 PASS→auto_accepted→本地 focused commit `96e9988`；用户授权扩展 R-09「已配置用户优先试用」round 0 PASS→auto_accepted→本地 focused commit `9cb35a8`；均未 push） |
 | active_session_type | task-30-implementation |
 | current_task | 实施 Task 30 新手试用入口：隐藏试用档案 + trial-state.json 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + CI Secret 注入试用资源 |
 | blocker | 无 |
-| next_action | Codex round-0 **REVISE**（2 项 MUST_FIX + 1 阻塞门禁）→ round-1 修复完成、包工复跑全绿（focused 39、repo 36、backend 708/2、ruff/mypy/diff-check clean）→ Codex round-1 **PASS**（无 MUST_FIX，scope_delta none）→ **auto_accepted** → 本地 focused commit `96e9988`（32 文件，+2286/−41，不 push）→ **awaiting_user_acceptance**：提示用户验收 Task 30 |
+| next_action | 验收阻塞已解除：用户报告试用 `available:false`（安全降级，非缺陷）；已在 gitignored `resources/trial/trial_api_key.txt` 落地用户提供的真实试用 Key（额度已设兜底），验证全新实例 `available=true`；`FileTrialKeyProvider` 缓存首次读取，**须重启应用**。R-09 扩展（用户新增规则「已配置且有试用机会时优先用掉试用机会」）已完成：Codex round 0 **PASS** → **auto_accepted** → 本地 focused commit `9cb35a8`（9 文件 +346/−22，不 push），实现配置用户自动优先消耗试用额度、耗尽/竞争失败静默回退个人 Provider；未配置用户 opt-in 流程不变。下一步：用户重启开发服务器 → Settings「不想配置，先试试效果」试用可用（已配置用户显示优先消耗提示）→ 验收 Task 30（含 R-09 规则）→ 授权 push（及可选安装包重建/Release，需在 GitHub 设 `PTS_TRIAL_API_KEY` secret）。此前链路：round 0 REVISE → round 1 修复、包工复跑全绿 → Codex round-1 **PASS** → **auto_accepted** → 本地 focused commit `96e9988`（32 文件，+2286/−41，不 push）→ **awaiting_user_acceptance** |
 | collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
 
 ## 当前 Git 状态事实
@@ -40,7 +40,7 @@
 
 ## 当前 Task 30 实施 Session（active）
 
-- `2026-08-16-task-30-trial-entry-impl`：本 Session 只处理 Task 30（新手试用入口）。Context Packet：`mvp-task-30-trial-entry-v1`（`docs/plans/2026-08-16-task-30-trial-entry-packet.md`，gitignored），base_commit `b6df1f3`，revise_round 0，规划裁决 R-01..R-08。
+- `2026-08-16-task-30-trial-entry-impl`：本 Session 只处理 Task 30（新手试用入口）。Context Packet：`mvp-task-30-trial-entry-v1`（`docs/plans/2026-08-16-task-30-trial-entry-packet.md`，gitignored），base_commit `b6df1f3`，revise_round 0，规划裁决 R-01..R-08；2026-08-16 用户授权扩展 R-09「已配置用户优先试用」→ 本地 commit `9cb35a8`（Codex round 0 PASS → auto_accepted，未 push）。Task 30 整体仍在 awaiting_user_acceptance。
 - 方案：独立隐藏试用档案 + `app-state/trial-state.json`（`claimedAttempts` 本机软限额，N=2）；试用 gateway 在首次 Provider 调用（Ask Gus `DISH_ANALYSIS` / Blueprint `ICON_GENERATION`）前原子 claim 一次，`INPUT_VALIDATION` 本地失败不扣；保存个人 Provider 参数或 Key 自动退出且不重置次数；耗尽返回 `PTS_TRIAL_LIMIT_REACHED`；试用 Key 由 `build.yml` 从 `secrets.PTS_TRIAL_API_KEY` 注入 `resources/trial/trial_api_key.txt`（gitignored），本地/测试只用 fake key。
 - 第三期发现 Session `2026-08-16-phase-3-global-memory-planning` 保持存在但不修改源码，暂停等待用户回答，Task 30 期间不开发第三期。
 

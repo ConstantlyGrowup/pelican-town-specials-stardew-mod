@@ -35,6 +35,27 @@
 - **Codex round-1 复审：PASS**（checked T30-TRIAL-006/001，无 MUST_FIX，optional_hardening/new_design none，scope_delta none，planning_rulings R-01..R-08 全过）。→ **auto_accepted** → 本地 focused commit `96e9988`（32 文件 +2286/−41，不 push）→ 进入 **awaiting_user_acceptance**。
 - 建议提交边界：Task 30 实现（backend trial/errors/orchestrator/app/settings + 前端 SettingsPage/GenerationError/copy/OpenAPI/E2E + workflows + .gitignore + repo 测试）+ 控制面文档（STATUS/本 Session/AGENTS.md/CONSTRAINTS.md/三期 Session 追加）。用户明确验收后可授权 push。
 
+## 验收阻塞解除：本地试用资源落地（2026-08-16）
+
+用户验收时反馈"即使没有试用过控制台仍输出 `{"available":false,...}`"。该行为是设计的安全降级（R-06：无 key 资源 → `available=false`），并非缺陷；`dist/` 现 bundle 为 v1.2.0（Task 30 之前，无试用代码），用户跑的应是仓库内开发服务器。
+
+解除步骤（本地环境，非代码改动）：
+- 用户提供真实试用 Key 且已设额度兜底；按 CI 注入的同一机制把资源文件落到本地 gitignored 路径 `resources/trial/trial_api_key.txt`（ASCII、无尾随换行，51 字节）。
+- `git check-ignore -v` 确认该文件被 `.gitignore:16` 忽略、`git ls-files resources/trial/` 为空——key 永不入库。
+- 验证：全新 `FileTrialKeyProvider` + `TrialAccessService` 读取 → `{"available": true, "enabled": false, "claimedAttempts": 0, "limit": 2, "remaining": 2}`。
+- 注意：`FileTrialKeyProvider` 首次读取后缓存，**正在运行的实例须重启**；当前无运行进程，下次启动即读到新资源。开发服务器读仓库根路径；本地 `build_windows.ps1`（spec datas 含整个 `resources/`）构建的安装包自动携带该资源；CI 构建由 `PTS_TRIAL_API_KEY` secret 注入（若发布 bundle 需用户在 GitHub 设该 secret）。
+
+## 用户授权扩展：已配置用户优先试用（R-09 / T30-TRIAL-007，2026-08-16）
+
+用户新增规则「当用户已经配置好了且有试用机会时，优先用掉试用机会」→ 作为 Task 30 合同的用户授权扩展（Context Packet 追加，base_commit `96e9988`，revise_round 0）。规划裁决 R-09 + 验收项 T30-TRIAL-007。
+
+- **行为契约**：已配置个人 Provider 的用户自动优先消耗免费试用额度（`trial_opportunity()` = available && claimed < limit，无需点击 opt-in）；额度耗尽或并发 claim 竞争失败时**静默**回退个人 Provider（不报错）；未配置用户保持既有 opt-in 流程（`is_active()` 门 → claim → 耗尽抛 `PTS_TRIAL_LIMIT_REACHED`）。
+- **实现（9 个 allowed_files）**：`application/trial.py` 增 `trial_opportunity()` 并放宽 `claim_attempt()` 的 `enabled` 门；`generation/orchestrator.py` `TrialAccess` Protocol 增方法 + `personal_configured` 构造参数 + `_ensure_gateway` 配置/非配置双路由；`api/app.py` `_personal_key_configured` 惰性回调接线；前端 SettingsPage 配置用户分支（priority status / exhausted status / 隐藏 opt-in 按钮）+ copy.ts zh/en 文案 + 单元/E2E 测试。
+- **实施期 scope_delta 2 项（均 `user_visible_delta: none`）**：① `claim_attempt()` 不再要求 `enabled`——配置路径可在未 opt-in 服务上消耗额度，非配置路径仍在 `is_active()` 之后才 claim，opt-in 流程行为不变（真实服务测试证明未 opt-in 服务可被配置路径耗尽至 claimed==2）；② zh 文案由「已配置个人服务…」改为「个人服务已设置…」避免与 allowed_files 之外的 `full-journey.spec.ts:608` `getByText("已配置")` 子串断言冲突。
+- **审阅**：Codex（gpt-5.6-luna/max，新 thread）round 0 **PASS**（checked T30-TRIAL-007 / R-05 / R-07 / T30-TRIAL-001，无 MUST_FIX，scope_delta none）。OPTIONAL_HARDENING 2 条非阻塞：全部门禁通过；STATUS 与 Session 状态措辞已在本记录中一致化。
+- **验证（包工复跑）**：focused 33 passed；API+generation 回归 87 passed；前端 Vitest 131 passed（20 文件）；E2E 32 passed；ruff clean；`python -m mypy backend/src`（CI 命令）clean；product copy / locale / `git diff --check` clean。
+- **状态**：**auto_accepted** → 本地 focused commit `9cb35a8`（9 个实现文件，不 push）+ 本控制面记录随 docs commit 提交。Task 30 整体（含 R-09）仍在 **awaiting_user_acceptance**。
+
 ## 不做
 
 - 不接触真实试用 Key（实现/测试/交接只用 fake，如 `sk-test-trial`）。
@@ -43,4 +64,4 @@
 
 ## 下一步
 
-等待 REVISE round-1 实施子代理 TASK_HANDOFF → 包工复跑聚焦 + 全量 backend/repo/static 门禁 → 桥接 Codex round-1 复审（新 thread）→ PASS → auto_accepted → 本地 focused commit → 提示用户验收。
+用户重启开发服务器 → Settings「不想配置，先试试效果」入口显示可用 → 完成 Task 30 验收 → 授权 push（及可选安装包重建/Release）。
