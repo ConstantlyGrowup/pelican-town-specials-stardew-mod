@@ -11,7 +11,7 @@
 ; plain `ISCC PelicanTownSpecials.iss` work from packaging/installer.
 
 #ifndef PtsAppVersion
-  #define PtsAppVersion "1.2.0"
+  #define PtsAppVersion "1.3.0"
 #endif
 #ifndef PtsBundleDir
   #define PtsBundleDir "..\..\dist\PelicanTownSpecials-windows-x64"
