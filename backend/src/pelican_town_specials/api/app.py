@@ -183,6 +183,7 @@ def create_app(
             min_confidence=app_config.ask_gus_min_confidence,
             trial_access=resolved_trial_service,
             trial_gateway_factory=_trial_gateway_factory(resolved_trial_service),
+            personal_configured=_personal_key_configured(resolved_secret_store),
         ),
         draft_repository=resolved_draft_repository,
     )
@@ -382,6 +383,20 @@ def _default_open_folder() -> Callable[[Path], None] | None:
     if os.name == "nt":
         return os.startfile  # type: ignore[return-value]
     return None
+
+
+def _personal_key_configured(secret_store: SecretStore) -> Callable[[], bool]:
+    """True when the user has saved a personal provider API key (R-09).
+
+    The callback is evaluated lazily at the first provider call of each
+    attempt so a freshly saved or deleted key is honored without any reload.
+    """
+
+    def is_configured() -> bool:
+        api_key = secret_store.get_api_key()
+        return api_key is not None and bool(api_key.get_secret_value().strip())
+
+    return is_configured
 
 
 def _gateway_factory(

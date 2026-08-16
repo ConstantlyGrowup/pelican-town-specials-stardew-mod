@@ -137,6 +137,41 @@ def test_is_active_reflects_enabled(tmp_path: Path) -> None:
     assert service.is_active() is False
 
 
+def test_trial_opportunity_true_when_available_and_fresh(tmp_path: Path) -> None:
+    """R-09: a fresh (not yet opted-in) trial still offers an opportunity.
+
+    ``trial_opportunity`` deliberately does not require ``enabled`` so a
+    configured user can burn the free allowance without clicking opt-in.
+    """
+    service, _ = _service(tmp_path)
+
+    assert service.trial_opportunity() is True
+
+
+def test_trial_opportunity_true_while_quota_remains(tmp_path: Path) -> None:
+    service, _ = _service(tmp_path)
+    service.enable()
+    service.claim_attempt()
+
+    assert service.trial_opportunity() is True
+
+
+def test_trial_opportunity_false_when_exhausted(tmp_path: Path) -> None:
+    service, _ = _service(tmp_path)
+    service.enable()
+    service.claim_attempt()
+    service.claim_attempt()
+
+    assert service.trial_opportunity() is False
+    assert service.status().remaining == 0
+
+
+def test_trial_opportunity_false_when_key_missing(tmp_path: Path) -> None:
+    service, _ = _service(tmp_path, key=None)
+
+    assert service.trial_opportunity() is False
+
+
 def test_disable_is_idempotent_and_preserves_claimed(tmp_path: Path) -> None:
     service, _ = _service(tmp_path)
     service.enable()

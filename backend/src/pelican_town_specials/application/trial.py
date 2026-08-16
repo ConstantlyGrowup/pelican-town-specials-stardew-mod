@@ -197,11 +197,32 @@ class TrialAccessService:
         with self._lock:
             return self._state.enabled
 
+    def trial_opportunity(self) -> bool:
+        """True when the trial is ready and still has quota to claim.
+
+        R-09 trial-first routing: a user who already configured their own
+        provider consumes the free trial allowance before their personal
+        provider is billed. The opt-in ``enabled`` flag is deliberately not
+        required here — the trial is preferred automatically while an
+        opportunity exists.
+        """
+        if not self.available:
+            return False
+        with self._lock:
+            return self._state.claimed_attempts < self._limit
+
     def claim_attempt(self) -> bool:
-        """Atomically claim one attempt; returns False when disabled or exhausted."""
+        """Atomically claim one attempt; returns False when exhausted.
+
+        The opt-in ``enabled`` gate is enforced by the orchestrator's
+        non-configured path (``is_active()``) before any claim is attempted.
+        R-09: a configured user drains the free allowance automatically without
+        clicking the opt-in, so an active quota is claimable regardless of the
+        ``enabled`` flag. An exhausted quota always returns False.
+        """
         with self._lock:
             state = self._load()
-            if not state.enabled or state.claimed_attempts >= self._limit:
+            if state.claimed_attempts >= self._limit:
                 return False
             claimed = state.model_copy(
                 update={"claimed_attempts": state.claimed_attempts + 1}

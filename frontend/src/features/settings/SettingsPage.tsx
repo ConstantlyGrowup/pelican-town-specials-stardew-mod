@@ -400,6 +400,15 @@ export function SettingsPage() {
                   {copy.trialExitButton}
                 </button>
               </>
+            ) : keyStatus?.apiKeyConfigured ? (
+              <p className="status-banner status-info" role="status">
+                {trialStatus.remaining > 0
+                  ? copy.trialConfiguredPriorityStatus.replace(
+                      "{remaining}",
+                      String(trialStatus.remaining),
+                    )
+                  : copy.trialConfiguredExhausted}
+              </p>
             ) : (
               <button className="btn btn-primary" type="button" onClick={onEnableTrial}>
                 {copy.trialEnableButton}

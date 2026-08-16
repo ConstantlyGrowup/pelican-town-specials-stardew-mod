@@ -16,7 +16,10 @@ from backend.tests.generation.conftest import (
     initial_command,
 )
 
-from pelican_town_specials.application.trial import TrialSafeGateway
+from pelican_town_specials.application.trial import (
+    TrialAccessService,
+    TrialSafeGateway,
+)
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
 from pelican_town_specials.domain.common import DraftMode
@@ -24,7 +27,10 @@ from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.draft import DraftStatus
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
-from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
+from pelican_town_specials.generation.orchestrator import (
+    GenerationOrchestrator,
+    TrialAccess,
+)
 from pelican_town_specials.persistence.asset_store import (
     AssetMetadata,
     FileAssetStore,
@@ -46,11 +52,19 @@ _CATALOG_PATH = (
 
 
 class FakeTrialAccess:
-    def __init__(self, *, active: bool = True, claim_result: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        active: bool = True,
+        claim_result: bool = True,
+        opportunity: bool = True,
+    ) -> None:
         self.active = active
         self.claim_result = claim_result
+        self.opportunity = opportunity
         self.is_active_calls = 0
         self.claim_calls = 0
+        self.opportunity_calls = 0
 
     def is_active(self) -> bool:
         self.is_active_calls += 1
@@ -59,6 +73,33 @@ class FakeTrialAccess:
     def claim_attempt(self) -> bool:
         self.claim_calls += 1
         return self.claim_result
+
+    def trial_opportunity(self) -> bool:
+        self.opportunity_calls += 1
+        return self.opportunity
+
+
+class _QuotaTrialAccess(FakeTrialAccess):
+    """Stateful fake whose quota drains across attempts (R-09).
+
+    Mirrors the real service: ``trial_opportunity`` reports whether quota
+    remains and ``claim_attempt`` only succeeds while quota is left.
+    """
+
+    def __init__(self, *, quota: int) -> None:
+        super().__init__(active=True, claim_result=True, opportunity=True)
+        self._remaining = quota
+
+    def trial_opportunity(self) -> bool:
+        self.opportunity_calls += 1
+        return self._remaining > 0
+
+    def claim_attempt(self) -> bool:
+        self.claim_calls += 1
+        if self._remaining <= 0:
+            return False
+        self._remaining -= 1
+        return True
 
 
 def _put_original_image(asset_store: FileAssetStore) -> AssetRef:
@@ -98,8 +139,9 @@ def _saved_ready_draft(
 def _orchestrator(
     tmp_path: Path,
     *,
-    trial_access: FakeTrialAccess | None = None,
+    trial_access: TrialAccess | None = None,
     trial_gateway: FakeGateway | None = None,
+    personal_configured: bool = False,
 ) -> tuple[GenerationOrchestrator, FakeGateway, FakeGateway]:
     workspace = WorkspacePaths.create(tmp_path / "workspace")
     asset_store = FileAssetStore(workspace)
@@ -118,6 +160,7 @@ def _orchestrator(
         min_confidence=0.5,
         trial_access=trial_access,
         trial_gateway_factory=(lambda: trial) if trial_access is not None else None,
+        personal_configured=lambda: personal_configured,
     )
     return orchestrator, personal, trial
 
@@ -247,3 +290,127 @@ async def test_trial_provider_error_details_do_not_leak(tmp_path: Path) -> None:
     assert "sk-test-trial" not in str(details)
     assert echo.calls == ["analyze"]
     assert personal.calls == []
+
+
+async def test_configured_user_prefers_trial_then_silently_falls_back(
+    tmp_path: Path,
+) -> None:
+    """T30-TRIAL-007: a configured user burns the free trial allowance first,
+    then silently falls back to the personal provider once it is exhausted."""
+    trial_access = _QuotaTrialAccess(quota=2)
+    orchestrator, personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+        personal_configured=True,
+    )
+
+    first = _saved_ready_draft(orchestrator)
+    events = [event async for event in orchestrator.run(initial_command(first))]
+    assert events[-1].type == "attempt.succeeded"
+    assert trial_access.claim_calls == 1
+    assert trial.calls == ["analyze", "design", "image", "image"]
+    assert personal.calls == []
+
+    second = _saved_ready_draft(orchestrator)
+    events = [event async for event in orchestrator.run(initial_command(second))]
+    assert events[-1].type == "attempt.succeeded"
+    assert trial_access.claim_calls == 2
+    assert trial.calls == ["analyze", "design", "image", "image"] * 2
+    assert personal.calls == []
+
+    third = _saved_ready_draft(orchestrator)
+    events = [event async for event in orchestrator.run(initial_command(third))]
+    assert events[-1].type == "attempt.succeeded"
+    # No further claims after exhaustion, and no PTS_TRIAL_LIMIT_REACHED: the
+    # configured path falls back silently.
+    assert trial_access.claim_calls == 2
+    assert trial.calls == ["analyze", "design", "image", "image"] * 2
+    assert personal.calls == ["analyze", "design", "image", "image"]
+
+    # The configured branch never consults the opt-in is_active() flag.
+    assert trial_access.is_active_calls == 0
+
+
+async def test_configured_user_no_trial_opportunity_uses_personal_gateway(
+    tmp_path: Path,
+) -> None:
+    trial_access = FakeTrialAccess(active=False, claim_result=True, opportunity=False)
+    orchestrator, personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+        personal_configured=True,
+    )
+    draft = _saved_ready_draft(orchestrator)
+
+    events = [event async for event in orchestrator.run(initial_command(draft))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert personal.calls == ["analyze", "design", "image", "image"]
+    assert trial.calls == []
+    assert trial_access.claim_calls == 0
+    assert trial_access.is_active_calls == 0
+
+
+async def test_configured_user_claim_lost_in_race_falls_back_to_personal(
+    tmp_path: Path,
+) -> None:
+    """T30-TRIAL-007: a concurrent claim loss must not surface an error on the
+    configured path — it silently falls back to the personal provider."""
+    trial_access = FakeTrialAccess(active=True, claim_result=False, opportunity=True)
+    orchestrator, personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+        personal_configured=True,
+    )
+    draft = _saved_ready_draft(orchestrator)
+
+    events = [event async for event in orchestrator.run(initial_command(draft))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert personal.calls == ["analyze", "design", "image", "image"]
+    assert trial.calls == []
+    assert trial_access.claim_calls == 1
+    assert trial_access.is_active_calls == 0
+
+
+async def test_configured_user_real_trial_service_prefers_then_falls_back(
+    tmp_path: Path,
+) -> None:
+    """T30-TRIAL-007: a REAL TrialAccessService (not opted-in) is drained by the
+    configured-user path and persists claims through the real state file."""
+    trial_workspace = WorkspacePaths.create(tmp_path / "trial-ws")
+    trial_service = TrialAccessService(
+        trial_workspace,
+        key_provider=lambda: "sk-test-trial",
+        limit=2,
+    )
+    # R-09 needs no opt-in click: the fresh service is not enabled yet.
+    assert trial_service.status().enabled is False
+    assert trial_service.trial_opportunity() is True
+
+    orchestrator, personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_service,
+        personal_configured=True,
+    )
+
+    first = _saved_ready_draft(orchestrator)
+    events = [event async for event in orchestrator.run(initial_command(first))]
+    assert events[-1].type == "attempt.succeeded"
+    assert trial.calls == ["analyze", "design", "image", "image"]
+    assert personal.calls == []
+    assert trial_service.status().claimed_attempts == 1
+
+    second = _saved_ready_draft(orchestrator)
+    events = [event async for event in orchestrator.run(initial_command(second))]
+    assert events[-1].type == "attempt.succeeded"
+    assert trial_service.status().claimed_attempts == 2
+    assert trial_service.status().remaining == 0
+    assert personal.calls == []
+
+    third = _saved_ready_draft(orchestrator)
+    events = [event async for event in orchestrator.run(initial_command(third))]
+    assert events[-1].type == "attempt.succeeded"
+    assert trial.calls == ["analyze", "design", "image", "image"] * 2
+    assert personal.calls == ["analyze", "design", "image", "image"]
+    assert trial_service.status().claimed_attempts == 2

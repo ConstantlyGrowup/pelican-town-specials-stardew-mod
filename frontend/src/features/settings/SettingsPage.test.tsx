@@ -126,7 +126,10 @@ describe("settings page", () => {
 
     expect(await screen.findByText(copy.settingsSaved)).toBeVisible();
     await waitFor(() => expect(keyInput.value).toBe(""));
-    expect(screen.getByText(/已配置/)).toBeVisible();
+    // Exact match: after saving the key the status shows "已配置". The R-09
+    // configured-user trial banner also contains "已配置…" so a loose regex
+    // would be ambiguous here.
+    expect(screen.getByText(copy.apiKeyConfigured)).toBeVisible();
   });
 
   it("deletes the API key and reflects the new status", async () => {
@@ -327,5 +330,45 @@ describe("settings trial panel", () => {
     expect(
       await screen.findByRole("button", { name: copy.trialEnableButton }),
     ).toBeVisible();
+  });
+});
+
+describe("settings trial panel (configured user, R-09)", () => {
+  beforeEach(() => {
+    server.use(
+      http.get("/api/v1/settings/provider", () =>
+        HttpResponse.json({ ...settingsView, apiKeyConfigured: true }),
+      ),
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json(trialStatusAvailable),
+      ),
+    );
+  });
+
+  it("shows the priority status and no opt-in button while trial quota remains", async () => {
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    expect(screen.getByText(copy.trialConfiguredPriorityStatus.replace("{remaining}", "2"))).toBeVisible();
+    expect(screen.queryByRole("button", { name: copy.trialEnableButton })).toBeNull();
+  });
+
+  it("shows the exhausted status when the trial quota is used up", async () => {
+    server.use(
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          available: true,
+          enabled: false,
+          claimedAttempts: 2,
+          limit: 2,
+          remaining: 0,
+        }),
+      ),
+    );
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    expect(screen.getByText(copy.trialConfiguredExhausted)).toBeVisible();
+    expect(screen.queryByRole("button", { name: copy.trialEnableButton })).toBeNull();
   });
 });

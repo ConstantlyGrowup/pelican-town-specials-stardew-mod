@@ -490,6 +490,8 @@ class TrialAccess(Protocol):
 
     def is_active(self) -> bool: ...
 
+    def trial_opportunity(self) -> bool: ...
+
     def claim_attempt(self) -> bool: ...
 
 
@@ -585,6 +587,7 @@ class GenerationOrchestrator:
         clock: Callable[[], float] = monotonic,
         trial_access: TrialAccess | None = None,
         trial_gateway_factory: GatewayFactory | None = None,
+        personal_configured: Callable[[], bool] = lambda: False,
     ) -> None:
         self._drafts = draft_repository
         self._attempts = attempt_repository
@@ -593,6 +596,7 @@ class GenerationOrchestrator:
         self._gateway_factory = gateway_factory
         self._trial_access = trial_access
         self._trial_gateway_factory = trial_gateway_factory
+        self._personal_configured = personal_configured
         self._registry = registry
         self._min_confidence = min_confidence
         self._clock = clock
@@ -829,21 +833,31 @@ class GenerationOrchestrator:
         """Build the per-attempt gateway lazily at the first provider call.
 
         Idempotent: the first call caches the gateway on the run state so a
-        single attempt claims at most one trial generation. When the trial is
-        active the trial gateway is built after an atomic claim; an exhausted
-        trial raises ``PTS_TRIAL_LIMIT_REACHED`` before any provider call.
+        single attempt claims at most one trial generation. R-09: a user who
+        already configured their own provider prefers the free trial allowance
+        and silently falls back to the personal provider once it is exhausted
+        (or lost in a concurrent claim). Users without a personal provider keep
+        the opt-in trial flow, where an exhausted trial raises
+        ``PTS_TRIAL_LIMIT_REACHED`` before any provider call.
         """
         if state.gateway is not None:
             return state.gateway
-        if (
-            self._trial_access is not None
-            and self._trial_gateway_factory is not None
-            and self._trial_access.is_active()
-        ):
-            if not self._trial_access.claim_attempt():
-                raise trial_limit_error()
-            state.gateway = self._trial_gateway_factory()
-            return state.gateway
+        if self._trial_access is not None and self._trial_gateway_factory is not None:
+            if self._personal_configured():
+                if (
+                    self._trial_access.trial_opportunity()
+                    and self._trial_access.claim_attempt()
+                ):
+                    state.gateway = self._trial_gateway_factory()
+                    return state.gateway
+                state.gateway = self._gateway_factory()
+                return state.gateway
+            # Users without a personal provider keep the opt-in trial flow.
+            if self._trial_access.is_active():
+                if not self._trial_access.claim_attempt():
+                    raise trial_limit_error()
+                state.gateway = self._trial_gateway_factory()
+                return state.gateway
         state.gateway = self._gateway_factory()
         return state.gateway
 
