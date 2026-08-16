@@ -449,6 +449,7 @@ async def test_fourth_concurrent_generation_returns_409_busy_with_details(
             draft_ids.append(create.json()["draftId"])
 
         gen_services.gateway.delay = 0.5
+        gen_services.gateway.hold = asyncio.Event()
         generate_tasks = [
             asyncio.create_task(
                 client.post(
@@ -460,7 +461,10 @@ async def test_fourth_concurrent_generation_returns_409_busy_with_details(
         ]
         try:
             # Wait until all three attempts are inside their first provider
-            # call; the snapshot below is then stable for the rejection.
+            # call and frozen there on the hold gate. The snapshot below is
+            # then stable for the rejection: the frozen generations cannot
+            # append further calls, so the no-additional-call assertion is
+            # deterministic rather than racing CI scheduling jitter.
             deadline = time.monotonic() + 5.0
             while time.monotonic() < deadline:
                 if gen_services.gateway.calls.count("analyze") >= 3:
@@ -493,6 +497,11 @@ async def test_fourth_concurrent_generation_returns_409_busy_with_details(
             assert gen_services.gateway.calls.count("analyze") == analyze_before
             assert len(gen_services.gateway.calls) == calls_before
         finally:
+            # Release any generations frozen on the hold gate so cancellation
+            # lands cleanly instead of mid-wait.
+            hold = gen_services.gateway.hold
+            if hold is not None and not hold.is_set():
+                hold.set()
             for task in generate_tasks:
                 if not task.done():
                     task.cancel()

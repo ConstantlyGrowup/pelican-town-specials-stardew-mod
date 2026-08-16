@@ -139,11 +139,13 @@ class FakeGateway:
         fail_stage: GenerationStage | None = None,
         delay: float = 0.0,
         image_edits_supported: bool | None = None,
+        hold: asyncio.Event | None = None,
     ) -> None:
         self.confidence = confidence
         self.fail_stage = fail_stage
         self.delay = delay
         self.image_edits_supported = image_edits_supported
+        self.hold = hold
         self.calls: list[str] = []
         self.image_requests: list[ImageGenerationRequest] = []
 
@@ -151,6 +153,10 @@ class FakeGateway:
         self, request, *, json_only: bool = False
     ) -> DishAnalysis:
         self.calls.append("analyze")
+        if self.hold is not None:
+            # Optional test gate: block inside the first provider call so a
+            # concurrency test can take a stable snapshot of in-flight calls.
+            await self.hold.wait()
         if self.delay:
             await asyncio.sleep(self.delay)
         if self.fail_stage is GenerationStage.DISH_ANALYSIS:
