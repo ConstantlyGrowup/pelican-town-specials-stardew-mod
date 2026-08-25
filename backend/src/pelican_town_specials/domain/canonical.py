@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 from enum import Enum
+from math import isfinite
 from typing import Any, Protocol, runtime_checkable
 from uuid import UUID
 
@@ -33,6 +34,39 @@ class _FrozenCanonicalModel(StrictModel):
 class CanonicalIconKind(str, Enum):
     SOURCE = "SOURCE"
     ICON_16 = "ICON_16"
+
+
+class RecallDecision(str, Enum):
+    NOT_ATTEMPTED_BELOW_MINIMUM = "NOT_ATTEMPTED_BELOW_MINIMUM"
+    NO_CANDIDATES = "NO_CANDIDATES"
+    MATCH_MISS = "MATCH_MISS"
+    MATCH_HIT = "MATCH_HIT"
+    FALLBACK_ERROR = "FALLBACK_ERROR"
+    BYPASSED_FULL_REGENERATE = "BYPASSED_FULL_REGENERATE"
+
+
+class RecallTrace(_FrozenCanonicalModel):
+    outcome: RecallDecision
+    candidate_count: int = Field(alias="candidateCount", ge=0)
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    canonical_dish_id: UUID | None = Field(default=None, alias="canonicalDishId")
+    elapsed_ms: int = Field(alias="elapsedMs", ge=0)
+
+    @field_validator("confidence")
+    @classmethod
+    def _validate_finite_confidence(cls, value: float | None) -> float | None:
+        if value is not None and not isfinite(value):
+            raise ValueError("confidence must be finite")
+        return value
+
+    @field_validator("canonical_dish_id", mode="before")
+    @classmethod
+    def _validate_optional_uuid4(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, UUID):
+            return ensure_uuid4(value)
+        return value
 
 
 class RecallIngredient(_FrozenCanonicalModel):
@@ -281,6 +315,8 @@ class CanonicalRecallCandidate(_FrozenCanonicalModel):
     language: Language
     catalog_version: str = Field(alias="catalogVersion", min_length=1, max_length=80)
     recall_document: RecallDocument = Field(alias="recallDocument")
+    display_name: str = Field(alias="displayName", min_length=1, max_length=60)
+    registered_at: datetime = Field(alias="registeredAt")
     use_count: int = Field(alias="useCount", ge=0)
     last_used_at: datetime | None = Field(default=None, alias="lastUsedAt")
 
@@ -309,6 +345,11 @@ class CanonicalRecallCandidate(_FrozenCanonicalModel):
             return None
         return ensure_utc(value)
 
+    @field_validator("registered_at", mode="before")
+    @classmethod
+    def _validate_registered_at(cls, value: datetime) -> datetime:
+        return ensure_utc(value)
+
 
 @runtime_checkable
 class CanonicalRepository(Protocol):
@@ -335,6 +376,13 @@ class CanonicalRepository(Protocol):
         language: Language,
         catalog_version: str,
         limit: int = CANONICAL_CANDIDATE_LIMIT,
+    ) -> list[CanonicalRecallCandidate]: ...
+
+    def list_recall_candidate_pool(
+        self,
+        *,
+        language: Language,
+        catalog_version: str,
     ) -> list[CanonicalRecallCandidate]: ...
 
     def record_usage(

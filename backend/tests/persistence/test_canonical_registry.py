@@ -407,6 +407,15 @@ def test_candidate_queries_are_valid_same_language_catalog_compatible_and_image_
     assert candidates[0].recall_document.summary
     assert candidates[0].recall_document.cuisine == "Farmhouse"
     assert candidates[0].recall_document.semantic_ingredients[0].name == "Egg"
+    assert candidates[0].display_name == zh_compatible.presentation.display_name
+    assert candidates[0].registered_at.tzinfo is not None
+    pool = registry.list_recall_candidate_pool(
+        language=Language.ZH_CN,
+        catalog_version="catalog-v1",
+    )
+    assert [candidate.canonical_id for candidate in pool] == [
+        zh_compatible.canonical_id
+    ]
     assert registry.count_valid() == 3
 
 

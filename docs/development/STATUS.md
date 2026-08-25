@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_9_task_33_planning |
-| project_phase | Milestone 8 与 Task 30 均已完成，正式版本 v1.3.0 已发布并核验。M9/M10 规划已验收；M9 Task 31–32 已本地完成，M10 仅规划验收、尚未授权实施 |
+| overall_state | milestone_9_task_34_planning |
+| project_phase | Milestone 8 与 Task 30 均已完成，正式版本 v1.3.0 已发布并核验。M9/M10 规划已验收；M9 Task 31–33 已本地完成，M10 仅规划验收、尚未授权实施 |
 | product_implementation_started | true |
-| active_session_id | none（Task 32 已 committed；Task 33 Session/Packet 待创建） |
+| active_session_id | none（Task 33 已 committed；Task 34 Session/Packet 待创建） |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | 为 Task 33“候选检索与语义 matcher”完成依赖闭包、Context Packet 和新 Session |
+| current_task | 为 Task 34“Ask Gus 命中复用、资产导入与 Provenance”完成依赖闭包、Context Packet 和新 Session |
 | blocker | 无 |
-| next_action | 以 Task 32 本地 focused commit 为 base 完成 Task 33 Context Packet（READY_FOR_IMPLEMENTATION）→ 新 `luna_worker` 实施 → 新 `detector` 独立审阅 → PASS 后主 Agent 复验并本地提交；不 push、不逐 Task 打断 |
+| next_action | 以 Task 33 本地 focused commit 为 base 完成 Task 34 Context Packet（READY_FOR_IMPLEMENTATION）→ 新 `luna_worker` 实施 → 新 `detector` 独立审阅 → PASS 后主 Agent 复验并本地提交；不 push、不逐 Task 打断 |
 | collaboration_model | M9 临时由 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实

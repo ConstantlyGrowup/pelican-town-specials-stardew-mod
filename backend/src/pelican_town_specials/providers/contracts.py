@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from enum import Enum
+from math import isfinite
 from typing import Protocol
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
-from pelican_town_specials.domain.common import Language, StrictModel
+from pelican_town_specials.domain.canonical import RecallDocument
+from pelican_town_specials.domain.common import Language, StrictModel, ensure_uuid4
 from pelican_town_specials.domain.dish import (
     BuffSpec,
     DishAnalysis,
@@ -27,6 +29,13 @@ class ModelGateway(Protocol):
     async def design_ask_gus(
         self, request: AskGusDesignRequest, *, json_only: bool = False
     ) -> GeneratedDishCore: ...
+
+    async def match_canonical(
+        self,
+        request: CanonicalMatchRequest,
+        *,
+        json_only: bool = False,
+    ) -> CanonicalMatchResponse: ...
 
     async def generate_image(self, request: ImageGenerationRequest) -> GeneratedImage: ...
 
@@ -59,6 +68,52 @@ class AskGusDesignRequest(StrictModel):
     context_text: str | None = Field(default=None, max_length=500)
     language: Language
     request_id: UUID
+
+
+class CanonicalMatchCandidate(StrictModel):
+    canonical_id: UUID = Field(alias="canonicalId")
+    display_name: str = Field(alias="displayName", min_length=1, max_length=60)
+    recall_document: RecallDocument = Field(alias="recallDocument")
+
+    @field_validator("canonical_id", mode="before")
+    @classmethod
+    def _validate_uuid4(cls, value: object) -> object:
+        if isinstance(value, UUID):
+            return ensure_uuid4(value)
+        if isinstance(value, str):
+            return ensure_uuid4(UUID(value))
+        return value
+
+
+class CanonicalMatchRequest(StrictModel):
+    analysis: DishAnalysis
+    context_text: str | None = Field(default=None, alias="contextText", max_length=500)
+    language: Language
+    candidates: list[CanonicalMatchCandidate] = Field(min_length=1, max_length=5)
+    request_id: UUID = Field(alias="requestId")
+
+
+class CanonicalMatchResponse(StrictModel):
+    candidate_id: UUID | None = Field(alias="candidateId")
+    confidence: float = Field(ge=0, le=1)
+
+    @field_validator("candidate_id", mode="before")
+    @classmethod
+    def _validate_optional_uuid4(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, UUID):
+            return ensure_uuid4(value)
+        if isinstance(value, str):
+            return ensure_uuid4(UUID(value))
+        return value
+
+    @field_validator("confidence")
+    @classmethod
+    def _validate_finite_confidence(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("confidence must be finite")
+        return value
 
 
 class SemanticRecipeIngredient(StrictModel):

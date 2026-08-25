@@ -36,6 +36,8 @@ from pelican_town_specials.persistence.secret_store import ApiKeySource
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalMatchRequest,
+    CanonicalMatchResponse,
     DishAnalysis,
     DishAnalysisRequest,
     GeneratedDishCore,
@@ -136,6 +138,17 @@ class TrialSafeGateway:
     ) -> GeneratedDishCore:
         try:
             return await self._inner.design_ask_gus(request, json_only=json_only)
+        except AppError as exc:
+            raise _trial_safe_error(exc) from exc
+
+    async def match_canonical(
+        self,
+        request: CanonicalMatchRequest,
+        *,
+        json_only: bool = False,
+    ) -> CanonicalMatchResponse:
+        try:
+            return await self._inner.match_canonical(request, json_only=json_only)
         except AppError as exc:
             raise _trial_safe_error(exc) from exc
 

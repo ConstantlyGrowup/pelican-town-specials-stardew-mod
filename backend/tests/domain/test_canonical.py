@@ -16,8 +16,10 @@ from pelican_town_specials.domain.canonical import (
     CANONICAL_REUSE_CONTRACT_VERSION,
     CanonicalDish,
     CanonicalIconMetadata,
+    RecallDecision,
     RecallDocument,
     RecallIngredient,
+    RecallTrace,
 )
 from pelican_town_specials.domain.dish import GameIngredient
 from tests.domain.factories import canonical_registration_fixture
@@ -65,6 +67,31 @@ def test_canonical_contract_constants_are_frozen() -> None:
     assert CANONICAL_MATCH_THRESHOLD == 0.90
     assert CANONICAL_REUSE_CONTRACT_VERSION == "canonical-reuse-v1"
     assert CANONICAL_MATCH_PROMPT_VERSION == "canonical-match-v1"
+
+
+def test_recall_trace_keeps_only_bounded_internal_outcome_fields() -> None:
+    trace = RecallTrace(
+        outcome=RecallDecision.MATCH_HIT,
+        candidateCount=5,
+        confidence=0.95,
+        canonicalDishId=uuid4(),
+        elapsedMs=12,
+    )
+
+    assert set(trace.model_dump(by_alias=True)) == {
+        "outcome",
+        "candidateCount",
+        "confidence",
+        "canonicalDishId",
+        "elapsedMs",
+    }
+    with pytest.raises(ValidationError):
+        RecallTrace(
+            outcome=RecallDecision.MATCH_MISS,
+            candidateCount=0,
+            elapsedMs=0,
+            explanation="must not be persisted",
+        )
 
 
 def test_registration_is_strict_and_rejects_mixed_gameplay_catalog_versions() -> None:

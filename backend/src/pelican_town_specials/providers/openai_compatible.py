@@ -23,6 +23,8 @@ from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalMatchRequest,
+    CanonicalMatchResponse,
     DishAnalysisRequest,
     GeneratedDishCore,
     GeneratedImage,
@@ -32,6 +34,9 @@ from pelican_town_specials.providers.contracts import (
 )
 from pelican_town_specials.providers.prompts.analysis_v1 import analysis_prompt_for
 from pelican_town_specials.providers.prompts.ask_gus_v3 import ask_gus_prompt_for
+from pelican_town_specials.providers.prompts.canonical_match_v1 import (
+    canonical_match_prompt_for,
+)
 from pelican_town_specials.providers.retry import RetryPolicy
 from pelican_town_specials.providers.safe_download import (
     SafeImageDownloader,
@@ -130,6 +135,48 @@ class OpenAICompatibleGateway:
             language=request.language,
         )
         return content
+
+    async def match_canonical(
+        self,
+        request: CanonicalMatchRequest,
+        *,
+        json_only: bool = False,
+    ) -> CanonicalMatchResponse:
+        self._require_model(self._settings.text_model, "text_model")
+        prompt, json_instruction = canonical_match_prompt_for(request.language)
+        analysis_label = (
+            "Current dish analysis:" if request.language is Language.EN_US else "当前菜品分析："
+        )
+        context_label = "Current contextText:" if request.language is Language.EN_US else "当前 contextText："
+        candidates_label = "Supplied candidates:" if request.language is Language.EN_US else "提供的候选："
+        payload = {
+            "analysis": request.analysis.model_dump(by_alias=True, mode="json"),
+            "contextText": request.context_text,
+            "language": request.language.value,
+            "candidates": [
+                candidate.model_dump(by_alias=True, mode="json")
+                for candidate in request.candidates
+            ],
+        }
+        prompt = (
+            f"{prompt}\n\n{analysis_label}\n"
+            f"{json.dumps(payload['analysis'], ensure_ascii=False, separators=(',', ':'))}\n"
+            f"{context_label}\n"
+            f"{json.dumps(payload['contextText'], ensure_ascii=False)}\n"
+            f"{candidates_label}\n"
+            f"{json.dumps(payload['candidates'], ensure_ascii=False, separators=(',', ':'))}"
+        )
+        return await self._chat_structured(
+            model=self._settings.text_model,
+            request_id=request.request_id,
+            timeout=self._settings.chat_timeout_seconds,
+            prompt=prompt,
+            json_instruction=json_instruction,
+            target_type=CanonicalMatchResponse,
+            image_data_url=None,
+            json_only=json_only,
+            language=request.language,
+        )
 
     async def generate_image(self, request: ImageGenerationRequest) -> GeneratedImage:
         model = self._settings.image_model

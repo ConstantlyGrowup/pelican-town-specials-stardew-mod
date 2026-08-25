@@ -11,6 +11,7 @@ import pytest
 import respx
 
 from pelican_town_specials.application.settings import ProviderSettings
+from pelican_town_specials.domain.canonical import RecallDocument, RecallIngredient
 from pelican_town_specials.domain.common import Language
 from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.errors import AppError
@@ -22,6 +23,13 @@ from pelican_town_specials.providers import (
     ImageOperation,
     OpenAICompatibleGateway,
     ProviderImageInput,
+)
+from pelican_town_specials.providers.contracts import (
+    CanonicalMatchCandidate,
+    CanonicalMatchRequest,
+)
+from pelican_town_specials.providers.prompts.canonical_match_v1 import (
+    canonical_match_prompt_for,
 )
 
 from .conftest import FakeSecretStore
@@ -140,6 +148,107 @@ def _analysis_request() -> DishAnalysisRequest:
         language=Language.ZH_CN,
         requestId=uuid4(),
     )
+
+
+def _canonical_match_request() -> CanonicalMatchRequest:
+    candidate_id = uuid4()
+    return CanonicalMatchRequest(
+        analysis=DishAnalysis.model_validate(_ANALYSIS_JSON),
+        contextText="make this a spicy spring noodle bowl",
+        language=Language.EN_US,
+        candidates=[
+            CanonicalMatchCandidate(
+                canonicalId=candidate_id,
+                displayName="Spring Noodles",
+                recallDocument=RecallDocument(
+                    recognizedDish="Spring Noodles",
+                    normalizedName="spring noodles",
+                    summary="A warm noodle bowl.",
+                    cuisine="Farmhouse",
+                    semanticIngredients=[
+                        RecallIngredient(
+                            name="Noodles",
+                            normalizedName="noodles",
+                            visibleConfidence=0.9,
+                        )
+                    ],
+                    cookingMethods=["boiled"],
+                    flavorProfile=[],
+                ),
+            )
+        ],
+        requestId=uuid4(),
+    )
+
+
+def test_canonical_match_schema_is_exactly_two_fields() -> None:
+    from pelican_town_specials.providers.contracts import CanonicalMatchResponse
+    from pelican_town_specials.providers.openai_compatible import _model_schema
+
+    schema = _model_schema("canonicalmatchresponse", CanonicalMatchResponse)
+    assert set(schema["schema"]["properties"]) == {"candidateId", "confidence"}
+    assert schema["schema"]["required"] == ["candidateId", "confidence"]
+
+
+@pytest.mark.parametrize("language", [Language.ZH_CN, Language.EN_US])
+def test_canonical_match_prompt_is_bilingual_context_conflict_and_json_only(
+    language: Language,
+) -> None:
+    prompt, instruction = canonical_match_prompt_for(language)
+
+    assert "contextText" in prompt
+    assert "confiden" in prompt or "置信度" in prompt
+    assert "candidateId" in instruction
+    assert "confidence" in instruction
+    assert "reasoning" in prompt or "推理" in prompt
+
+
+@respx.mock
+async def test_canonical_match_uses_text_model_and_sends_no_image_or_reasoning(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    request = _canonical_match_request()
+    candidate_id = request.candidates[0].canonical_id
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(
+            json.dumps({"candidateId": str(candidate_id), "confidence": 0.95})
+        )
+    )
+
+    result = await gateway.match_canonical(request)
+
+    assert result.candidate_id == candidate_id
+    assert result.confidence == 0.95
+    body = json.loads(route.calls[0].request.content.decode())
+    assert body["model"] == "text-model"
+    assert "reasoning_effort" not in body
+    content = body["messages"][0]["content"]
+    assert len(content) == 1
+    prompt_text = content[0]["text"]
+    assert request.context_text in prompt_text
+    assert str(candidate_id) in prompt_text
+    assert "image_url" not in body
+    response_format = body["response_format"]
+    assert set(response_format["json_schema"]["schema"]["properties"]) == {
+        "candidateId",
+        "confidence",
+    }
+
+
+@respx.mock
+async def test_canonical_match_json_only_uses_existing_structured_fallback(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    request = _canonical_match_request()
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps({"candidateId": None, "confidence": 0.1}))
+    )
+
+    result = await gateway.match_canonical(request, json_only=True)
+
+    assert result.candidate_id is None
+    body = json.loads(route.calls[0].request.content.decode())
+    assert "response_format" not in body
 
 
 @respx.mock

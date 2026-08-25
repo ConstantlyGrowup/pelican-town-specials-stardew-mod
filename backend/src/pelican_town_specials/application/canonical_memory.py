@@ -6,19 +6,32 @@ import hashlib
 import json
 import logging
 import unicodedata
-from collections.abc import Mapping
+from collections import Counter
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
 from enum import Enum
+from math import isfinite
+from time import monotonic
 from typing import Literal
 from uuid import UUID, uuid4
 
 from pelican_town_specials.domain.archive import ArchivedDish
 from pelican_town_specials.domain.assets import AssetKind
 from pelican_town_specials.domain.canonical import (
+    CANONICAL_CANDIDATE_LIMIT,
+    CANONICAL_MATCH_THRESHOLD,
+    CANONICAL_MIN_VALID_COUNT,
+    CANONICAL_REUSE_CONTRACT_VERSION,
+    CanonicalDish,
     CanonicalDishRegistration,
     CanonicalIconInput,
+    CanonicalIconKind,
+    CanonicalRecallCandidate,
     CanonicalRepository,
+    RecallDecision,
     RecallDocument,
     RecallIngredient,
+    RecallTrace,
 )
 from pelican_town_specials.domain.common import DraftMode, Language, ensure_uuid4
 from pelican_town_specials.domain.dish import DishAnalysis, GenerationSource
@@ -33,6 +46,12 @@ from pelican_town_specials.persistence.canonical_registry import (
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+)
+from pelican_town_specials.providers.contracts import (
+    CanonicalMatchCandidate,
+    CanonicalMatchRequest,
+    CanonicalMatchResponse,
+    ModelGateway,
 )
 
 RegistrationOutcome = Literal[
@@ -122,6 +141,356 @@ def build_dish_signature(
         separators=(",", ":"),
     )
     return hashlib.sha256(compact.encode("utf-8")).hexdigest()
+
+
+def ingredient_similarity(
+    left: Iterable[str],
+    right: Iterable[str],
+) -> float:
+    """Return the overlap coefficient for normalized ingredient-name sets."""
+
+    left_set = {
+        normalized
+        for value in left
+        if (normalized := normalize_recall_text(value))
+    }
+    right_set = {
+        normalized
+        for value in right
+        if (normalized := normalize_recall_text(value))
+    }
+    if not left_set or not right_set:
+        return 0.0
+    return len(left_set.intersection(right_set)) / min(len(left_set), len(right_set))
+
+
+def name_similarity(left: str, right: str) -> float:
+    """Return multiset Unicode-codepoint bigram Dice similarity."""
+
+    left_text = normalize_recall_text(left).replace(" ", "")
+    right_text = normalize_recall_text(right).replace(" ", "")
+    if len(left_text) == 1 or len(right_text) == 1:
+        return 1.0 if left_text == right_text else 0.0
+    if len(left_text) < 2 or len(right_text) < 2:
+        return 0.0
+    left_bigrams = Counter(
+        left_text[index : index + 2] for index in range(len(left_text) - 1)
+    )
+    right_bigrams = Counter(
+        right_text[index : index + 2] for index in range(len(right_text) - 1)
+    )
+    shared = sum((left_bigrams & right_bigrams).values())
+    return 2 * shared / (sum(left_bigrams.values()) + sum(right_bigrams.values()))
+
+
+def context_similarity(
+    left_cuisine: str | None,
+    left_methods: Iterable[str],
+    right_cuisine: str | None,
+    right_methods: Iterable[str],
+) -> float:
+    """Return Jaccard similarity for cuisine and cooking-method tokens."""
+
+    def tokens(cuisine: str | None, methods: Iterable[str]) -> set[str]:
+        values = [cuisine] if cuisine is not None else []
+        values.extend(methods)
+        return {
+            normalized
+            for value in values
+            if (normalized := normalize_recall_text(value))
+        }
+
+    left_set = tokens(left_cuisine, left_methods)
+    right_set = tokens(right_cuisine, right_methods)
+    union = left_set.union(right_set)
+    if not union:
+        return 0.0
+    return len(left_set.intersection(right_set)) / len(union)
+
+
+def weighted_similarity(
+    ingredient_score: float,
+    name_score: float,
+    context_score: float,
+) -> float:
+    """Combine the frozen local recall weights without rounding."""
+
+    return (
+        0.70 * ingredient_score
+        + 0.20 * name_score
+        + 0.10 * context_score
+    )
+
+
+@dataclass(frozen=True)
+class RankedCanonicalCandidate:
+    candidate: CanonicalRecallCandidate
+    ingredient_score: float
+    name_score: float
+    context_score: float
+    score: float
+
+
+class CandidateRetriever:
+    """Rank the complete compatible lightweight pool before taking Top 5."""
+
+    def retrieve(
+        self,
+        analysis: DishAnalysis,
+        candidates: Iterable[CanonicalRecallCandidate],
+        *,
+        language: Language | None = None,
+        catalog_version: str | None = None,
+    ) -> list[RankedCanonicalCandidate]:
+        current_ingredients = [
+            ingredient.normalized_name or ingredient.name
+            for ingredient in analysis.semantic_ingredients
+        ]
+        ranked: list[RankedCanonicalCandidate] = []
+        for candidate in candidates:
+            if language is not None and candidate.language is not language:
+                continue
+            if (
+                catalog_version is not None
+                and candidate.catalog_version != catalog_version
+            ):
+                continue
+            candidate_ingredients = [
+                ingredient.normalized_name or ingredient.name
+                for ingredient in candidate.recall_document.semantic_ingredients
+            ]
+            ingredient_score = ingredient_similarity(
+                current_ingredients,
+                candidate_ingredients,
+            )
+            name_score = name_similarity(
+                analysis.recognized_dish,
+                candidate.recall_document.normalized_name,
+            )
+            context_score = context_similarity(
+                analysis.cuisine,
+                analysis.cooking_methods,
+                candidate.recall_document.cuisine,
+                candidate.recall_document.cooking_methods,
+            )
+            score = weighted_similarity(
+                ingredient_score,
+                name_score,
+                context_score,
+            )
+            if ingredient_score == 0.0 and name_score < 0.50:
+                continue
+            ranked.append(
+                RankedCanonicalCandidate(
+                    candidate=candidate,
+                    ingredient_score=ingredient_score,
+                    name_score=name_score,
+                    context_score=context_score,
+                    score=score,
+                )
+            )
+        ranked.sort(
+            key=lambda item: (
+                -item.score,
+                item.candidate.registered_at,
+                str(item.candidate.canonical_id),
+            )
+        )
+        return ranked[:CANONICAL_CANDIDATE_LIMIT]
+
+
+@dataclass(frozen=True)
+class RecallResult:
+    canonical_dish: CanonicalDish | None
+    trace: RecallTrace
+
+    @property
+    def canonical(self) -> CanonicalDish | None:
+        return self.canonical_dish
+
+    @property
+    def decision(self) -> RecallDecision:
+        return self.trace.outcome
+
+
+class RecallService:
+    """Fail-open candidate retrieval and one-shot semantic Canonical matcher."""
+
+    def __init__(
+        self,
+        *,
+        registry: CanonicalRepository,
+        matcher: ModelGateway | None = None,
+        gateway: ModelGateway | None = None,
+        clock: Callable[[], float] = monotonic,
+    ) -> None:
+        selected_matcher = matcher or gateway
+        if selected_matcher is None:
+            raise ValueError("a Canonical matcher gateway is required")
+        self._registry = registry
+        self._matcher = selected_matcher
+        self._clock = clock
+        self._retriever = CandidateRetriever()
+
+    async def recall(
+        self,
+        analysis: DishAnalysis,
+        context_text: str | None,
+        language: Language,
+        catalog_version: str,
+        request_id: UUID,
+    ) -> RecallResult:
+        started = self._clock()
+        candidate_count = 0
+        try:
+            valid_count = self._registry.count_valid()
+            if valid_count < CANONICAL_MIN_VALID_COUNT:
+                return self._result(
+                    started,
+                    RecallDecision.NOT_ATTEMPTED_BELOW_MINIMUM,
+                    candidate_count=0,
+                )
+
+            pool = self._registry.list_recall_candidate_pool(
+                language=language,
+                catalog_version=catalog_version,
+            )
+            ranked = self._retriever.retrieve(
+                analysis,
+                pool,
+                language=language,
+                catalog_version=catalog_version,
+            )
+            candidate_count = len(ranked)
+            if not ranked:
+                return self._result(
+                    started,
+                    RecallDecision.NO_CANDIDATES,
+                    candidate_count=0,
+                )
+
+            request = CanonicalMatchRequest(
+                analysis=analysis,
+                contextText=context_text,
+                language=language,
+                requestId=request_id,
+                candidates=[
+                    CanonicalMatchCandidate(
+                        canonicalId=item.candidate.canonical_id,
+                        displayName=item.candidate.display_name,
+                        recallDocument=item.candidate.recall_document,
+                    )
+                    for item in ranked
+                ],
+            )
+            response = await self._matcher.match_canonical(
+                request,
+                json_only=False,
+            )
+            try:
+                response = CanonicalMatchResponse.model_validate(response)
+            except Exception:  # noqa: BLE001 - malformed model response is a miss
+                return self._result(
+                    started,
+                    RecallDecision.MATCH_MISS,
+                    candidate_count=candidate_count,
+                )
+            confidence = response.confidence
+            if (
+                response.candidate_id is None
+                or response.candidate_id
+                not in {item.candidate.canonical_id for item in ranked}
+                or not isfinite(confidence)
+                or confidence < CANONICAL_MATCH_THRESHOLD
+            ):
+                return self._result(
+                    started,
+                    RecallDecision.MATCH_MISS,
+                    candidate_count=len(ranked),
+                    confidence=confidence,
+                )
+
+            canonical = self._registry.get_valid(response.candidate_id)
+            if (
+                canonical is None
+                or canonical.canonical_id != response.candidate_id
+                or not self._is_compatible(
+                    canonical,
+                    language=language,
+                    catalog_version=catalog_version,
+                )
+            ):
+                return self._result(
+                    started,
+                    RecallDecision.MATCH_MISS,
+                    candidate_count=len(ranked),
+                    confidence=confidence,
+                )
+            try:
+                self._validate_owned_icons(response.candidate_id)
+            except Exception:  # noqa: BLE001 - invalidated assets are a miss
+                return self._result(
+                    started,
+                    RecallDecision.MATCH_MISS,
+                    candidate_count=candidate_count,
+                    confidence=confidence,
+                )
+            return self._result(
+                started,
+                RecallDecision.MATCH_HIT,
+                candidate_count=len(ranked),
+                confidence=confidence,
+                canonical_dish_id=canonical.canonical_id,
+                canonical_dish=canonical,
+            )
+        except Exception:  # noqa: BLE001 - Canonical recall is fail-open
+            return self._result(
+                started,
+                RecallDecision.FALLBACK_ERROR,
+                candidate_count=candidate_count,
+            )
+
+    @staticmethod
+    def _is_compatible(
+        canonical: CanonicalDish,
+        *,
+        language: Language,
+        catalog_version: str,
+    ) -> bool:
+        return (
+            canonical.language is language
+            and canonical.catalog_version == catalog_version
+            and canonical.reuse_contract_version == CANONICAL_REUSE_CONTRACT_VERSION
+        )
+
+    def _validate_owned_icons(self, canonical_id: UUID) -> None:
+        self._registry.load_owned_icon(canonical_id, CanonicalIconKind.SOURCE)
+        self._registry.load_owned_icon(canonical_id, CanonicalIconKind.ICON_16)
+
+    def _result(
+        self,
+        started: float,
+        outcome: RecallDecision,
+        *,
+        candidate_count: int,
+        confidence: float | None = None,
+        canonical_dish_id: UUID | None = None,
+        canonical_dish: CanonicalDish | None = None,
+    ) -> RecallResult:
+        elapsed_ms = max(0, int((self._clock() - started) * 1000))
+        return RecallResult(
+            canonical_dish=canonical_dish,
+            trace=RecallTrace(
+                outcome=outcome,
+                candidateCount=candidate_count,
+                confidence=confidence,
+                canonicalDishId=canonical_dish_id,
+                elapsedMs=elapsed_ms,
+            ),
+        )
+
+
+CanonicalRecallService = RecallService
 
 
 class CanonicalRegistrationService:

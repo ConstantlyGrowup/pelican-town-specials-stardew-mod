@@ -18,6 +18,7 @@ from pelican_town_specials.domain.assets import MediaType
 from pelican_town_specials.domain.canonical import (
     CANONICAL_CANDIDATE_LIMIT,
     CANONICAL_REGISTRY_SCHEMA_VERSION,
+    CANONICAL_REUSE_CONTRACT_VERSION,
     CanonicalDish,
     CanonicalDishRegistration,
     CanonicalIconInput,
@@ -479,6 +480,33 @@ class SQLiteCanonicalRegistry:
             raise ValueError(
                 f"limit must be between 1 and {CANONICAL_CANDIDATE_LIMIT}"
             )
+        return self._list_recall_candidate_rows(
+            language=language,
+            catalog_version=catalog_version,
+            limit=limit,
+        )
+
+    def list_recall_candidate_pool(
+        self,
+        *,
+        language: Language,
+        catalog_version: str,
+    ) -> list[CanonicalRecallCandidate]:
+        """Return the full valid compatible pool without loading icon bytes."""
+
+        return self._list_recall_candidate_rows(
+            language=language,
+            catalog_version=catalog_version,
+            limit=None,
+        )
+
+    def _list_recall_candidate_rows(
+        self,
+        *,
+        language: Language,
+        catalog_version: str,
+        limit: int | None,
+    ) -> list[CanonicalRecallCandidate]:
         with self._validity_lock:
             valid_ids = {str(value) for value in self._valid_canonical_ids}
         with self._connect() as connection:
@@ -487,31 +515,48 @@ class SQLiteCanonicalRegistry:
                 SELECT canonical_id, signature, language, catalog_version,
                        recognized_dish, normalized_dish_name, summary, cuisine,
                        cooking_methods_json, flavor_profile_json,
-                       semantic_ingredients_json, use_count, last_used_at
+                       semantic_ingredients_json, presentation_json, created_at,
+                       use_count, last_used_at
                 FROM canonical_dishes
                 WHERE language = ? AND catalog_version = ?
+                  AND reuse_contract_version = ?
                 ORDER BY created_at ASC, canonical_id ASC
                 """,
-                (language.value, catalog_version),
+                (language.value, catalog_version, CANONICAL_REUSE_CONTRACT_VERSION),
             ).fetchall()
         candidates: list[CanonicalRecallCandidate] = []
         for row in rows:
             if str(row["canonical_id"]) not in valid_ids:
                 continue
-            candidates.append(
-                CanonicalRecallCandidate(
-                    canonicalId=UUID(str(row["canonical_id"])),
-                    dishSignature=str(row["signature"]),
-                    language=Language(str(row["language"])),
-                    catalogVersion=str(row["catalog_version"]),
-                    recallDocument=self._row_to_recall_document(row),
-                    useCount=int(row["use_count"]),
-                    lastUsedAt=self._parse_timestamp(row["last_used_at"]),
-                )
-            )
-            if len(candidates) == limit:
+            candidates.append(self._row_to_recall_candidate(row))
+            if limit is not None and len(candidates) == limit:
                 break
         return candidates
+
+    def _row_to_recall_candidate(
+        self,
+        row: sqlite3.Row,
+    ) -> CanonicalRecallCandidate:
+        registered_at = self._parse_timestamp(row["created_at"])
+        if registered_at is None:
+            raise ValueError("canonical registered_at must not be null")
+        presentation = json.loads(str(row["presentation_json"]))
+        if not isinstance(presentation, dict):
+            raise TypeError("canonical presentation must be an object")
+        display_name = presentation.get("displayName")
+        if not isinstance(display_name, str):
+            raise TypeError("canonical presentation displayName is invalid")
+        return CanonicalRecallCandidate(
+            canonicalId=UUID(str(row["canonical_id"])),
+            dishSignature=str(row["signature"]),
+            language=Language(str(row["language"])),
+            catalogVersion=str(row["catalog_version"]),
+            recallDocument=self._row_to_recall_document(row),
+            displayName=display_name,
+            registeredAt=registered_at,
+            useCount=int(row["use_count"]),
+            lastUsedAt=self._parse_timestamp(row["last_used_at"]),
+        )
 
     def record_usage(
         self,
