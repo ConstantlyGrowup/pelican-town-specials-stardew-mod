@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GenerationErrorEnvelope, GenerationStage } from "../../api/ndjson";
 import { catalogs } from "../../i18n/copy";
 import type { GenerationPhase } from "../generation/useGeneration";
@@ -15,6 +15,7 @@ type UseGenerationOverride = {
   currentStage: GenerationStage | null;
   succeededStages: GenerationStage[];
   totalStages: number | null;
+  timing: { startedAt: string; finishedAt: string } | null;
   error: GenerationErrorEnvelope | null;
   begin: () => void;
   cancel: () => void;
@@ -43,7 +44,32 @@ const copy = catalogs["zh-CN"];
 
 const server = setupServer();
 
+const successfulProgress = {
+  draftId: "draft-1",
+  active: false,
+  attempt: {
+    attemptId: "a-1",
+    draftId: "draft-1",
+    kind: "BLUEPRINT_PREVIEW",
+    sourceRevision: 1,
+    status: "SUCCEEDED",
+    currentStage: null,
+    stages: [],
+    totalStages: 6,
+    startedAt: "2026-08-25T00:00:00.000Z",
+    finishedAt: "2026-08-25T00:00:09.500Z",
+    error: null,
+  },
+};
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeEach(() => {
+  server.use(
+    http.get("/api/v1/drafts/:draft_id/generation", () =>
+      HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
+    ),
+  );
+});
 afterEach(() => {
   useGenerationOverride.current = null;
   server.resetHandlers();
@@ -152,6 +178,28 @@ describe("blueprint editor", () => {
       "src",
       "/api/v1/assets/icon-1",
     );
+  });
+
+  it("shows only neutral persisted timing and never a Gus memory story", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "REVIEWABLE" })),
+      ),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(successfulProgress),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("status", { name: "本次生成用时 9.5 秒" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Gus 的灵感")).toBeNull();
+    expect(
+      screen.queryByText(
+        "嗯，这道菜声名远扬，我好像在哪吃过它。于是我灵感涌现，加快了我的鉴定速度。",
+      ),
+    ).toBeNull();
   });
 
   it("loads a blueprint draft into an editable form and saves with expectedRevision", async () => {
@@ -552,6 +600,7 @@ describe("blueprint editor", () => {
       currentStage: null,
       succeededStages: [],
       totalStages: null,
+      timing: null,
       error: {
         code: "PTS_GEN_VALIDATION_FAILED",
         message: "生成结果未通过校验。",

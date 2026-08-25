@@ -4,18 +4,45 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { catalogs } from "../../i18n/copy";
-import { resetGenerationStore } from "../generation/generationStore";
+import {
+  applyTerminalSnapshot,
+  resetGenerationStore,
+} from "../generation/generationStore";
 import { AskGusReviewPage } from "./AskGusReviewPage";
 
 const copy = catalogs["zh-CN"];
 
 const server = setupServer();
 
+const successfulProgress = (attemptOverrides: Record<string, unknown> = {}) => ({
+  draftId: "draft-1",
+  active: false,
+  attempt: {
+    attemptId: "a-1",
+    draftId: "draft-1",
+    kind: "INITIAL",
+    sourceRevision: 3,
+    status: "SUCCEEDED",
+    currentStage: null,
+    stages: [],
+    totalStages: 9,
+    startedAt: "2026-08-25T00:00:00.000Z",
+    finishedAt: "2026-08-25T00:00:09.500Z",
+    error: null,
+    ...attemptOverrides,
+  },
+});
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeEach(() => {
   resetGenerationStore();
+  server.use(
+    http.get("/api/v1/drafts/:draft_id/generation", () =>
+      HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
+    ),
+  );
 });
 afterEach(() => {
   server.resetHandlers();
@@ -84,8 +111,11 @@ function askGusDraft(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderPage(
+  queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  }),
+) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={["/drafts/draft-1"]}>
@@ -123,6 +153,194 @@ describe("ask gus review", () => {
       "src",
       "/api/v1/assets/icon-1",
     );
+  });
+
+  it("restores neutral timing on a REVIEWABLE mount without starting generation", async () => {
+    const generateSpy = vi.fn();
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(successfulProgress()),
+      ),
+      http.post("/api/v1/drafts/:draft_id/generate", generateSpy),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("status", { name: "本次生成用时 9.5 秒" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Gus 的灵感")).toBeNull();
+    expect(generateSpy).not.toHaveBeenCalled();
+  });
+
+  it("uses the special Gus story only for a canonical-reused result", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({
+            provenance: { ...provenance, generationSource: "CANONICAL_REUSED" },
+          }),
+        ),
+      ),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(successfulProgress()),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "嗯，这道菜声名远扬，我好像在哪吃过它。于是我灵感涌现，加快了我的鉴定速度。",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Gus 的灵感")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveAccessibleName(
+      "Gus 的灵感，本次生成用时 9.5 秒",
+    );
+  });
+
+  it("does not pair full-regeneration timing with stale canonical provenance", async () => {
+    let draftCallCount = 0;
+    let releaseDraftRefresh!: () => void;
+    const draftRefresh = new Promise<void>((resolve) => {
+      releaseDraftRefresh = resolve;
+    });
+    let progressCallCount = 0;
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", async () => {
+        draftCallCount += 1;
+        if (draftCallCount === 1) {
+          return HttpResponse.json(
+            askGusDraft({
+              provenance: { ...provenance, generationSource: "CANONICAL_REUSED" },
+            }),
+          );
+        }
+        await draftRefresh;
+        return HttpResponse.json(
+          askGusDraft({
+            revision: 4,
+            provenance: { ...provenance, generationSource: "FRESH_GENERATION" },
+          }),
+        );
+      }),
+      http.get("/api/v1/drafts/:draft_id/generation", () => {
+        progressCallCount += 1;
+        return HttpResponse.json(
+          progressCallCount === 1
+            ? { draftId: "draft-1", active: false, attempt: null }
+            : successfulProgress({
+                attemptId: "full-1",
+                kind: "FULL_REGENERATE",
+                sourceRevision: 3,
+              }),
+        );
+      }),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          '{"type":"attempt.started","attemptId":"full-1"}\n' +
+            '{"type":"attempt.succeeded","attemptId":"full-1","draftRevision":4,"draft":{}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.fullRegenerate }));
+    await waitFor(() => expect(draftCallCount).toBe(2));
+    expect(screen.queryByText("嗯，这道菜声名远扬，我好像在哪吃过它。于是我灵感涌现，加快了我的鉴定速度。")).toBeNull();
+
+    releaseDraftRefresh();
+    expect(
+      await screen.findByRole("status", { name: "本次生成用时 9.5 秒" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Gus 的灵感")).toBeNull();
+  });
+
+  it("waits for a cached canonical DraftView to refresh before mount timing", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(
+      ["draft", "draft-1"],
+      askGusDraft({
+        provenance: { ...provenance, generationSource: "CANONICAL_REUSED" },
+      }),
+    );
+    applyTerminalSnapshot("draft-1", {
+      attemptId: "canonical-old",
+      draftId: "draft-1",
+      kind: "INITIAL",
+      sourceRevision: 2,
+      status: "SUCCEEDED",
+      currentStage: null,
+      stages: [],
+      totalStages: 9,
+      startedAt: "2026-08-25T00:00:00.000Z",
+      finishedAt: "2026-08-25T00:00:08.000Z",
+      error: null,
+    });
+    let releaseDraftRefresh!: () => void;
+    const draftRefreshGate = new Promise<void>((resolve) => {
+      releaseDraftRefresh = resolve;
+    });
+    const progressHandler = vi.fn(() =>
+      HttpResponse.json(
+        successfulProgress({
+          attemptId: "fresh-after-cache",
+          kind: "FULL_REGENERATE",
+          sourceRevision: 3,
+        }),
+      ),
+    );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", async () => {
+        await draftRefreshGate;
+        return HttpResponse.json(
+          askGusDraft({
+            revision: 4,
+            provenance: { ...provenance, generationSource: "FRESH_GENERATION" },
+          }),
+        );
+      }),
+      http.get("/api/v1/drafts/:draft_id/generation", progressHandler),
+    );
+    renderPage(queryClient);
+
+    await waitFor(() => expect(progressHandler).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByText("Gus 的灵感")).toBeNull());
+    expect(
+      screen.queryByRole("status", { name: "本次生成用时 9.5 秒" }),
+    ).toBeNull();
+
+    releaseDraftRefresh();
+    expect(
+      await screen.findByRole("status", { name: "本次生成用时 9.5 秒" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Gus 的灵感")).toBeNull();
+  });
+
+  it("does not show timing for a failed terminal attempt", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(
+          successfulProgress({
+            status: "FAILED",
+            error: {
+              code: "PTS_GEN_VALIDATION_FAILED",
+              message: "生成结果未通过校验。",
+              retryable: false,
+              requestId: "req-1",
+            },
+          }),
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByRole("button", { name: copy.fullRegenerate });
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("offers full regeneration but no partial visual actions", async () => {

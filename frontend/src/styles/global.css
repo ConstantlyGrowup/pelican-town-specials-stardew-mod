@@ -1162,6 +1162,61 @@ input[type="checkbox"] {
   content: "";
 }
 
+.generation-timing {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 16px 0;
+  padding: 10px 12px;
+  color: var(--pts-ink);
+  background: var(--pts-paper-muted);
+  border: 3px solid var(--pts-wood-mid);
+  box-shadow: var(--pts-shadow-pixel-small);
+  overflow-wrap: anywhere;
+}
+
+.generation-timing--gus {
+  background: var(--pts-highlight);
+  border-color: var(--pts-wood-deep);
+}
+
+.generation-timing__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--pts-font-mono);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.generation-timing__icon {
+  color: var(--pts-gold);
+  font-size: 18px;
+  line-height: 1;
+  text-shadow: 1px 1px 0 var(--pts-ink);
+}
+
+.generation-timing__story,
+.generation-timing__duration {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.generation-timing__story {
+  color: var(--pts-wood-deep);
+  font-family: var(--pts-font-display);
+  font-size: 16px;
+}
+
+.generation-timing__duration {
+  color: var(--pts-ink-soft);
+  font-family: var(--pts-font-mono);
+  font-size: 12px;
+}
+
 .result-title {
   margin: 0 0 14px;
   font-family: var(--pts-font-display);
@@ -1371,6 +1426,18 @@ input[type="checkbox"] {
 
 .blueprint-status-card .status-icon {
   flex: 0 0 auto;
+}
+
+.blueprint-sidebar .generation-timing {
+  margin: 0;
+  color: var(--pts-blue-ink);
+  background: var(--pts-blue-white);
+  border-color: var(--pts-blue);
+  box-shadow: 2px 2px 0 var(--pts-blue-ink);
+}
+
+.blueprint-sidebar .generation-timing__duration {
+  color: var(--pts-blue-ink);
 }
 
 .preview-frame-empty {

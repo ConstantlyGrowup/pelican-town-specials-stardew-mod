@@ -20,6 +20,7 @@ import {
 } from "./pickers";
 import { GenerationError } from "../generation/GenerationError";
 import { GenerationProgress } from "../generation/GenerationProgress";
+import { GenerationTimingBadge } from "../generation/GenerationTimingBadge";
 import { useGeneration } from "../generation/useGeneration";
 
 type DraftView = components["schemas"]["DraftView"];
@@ -63,9 +64,9 @@ export function BlueprintEditorPage() {
     running:
       query.data?.status === "GENERATING" ||
       query.data?.status === "REGENERATING",
-    onSuccess: () => {
+    onSuccess: async () => {
       setStale(false);
-      void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
+      await queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
     },
   });
 
@@ -398,6 +399,7 @@ export function BlueprintEditorPage() {
             <span className="status-icon" aria-hidden="true">ⓘ</span>
             <span>{copy.saveThenUpdateHint}</span>
           </div>
+          <GenerationTimingBadge timing={generation.timing} />
         </aside>
         <section className="blueprint-canvas">
       {generation.phase === "streaming" && (

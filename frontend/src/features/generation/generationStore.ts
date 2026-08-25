@@ -17,12 +17,21 @@ export type GenerationPhase =
   | "error"
   | "cancelled";
 
+export type GenerationTiming = {
+  startedAt: string;
+  finishedAt: string;
+};
+
 export type GenerationState = {
   phase: GenerationPhase;
+  /** Persisted attempt identity used to reject stale progress snapshots. */
+  attemptId: string | null;
   currentStage: GenerationStage | null;
   succeededStages: GenerationStage[];
   totalStages: number | null;
   error: GenerationErrorEnvelope | null;
+  /** Timing from the latest terminal SUCCEEDED attempt, never browser time. */
+  timing: GenerationTiming | null;
 };
 
 type InternalState = GenerationState & {
@@ -59,10 +68,12 @@ function getState(draftId: string): InternalState {
   if (!state) {
     const idle: GenerationState = {
       phase: "idle",
+      attemptId: null,
       currentStage: null,
       succeededStages: [],
       totalStages: null,
       error: null,
+      timing: null,
     };
     state = { ...idle, controller: null, _snapshot: idle };
     states.set(draftId, state);
@@ -74,12 +85,15 @@ function setState(draftId: string, patch: Partial<GenerationState>) {
   const state = getState(draftId);
   const next: GenerationState = {
     phase: patch.phase ?? state.phase,
+    attemptId:
+      patch.attemptId !== undefined ? patch.attemptId : state.attemptId,
     currentStage:
       patch.currentStage !== undefined ? patch.currentStage : state.currentStage,
     succeededStages: patch.succeededStages ?? state.succeededStages,
     totalStages:
       patch.totalStages !== undefined ? patch.totalStages : state.totalStages,
     error: patch.error !== undefined ? patch.error : state.error,
+    timing: patch.timing !== undefined ? patch.timing : state.timing,
   };
   states.set(draftId, { ...next, controller: state.controller, _snapshot: next });
   emit();
@@ -89,10 +103,27 @@ export function getGenerationState(draftId: string): GenerationState {
   return getState(draftId)._snapshot;
 }
 
+/** Hide any previous successful duration while a newer result is reconciled. */
+export function clearGenerationTiming(draftId: string): void {
+  if (getState(draftId).timing !== null) {
+    setState(draftId, { timing: null });
+  }
+}
+
 /** True while a live NDJSON stream is attached for this draft. */
 export function hasLiveStream(draftId: string): boolean {
   const state = getState(draftId);
   return state.controller !== null && state.phase === "streaming";
+}
+
+function timingFromAttempt(attempt: GenerationAttemptPublic): GenerationTiming | null {
+  if (attempt.status !== "SUCCEEDED" || !attempt.finishedAt) {
+    return null;
+  }
+  return {
+    startedAt: attempt.startedAt,
+    finishedAt: attempt.finishedAt,
+  };
 }
 
 /**
@@ -112,37 +143,65 @@ export function hydrateGeneration(
     // A live stream is attached and authoritative; do not clobber it.
     return;
   }
-  if (
-    current.phase === "success" ||
-    current.phase === "error" ||
-    current.phase === "cancelled"
-  ) {
-    // A terminal state is sticky; a stale in-flight poll must not roll the
-    // UI back to streaming.
-    return;
-  }
   const attempt = progress.attempt;
-  if (!progress.active || !attempt) {
-    if (current.phase !== "idle") {
-      setState(draftId, { phase: "idle", error: null });
+  if (progress.active && attempt) {
+    if (
+      (current.phase === "success" ||
+        current.phase === "error" ||
+        current.phase === "cancelled") &&
+      current.attemptId === attempt.attemptId
+    ) {
+      // A stale active poll must not roll a terminal snapshot for the same
+      // attempt back to streaming.
+      return;
     }
+    const succeededStages = attempt.stages
+      .filter((stage) => stage.status === "SUCCEEDED")
+      .map((stage) => stage.stage);
+    // `attempt.stages` only records stages reached so far, so the total comes
+    // from the explicit `totalStages` field the orchestrator persists per run.
+    const totalStages = attempt.totalStages ?? null;
+    const streaming: GenerationState = {
+      phase: "streaming",
+      attemptId: attempt.attemptId,
+      currentStage: attempt.currentStage ?? null,
+      succeededStages,
+      totalStages,
+      error: null,
+      // A new active attempt must never inherit the last successful duration.
+      timing: null,
+    };
+    states.set(draftId, { ...streaming, controller: null, _snapshot: streaming });
+    emit();
     return;
   }
-  const succeededStages = attempt.stages
-    .filter((stage) => stage.status === "SUCCEEDED")
-    .map((stage) => stage.stage);
-  // `attempt.stages` only records stages reached so far, so the total comes
-  // from the explicit `totalStages` field the orchestrator persists per run.
-  const totalStages = attempt.totalStages ?? null;
-  const streaming: GenerationState = {
-    phase: "streaming",
-    currentStage: attempt.currentStage ?? null,
-    succeededStages,
-    totalStages,
-    error: null,
-  };
-  states.set(draftId, { ...streaming, controller: null, _snapshot: streaming });
-  emit();
+
+  if (attempt) {
+    applyTerminalSnapshot(draftId, attempt);
+    return;
+  }
+
+  // A terminal local stream is still authoritative when a transient progress
+  // response has no attempt. A real terminal attempt is handled above and can
+  // clear timing for failed/cancelled generations.
+  if (current.controller !== null && current.phase !== "idle") {
+    return;
+  }
+  if (
+    current.phase !== "idle" ||
+    current.attemptId !== null ||
+    current.timing !== null
+  ) {
+    setState(draftId, {
+      phase: "idle",
+      attemptId: null,
+      currentStage: null,
+      succeededStages: [],
+      totalStages: null,
+      error: null,
+      timing: null,
+    });
+  }
 }
 
 /**
@@ -183,10 +242,12 @@ export function applyTerminalSnapshot(
   }
   const terminal: GenerationState = {
     phase,
+    attemptId: attempt.attemptId,
     currentStage: null,
     succeededStages: current.succeededStages,
     totalStages: current.totalStages,
     error,
+    timing: timingFromAttempt(attempt),
   };
   states.set(draftId, { ...terminal, controller: null, _snapshot: terminal });
   emit();
@@ -207,9 +268,11 @@ export type GenerationFallbackMessages = {
   cancelError: string;
 };
 
+type GenerationSuccessHandler = (attemptId?: string) => void | Promise<void>;
+
 export function beginGeneration(
   draftId: string,
-  onSuccess?: () => void,
+  onSuccess?: GenerationSuccessHandler,
   fallback?: GenerationFallbackMessages,
 ): void {
   const state = getState(draftId);
@@ -217,10 +280,12 @@ export function beginGeneration(
   const controller = new AbortController();
   const streaming: GenerationState = {
     phase: "streaming",
+    attemptId: null,
     currentStage: null,
     succeededStages: [],
     totalStages: null,
     error: null,
+    timing: null,
   };
   states.set(draftId, {
     ...streaming,
@@ -243,16 +308,21 @@ export function beginGeneration(
         // A user cancel may already have reported a failure envelope; do not
         // overwrite it with a generic cancelled state.
         if (current.phase !== "error") {
-          setState(draftId, { phase: "cancelled" });
+          setState(draftId, { phase: "cancelled", timing: null });
         }
         return;
       }
       if (cause instanceof GenerationRequestError) {
-        setState(draftId, { phase: "error", error: cause.envelope });
+        setState(draftId, {
+          phase: "error",
+          error: cause.envelope,
+          timing: null,
+        });
         return;
       }
       setState(draftId, {
         phase: "error",
+        timing: null,
         error: {
           code: "PTS_GEN_STREAM_ERROR",
           message: cause instanceof Error
@@ -271,7 +341,7 @@ function handleEvent(
   draftId: string,
   controller: AbortController,
   event: GenerationEvent,
-  onSuccess: (() => void) | undefined,
+  onSuccess: GenerationSuccessHandler | undefined,
 ) {
   const current = getState(draftId);
   if (current.controller !== controller) {
@@ -279,15 +349,18 @@ function handleEvent(
   }
   switch (event.type) {
     case "attempt.started":
+      setState(draftId, { attemptId: event.attemptId, timing: null });
       break;
     case "stage.started":
       setState(draftId, {
+        attemptId: event.attemptId,
         currentStage: event.stage,
         totalStages: event.total,
       });
       break;
     case "stage.succeeded":
       setState(draftId, {
+        attemptId: event.attemptId,
         succeededStages: current.succeededStages.includes(event.stage)
           ? current.succeededStages
           : [...current.succeededStages, event.stage],
@@ -296,11 +369,22 @@ function handleEvent(
       });
       break;
     case "attempt.succeeded":
-      setState(draftId, { phase: "success" });
-      onSuccess?.();
+      setState(draftId, {
+        phase: "success",
+        attemptId: event.attemptId,
+        // The NDJSON event has no persisted timestamps. The caller refreshes
+        // GET generation progress to obtain the authoritative timing.
+        timing: null,
+      });
+      void onSuccess?.(event.attemptId);
       break;
     case "attempt.failed":
-      setState(draftId, { phase: "error", error: event.error });
+      setState(draftId, {
+        phase: "error",
+        attemptId: event.attemptId,
+        error: event.error,
+        timing: null,
+      });
       break;
   }
 }
@@ -345,9 +429,9 @@ export async function cancelStream(
       if (current.controller === captured) {
         captured?.abort();
         if (envelope) {
-          setState(draftId, { phase: "error", error: envelope });
+          setState(draftId, { phase: "error", error: envelope, timing: null });
         } else {
-          setState(draftId, { phase: "cancelled", error: null });
+          setState(draftId, { phase: "cancelled", error: null, timing: null });
         }
       }
     }

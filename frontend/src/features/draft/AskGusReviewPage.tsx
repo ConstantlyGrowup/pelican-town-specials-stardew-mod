@@ -9,6 +9,7 @@ import type { components } from "../../api/generated/schema";
 import { useCopy } from "../../i18n/locale";
 import { GenerationError } from "../generation/GenerationError";
 import { GenerationProgress } from "../generation/GenerationProgress";
+import { GenerationTimingBadge } from "../generation/GenerationTimingBadge";
 import { useGeneration } from "../generation/useGeneration";
 
 type DraftView = components["schemas"]["DraftView"];
@@ -52,8 +53,8 @@ export function AskGusReviewPage() {
     running:
       query.data?.status === "GENERATING" ||
       query.data?.status === "REGENERATING",
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
     },
   });
 
@@ -240,6 +241,15 @@ export function AskGusReviewPage() {
             </div>
           </>
         )}
+        <GenerationTimingBadge
+          timing={generation.timing}
+          variant={
+            generation.timing &&
+            draft.provenance?.generationSource === "CANONICAL_REUSED"
+              ? "gus"
+              : "neutral"
+          }
+        />
         {waitingForResult && (
           <div className="gus-waiting-note" role="status" aria-live="polite">
             <img src="/assets/ui/gus-portrait-1.png" alt={copy.gusName} />

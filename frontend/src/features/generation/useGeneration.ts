@@ -7,6 +7,7 @@ import {
   applyTerminalSnapshot,
   beginGeneration,
   cancelStream,
+  clearGenerationTiming,
   getGenerationState,
   hasLiveStream,
   hydrateGeneration,
@@ -26,9 +27,10 @@ const POLL_INTERVAL_MS = 2000;
 
 type UseGenerationOptions = {
   draftId: string;
-  onSuccess?: () => void;
+  onSuccess?: () => void | Promise<void>;
   /** True while the owning page believes the draft is GENERATING/REGENERATING
-   * (from the draft query). Enables server hydration + polling. */
+   * (from the draft query). Keeps retry polling active after a transient read
+   * failure; the initial read happens for every mounted draft. */
   running?: boolean;
   /** Poll interval override (tests use a tiny value; production keeps 2s). */
   pollIntervalMs?: number;
@@ -57,17 +59,80 @@ export function useGeneration({
   const copy = useCopy();
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
+  const notifiedAttemptRef = useRef<string | null>(null);
+  const progressReadSequenceRef = useRef(0);
 
   const state = useSyncExternalStore(
     subscribeGeneration,
     () => getGenerationState(draftId),
   );
 
-  // Hydrate + poll while the server owns a generation but no live stream is
-  // attached here. Stops at terminal state, on unmount, or when a stream is
-  // started locally (the streaming path owns the state afterwards).
+  const readLatestProgress = useCallback(async () => {
+    const requestSequence = progressReadSequenceRef.current + 1;
+    progressReadSequenceRef.current = requestSequence;
+    const progress = await fetchGenerationProgress(draftId);
+    if (requestSequence !== progressReadSequenceRef.current) {
+      return null;
+    }
+    return { progress, requestSequence };
+  }, [draftId]);
+
+  const refreshTerminalProgress = useCallback(async (expectedAttemptId: string) => {
+    if (!draftId) {
+      return;
+    }
+    try {
+      const latestRead = await readLatestProgress();
+      if (!latestRead) {
+        return;
+      }
+      const { progress, requestSequence } = latestRead;
+      if (
+        progress.active ||
+        progress.attempt?.status !== "SUCCEEDED" ||
+        progress.attempt.attemptId !== expectedAttemptId ||
+        requestSequence !== progressReadSequenceRef.current ||
+        getGenerationState(draftId).attemptId !== expectedAttemptId
+      ) {
+        return;
+      }
+      applyTerminalSnapshot(draftId, progress.attempt);
+    } catch {
+      // The terminal progress refresh is best-effort; the page remains on the
+      // successful stream state and a later mount can restore persisted time.
+    }
+  }, [draftId, readLatestProgress]);
+
+  const onLocalSuccess = useCallback(
+    async (attemptId?: string) => {
+      if (!attemptId) {
+        return;
+      }
+      try {
+        // Wait for the owning page to refetch its DraftView before the
+        // terminal timing can be paired with its provenance.
+        await onSuccessRef.current?.();
+      } catch {
+        // A failed query refresh must not expose timing beside stale result
+        // provenance. A later mount can restore the persisted attempt.
+        return;
+      }
+      if (getGenerationState(draftId).attemptId !== attemptId) {
+        return;
+      }
+      notifiedAttemptRef.current = attemptId;
+      // NDJSON success has no timestamps. Read the persisted terminal attempt
+      // instead of measuring when the stream line arrived in the browser.
+      void refreshTerminalProgress(attemptId);
+    },
+    [draftId, refreshTerminalProgress],
+  );
+
+  // Read one persisted snapshot on every draft-page mount, including
+  // REVIEWABLE results. If the server reports active work, continue polling
+  // until its terminal attempt is available. These reads never call begin().
   useEffect(() => {
-    if (!running || !draftId) {
+    if (!draftId) {
       return;
     }
     let disposed = false;
@@ -80,6 +145,12 @@ export function useGeneration({
       }
     };
 
+    const schedule = () => {
+      if (timer === null) {
+        timer = window.setInterval(() => void tick(), pollIntervalMs);
+      }
+    };
+
     const tick = async () => {
       if (disposed) {
         return;
@@ -89,48 +160,87 @@ export function useGeneration({
         stop();
         return;
       }
-      let progress;
+      let latestRead;
       try {
-        progress = await fetchGenerationProgress(draftId);
+        latestRead = await readLatestProgress();
       } catch {
         // Transient failure; the next poll tick retries.
+        if (running) {
+          schedule();
+        }
         return;
       }
-      if (disposed) {
+      if (!latestRead) {
+        return;
+      }
+      const { progress, requestSequence } = latestRead;
+      if (
+        disposed ||
+        requestSequence !== progressReadSequenceRef.current ||
+        hasLiveStream(draftId)
+      ) {
         return;
       }
       if (progress.active && progress.attempt) {
         hydrateGeneration(draftId, progress);
+        schedule();
       } else {
         stop();
         if (progress.attempt) {
+          if (
+            progress.attempt.status === "SUCCEEDED" &&
+            progress.attempt.attemptId !== notifiedAttemptRef.current
+          ) {
+            clearGenerationTiming(draftId);
+            try {
+              // A cached DraftView may still describe the result replaced by
+              // this attempt, including on a REVIEWABLE mount. Refresh it
+              // before exposing the new timing beside its provenance.
+              await onSuccessRef.current?.();
+            } catch {
+              return;
+            }
+            if (
+              disposed ||
+              requestSequence !== progressReadSequenceRef.current ||
+              hasLiveStream(draftId)
+            ) {
+              return;
+            }
+            notifiedAttemptRef.current = progress.attempt.attemptId;
+          }
           applyTerminalSnapshot(draftId, progress.attempt);
+          if (running) {
+            void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
+          }
         } else {
           hydrateGeneration(draftId, progress);
         }
-        if (progress.attempt?.status === "SUCCEEDED") {
-          onSuccessRef.current?.();
-        }
-        void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
       }
     };
 
     void tick();
-    timer = window.setInterval(() => void tick(), pollIntervalMs);
+    if (running) {
+      schedule();
+    }
     return () => {
       disposed = true;
       stop();
+      progressReadSequenceRef.current += 1;
     };
-  }, [running, draftId, queryClient, pollIntervalMs]);
+  }, [running, draftId, queryClient, pollIntervalMs, readLatestProgress]);
 
   const begin = useCallback(() => {
-    beginGeneration(draftId, onSuccessRef.current, {
+    progressReadSequenceRef.current += 1;
+    notifiedAttemptRef.current = null;
+    beginGeneration(draftId, onLocalSuccess, {
       streamError: copy.generationStreamError,
       cancelError: copy.cancelStreamError,
     });
-  }, [draftId, copy.generationStreamError, copy.cancelStreamError]);
+  }, [draftId, onLocalSuccess, copy.generationStreamError, copy.cancelStreamError]);
 
   const cancel = useCallback(async () => {
+    progressReadSequenceRef.current += 1;
     await cancelStream(draftId, { cancelError: copy.cancelStreamError });
     void queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
   }, [draftId, copy.cancelStreamError, queryClient]);
@@ -140,6 +250,7 @@ export function useGeneration({
     currentStage: state.currentStage,
     succeededStages: state.succeededStages,
     totalStages: state.totalStages,
+    timing: state.timing,
     error: state.error,
     begin,
     cancel,

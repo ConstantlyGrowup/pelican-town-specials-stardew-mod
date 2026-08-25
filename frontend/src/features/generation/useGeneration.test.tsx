@@ -5,7 +5,12 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import type { PropsWithChildren } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { resetGenerationStore } from "./generationStore";
+import {
+  applyTerminalSnapshot,
+  getGenerationState,
+  hydrateGeneration,
+  resetGenerationStore,
+} from "./generationStore";
 import { useGeneration } from "./useGeneration";
 
 const server = setupServer();
@@ -52,6 +57,296 @@ describe("useGeneration", () => {
 
     await waitFor(() => expect(result.current.phase).toBe("success"));
     expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes persisted timing after local stream success", async () => {
+    const progressHandler = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
+      )
+      .mockReturnValue(
+        HttpResponse.json({
+          draftId: "draft-1",
+          active: false,
+          attempt: {
+            attemptId: "a-1",
+            draftId: "draft-1",
+            kind: "INITIAL",
+            sourceRevision: 1,
+            status: "SUCCEEDED",
+            currentStage: null,
+            stages: [],
+            totalStages: 9,
+            startedAt: "2026-08-25T00:00:00.000Z",
+            finishedAt: "2026-08-25T00:00:09.500Z",
+            error: null,
+          },
+        }),
+      );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id/generation", progressHandler),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        ndjson(
+          '{"type":"attempt.started","attemptId":"a-1"}\n' +
+            '{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":3,"draft":{}}\n',
+        ),
+      ),
+    );
+    const { result } = renderHook(
+      () => useGeneration({ draftId: "draft-1" }),
+      { wrapper },
+    );
+
+    act(() => result.current.begin());
+
+    await waitFor(() => expect(result.current.phase).toBe("success"));
+    await waitFor(() =>
+      expect(result.current.timing).toEqual({
+        startedAt: "2026-08-25T00:00:00.000Z",
+        finishedAt: "2026-08-25T00:00:09.500Z",
+      }),
+    );
+    expect(progressHandler).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { label: "active", active: true, status: "RUNNING" },
+    { label: "terminal", active: false, status: "SUCCEEDED" },
+  ])(
+    "ignores a delayed $label attempt A after local attempt B has newer timing",
+    async ({ active, status }) => {
+      let releaseOldRead!: () => void;
+      const oldReadGate = new Promise<void>((resolve) => {
+        releaseOldRead = resolve;
+      });
+      let markOldHandlerReturned!: () => void;
+      const oldHandlerReturned = new Promise<void>((resolve) => {
+        markOldHandlerReturned = resolve;
+      });
+      let progressCallCount = 0;
+      const progressHandler = vi.fn(async () => {
+        progressCallCount += 1;
+        if (progressCallCount === 1) {
+          await oldReadGate;
+          markOldHandlerReturned();
+          return HttpResponse.json({
+            draftId: "draft-1",
+            active,
+            attempt: {
+              attemptId: "a-old",
+              draftId: "draft-1",
+              kind: "INITIAL",
+              sourceRevision: 1,
+              status,
+              currentStage: active ? "DISH_ANALYSIS" : null,
+              stages: [],
+              totalStages: 9,
+              startedAt: "2026-08-25T00:00:00.000Z",
+              finishedAt: active ? null : "2026-08-25T00:00:04.000Z",
+              error: null,
+            },
+          });
+        }
+        return HttpResponse.json({
+          draftId: "draft-1",
+          active: false,
+          attempt: {
+            attemptId: "b-new",
+            draftId: "draft-1",
+            kind: "FULL_REGENERATE",
+            sourceRevision: 2,
+            status: "SUCCEEDED",
+            currentStage: null,
+            stages: [],
+            totalStages: 9,
+            startedAt: "2026-08-25T00:01:00.000Z",
+            finishedAt: "2026-08-25T00:01:09.500Z",
+            error: null,
+          },
+        });
+      });
+      server.use(
+        http.get("/api/v1/drafts/:draft_id/generation", progressHandler),
+        http.post("/api/v1/drafts/:draft_id/generate", () =>
+          ndjson(
+            '{"type":"attempt.started","attemptId":"b-new"}\n' +
+              '{"type":"attempt.succeeded","attemptId":"b-new","draftRevision":3,"draft":{}}\n',
+          ),
+        ),
+      );
+      const { result } = renderHook(
+        () => useGeneration({ draftId: "draft-1" }),
+        { wrapper },
+      );
+
+      await waitFor(() => expect(progressHandler).toHaveBeenCalledTimes(1));
+      act(() => result.current.begin());
+      await waitFor(() =>
+        expect(getGenerationState("draft-1").timing).toEqual({
+          startedAt: "2026-08-25T00:01:00.000Z",
+          finishedAt: "2026-08-25T00:01:09.500Z",
+        }),
+      );
+
+      await act(async () => {
+        releaseOldRead();
+        await oldHandlerReturned;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+
+      expect(getGenerationState("draft-1")).toMatchObject({
+        phase: "success",
+        attemptId: "b-new",
+        timing: {
+          startedAt: "2026-08-25T00:01:00.000Z",
+          finishedAt: "2026-08-25T00:01:09.500Z",
+        },
+      });
+    },
+  );
+
+  it("rejects a local terminal refresh for a different attempt id", async () => {
+    const progressHandler = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
+      )
+      .mockReturnValue(
+        HttpResponse.json({
+          draftId: "draft-1",
+          active: false,
+          attempt: {
+            attemptId: "a-stale",
+            draftId: "draft-1",
+            kind: "INITIAL",
+            sourceRevision: 1,
+            status: "SUCCEEDED",
+            currentStage: null,
+            stages: [],
+            totalStages: 9,
+            startedAt: "2026-08-25T00:00:00.000Z",
+            finishedAt: "2026-08-25T00:00:04.000Z",
+            error: null,
+          },
+        }),
+      );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id/generation", progressHandler),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        ndjson(
+          '{"type":"attempt.started","attemptId":"b-local"}\n' +
+            '{"type":"attempt.succeeded","attemptId":"b-local","draftRevision":3,"draft":{}}\n',
+        ),
+      ),
+    );
+    const { result } = renderHook(
+      () => useGeneration({ draftId: "draft-1" }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(progressHandler).toHaveBeenCalledTimes(1));
+    act(() => result.current.begin());
+    await waitFor(() => expect(progressHandler).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(getGenerationState("draft-1")).toMatchObject({
+      phase: "success",
+      attemptId: "b-local",
+      timing: null,
+    });
+  });
+
+  it("hydrates a REVIEWABLE draft from progress without starting generation", async () => {
+    const generateHandler = vi.fn(() =>
+      ndjson('{"type":"attempt.started","attemptId":"unexpected"}\n'),
+    );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json({
+          draftId: "draft-1",
+          active: false,
+          attempt: {
+            attemptId: "a-reviewable",
+            draftId: "draft-1",
+            kind: "INITIAL",
+            sourceRevision: 3,
+            status: "SUCCEEDED",
+            currentStage: null,
+            stages: [],
+            totalStages: 9,
+            startedAt: "2026-08-25T00:00:00.000Z",
+            finishedAt: "2026-08-25T00:00:09.500Z",
+            error: null,
+          },
+        }),
+      ),
+      http.post("/api/v1/drafts/:draft_id/generate", generateHandler),
+    );
+    const { result } = renderHook(
+      () => useGeneration({ draftId: "draft-1", running: false }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("success"));
+    expect(result.current.timing).toEqual({
+      startedAt: "2026-08-25T00:00:00.000Z",
+      finishedAt: "2026-08-25T00:00:09.500Z",
+    });
+    expect(generateHandler).not.toHaveBeenCalled();
+  });
+
+  it("clears old timing for a new active attempt and a non-success terminal attempt", () => {
+    act(() => {
+      applyTerminalSnapshot("draft-1", {
+        attemptId: "old-success",
+        draftId: "draft-1",
+        kind: "INITIAL",
+        sourceRevision: 1,
+        status: "SUCCEEDED",
+        currentStage: null,
+        stages: [],
+        totalStages: 9,
+        startedAt: "2026-08-25T00:00:00.000Z",
+        finishedAt: "2026-08-25T00:00:09.500Z",
+        error: null,
+      });
+      hydrateGeneration("draft-1", {
+        draftId: "draft-1",
+        active: true,
+        attempt: {
+          attemptId: "new-active",
+          draftId: "draft-1",
+          kind: "FULL_REGENERATE",
+          sourceRevision: 2,
+          status: "RUNNING",
+          currentStage: "DISH_ANALYSIS",
+          stages: [],
+          totalStages: 9,
+          startedAt: "2026-08-25T00:01:00.000Z",
+          finishedAt: null,
+          error: null,
+        },
+      });
+    });
+    expect(getGenerationState("draft-1").timing).toBeNull();
+
+    act(() => {
+      applyTerminalSnapshot("draft-1", {
+        attemptId: "new-failed",
+        draftId: "draft-1",
+        kind: "FULL_REGENERATE",
+        sourceRevision: 2,
+        status: "FAILED",
+        currentStage: null,
+        stages: [],
+        totalStages: 9,
+        startedAt: "2026-08-25T00:01:00.000Z",
+        finishedAt: "2026-08-25T00:01:03.000Z",
+        error: null,
+      });
+    });
+    expect(getGenerationState("draft-1").timing).toBeNull();
   });
 
   it("surfaces the backend envelope on a 409 generate rejection", async () => {
@@ -486,8 +781,10 @@ describe("useGeneration", () => {
     unmount();
   });
 
-  it("does not poll when running is false", async () => {
-    const getHandler = vi.fn();
+  it("reads persisted progress once when running is false", async () => {
+    const getHandler = vi.fn(() =>
+      HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
+    );
     server.use(
       http.get("/api/v1/drafts/draft-1/generation", getHandler),
     );
@@ -496,8 +793,9 @@ describe("useGeneration", () => {
       { wrapper },
     );
     expect(result.current.phase).toBe("idle");
+    await waitFor(() => expect(getHandler).toHaveBeenCalledTimes(1));
     await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(getHandler).not.toHaveBeenCalled();
+    expect(getHandler).toHaveBeenCalledTimes(1);
     unmount();
   });
 
