@@ -46,6 +46,7 @@ def _service(services: AppServices) -> DraftService:
         asset_store=services.asset_store,
         catalog=services.catalog,
         attempt_repository=services.attempt_repository,
+        canonical_registration_service=services.canonical_registration,
     )
 
 

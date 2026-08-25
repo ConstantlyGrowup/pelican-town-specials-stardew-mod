@@ -53,6 +53,7 @@ from pelican_town_specials.persistence.repositories import (
     TombstonedDishError,
 )
 
+from .canonical_memory import CanonicalRegistrationService
 from .common import Page
 
 _BLUEPRINT_TEMPLATE_VERSION: Literal["blueprint-v1"] = "blueprint-v1"
@@ -408,6 +409,7 @@ class DraftService:
         catalog: VanillaCatalog,
         attempt_repository: GenerationAttemptRepository,
         attempt_registry: AttemptRegistry | None = None,
+        canonical_registration_service: CanonicalRegistrationService | None = None,
     ) -> None:
         self._drafts = draft_repository
         self._archives = archive_repository
@@ -415,6 +417,7 @@ class DraftService:
         self._catalog = catalog
         self._attempts = attempt_repository
         self._registry = attempt_registry
+        self._canonical_registration = canonical_registration_service
 
     def create_draft(self, request: DraftCreateRequest) -> DraftRecord:
         self._require_source_asset(request.source.original_image_asset_id)
@@ -608,6 +611,7 @@ class DraftService:
                 existing.dish_id,
                 expected_revision=None,
             )
+            self._register_canonical_archive(existing)
             return existing
 
         draft = self.get_draft(draft_id)
@@ -631,7 +635,10 @@ class DraftService:
             source_draft_id=draft_id,
         )
         try:
-            self._archives.add_immutable(archive, idempotency_key=normalized_key)
+            archive = self._archives.add_immutable(
+                archive,
+                idempotency_key=normalized_key,
+            )
         except IdempotencyConflictError as exc:
             raise self._idempotency_conflict_error() from exc
         except TombstonedDishError as exc:
@@ -642,7 +649,13 @@ class DraftService:
             archive.dish_id,
             expected_revision=draft.revision,
         )
+        self._register_canonical_archive(archive)
         return archive
+
+    def _register_canonical_archive(self, archive: ArchivedDish) -> None:
+        if self._canonical_registration is None:
+            return
+        self._canonical_registration.register_archive(archive)
 
     def _new_draft(
         self,

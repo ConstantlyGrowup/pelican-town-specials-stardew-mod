@@ -10,12 +10,18 @@ import pytest
 from backend.tests.domain.factories import ask_gus_reviewable_fixture
 from PIL import Image
 
+from pelican_town_specials.application.canonical_memory import (
+    CanonicalRegistrationService,
+)
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
 from pelican_town_specials.domain.draft import DraftRecord
 from pelican_town_specials.persistence.asset_store import (
     AssetMetadata,
     FileAssetStore,
+)
+from pelican_town_specials.persistence.canonical_registry import (
+    SQLiteCanonicalRegistry,
 )
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
@@ -42,6 +48,8 @@ class AppServices:
     archive_repository: ArchiveRepository
     attempt_repository: GenerationAttemptRepository
     catalog: VanillaCatalog
+    canonical_registry: SQLiteCanonicalRegistry
+    canonical_registration: CanonicalRegistrationService
 
 
 @pytest.fixture
@@ -52,6 +60,13 @@ def services(tmp_path: Path) -> AppServices:
     archive_repository = ArchiveRepository(workspace)
     attempt_repository = GenerationAttemptRepository(workspace)
     catalog = VanillaCatalog.from_json(_CATALOG_PATH)
+    canonical_registry = SQLiteCanonicalRegistry(workspace)
+    canonical_registration = CanonicalRegistrationService(
+        registry=canonical_registry,
+        archive_repository=archive_repository,
+        draft_repository=draft_repository,
+        asset_store=asset_store,
+    )
     return AppServices(
         workspace=workspace,
         asset_store=asset_store,
@@ -59,6 +74,8 @@ def services(tmp_path: Path) -> AppServices:
         archive_repository=archive_repository,
         attempt_repository=attempt_repository,
         catalog=catalog,
+        canonical_registry=canonical_registry,
+        canonical_registration=canonical_registration,
     )
 
 
@@ -85,11 +102,18 @@ def put_png(
 
 def make_reviewable_draft(services: AppServices, *, revision: int = 1) -> DraftRecord:
     preview_ref = put_png(services.asset_store, kind=AssetKind.PREVIEW, color="purple")
+    source_icon_ref = put_png(
+        services.asset_store,
+        kind=AssetKind.ICON_SOURCE,
+        size=32,
+        color="green",
+    )
     icon_ref = put_png(services.asset_store, kind=AssetKind.ICON_16, color="gold")
     draft = ask_gus_reviewable_fixture(revision=revision)
     visuals = draft.visuals.model_copy(
         update={
             "preview_asset_id": preview_ref.asset_id,
+            "icon_source_asset_id": source_icon_ref.asset_id,
             "icon_16_asset_id": icon_ref.asset_id,
         }
     )

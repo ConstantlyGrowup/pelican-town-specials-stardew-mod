@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import sys
 from collections.abc import AsyncIterator, Callable
@@ -39,6 +40,9 @@ from pelican_town_specials.api.security import (
     require_session,
 )
 from pelican_town_specials.application.assets import AssetService
+from pelican_town_specials.application.canonical_memory import (
+    CanonicalRegistrationService,
+)
 from pelican_town_specials.application.catalog import CatalogService
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
@@ -57,14 +61,19 @@ from pelican_town_specials.application.trial import (
 )
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.config import AppConfig
+from pelican_town_specials.domain.canonical import CanonicalRepository
 from pelican_town_specials.domain.draft import AttemptStatus, DraftStatus
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.mod_compiler.compiler import ContentPatcherCompiler
 from pelican_town_specials.observability.diagnostics import DiagnosticsBuilder
-from pelican_town_specials.observability.logging import configure_logging
+from pelican_town_specials.observability.logging import configure_logging, log_event
 from pelican_town_specials.persistence.asset_store import FileAssetStore
+from pelican_town_specials.persistence.canonical_registry import (
+    CanonicalRegistryUnavailableError,
+    SQLiteCanonicalRegistry,
+)
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
@@ -101,6 +110,8 @@ def create_app(
     asset_service: AssetService | None = None,
     draft_service: DraftService | None = None,
     cookbook_service: CookbookService | None = None,
+    canonical_registry: CanonicalRepository | None = None,
+    canonical_registration_service: CanonicalRegistrationService | None = None,
     attempt_repository: GenerationAttemptRepository | None = None,
     attempt_registry: AttemptRegistry | None = None,
     generation_service: GenerationService | None = None,
@@ -121,6 +132,32 @@ def create_app(
     resolved_archive_repository = archive_repository or ArchiveRepository(
         resolved_workspace
     )
+    resolved_canonical_registry = canonical_registry
+    if resolved_canonical_registry is None and canonical_registration_service is None:
+        try:
+            resolved_canonical_registry = SQLiteCanonicalRegistry(resolved_workspace)
+        except Exception as exc:  # noqa: BLE001 - registry must fail open
+            log_event(
+                logging.WARNING,
+                error_code="PTS_CANONICAL_REGISTRY_DISABLED",
+                usage={
+                    "operation": "registry_initialization",
+                    "reason": (
+                        "REGISTRY_UNAVAILABLE"
+                        if isinstance(exc, CanonicalRegistryUnavailableError)
+                        else "INITIALIZATION_FAILED"
+                    ),
+                },
+            )
+            resolved_canonical_registry = None
+    resolved_canonical_registration = canonical_registration_service
+    if resolved_canonical_registration is None and resolved_canonical_registry is not None:
+        resolved_canonical_registration = CanonicalRegistrationService(
+            registry=resolved_canonical_registry,
+            archive_repository=resolved_archive_repository,
+            draft_repository=resolved_draft_repository,
+            asset_store=resolved_asset_store,
+        )
     resolved_catalog = vanilla_catalog or _load_default_catalog()
     resolved_asset_service = asset_service or AssetService(resolved_asset_store)
     resolved_attempt_repository = attempt_repository or GenerationAttemptRepository(
@@ -136,6 +173,7 @@ def create_app(
         catalog=resolved_catalog,
         attempt_repository=resolved_attempt_repository,
         attempt_registry=attempt_registry,
+        canonical_registration_service=resolved_canonical_registration,
     )
     resolved_cookbook_service = cookbook_service or CookbookService(
         resolved_archive_repository,
@@ -211,6 +249,18 @@ def create_app(
                 )
             ):
                 resolved_generation_service.recover_interrupted(draft.draft_id)
+        if resolved_canonical_registration is not None:
+            try:
+                resolved_canonical_registration.reconcile_active_archives()
+            except Exception:  # noqa: BLE001 - reconciliation must not block startup
+                log_event(
+                    logging.WARNING,
+                    error_code="PTS_CANONICAL_RECONCILIATION_FAILED",
+                    usage={
+                        "operation": "startup_reconciliation",
+                        "reason": "UNEXPECTED_FAILURE",
+                    },
+                )
         monitor_task: asyncio.Task[None] | None = None
         if resolved_activity_tracker.has_shutdown_callback:
             monitor_task = asyncio.create_task(
@@ -246,6 +296,8 @@ def create_app(
     app.state.asset_store = resolved_asset_store
     app.state.draft_repository = resolved_draft_repository
     app.state.archive_repository = resolved_archive_repository
+    app.state.canonical_registry = resolved_canonical_registry
+    app.state.canonical_registration_service = resolved_canonical_registration
     app.state.vanilla_catalog = resolved_catalog
     app.state.asset_service = resolved_asset_service
     app.state.draft_service = resolved_draft_service

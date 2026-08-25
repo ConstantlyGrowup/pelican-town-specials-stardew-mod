@@ -14,6 +14,9 @@ from PIL import Image
 from pelican_town_specials.api.app import create_app
 from pelican_town_specials.api.security import SecurityConfig, SecurityState
 from pelican_town_specials.application.assets import AssetService
+from pelican_town_specials.application.canonical_memory import (
+    CanonicalRegistrationService,
+)
 from pelican_town_specials.application.cookbook import CookbookService
 from pelican_town_specials.application.drafts import DraftService
 from pelican_town_specials.application.trial import TrialAccessService
@@ -23,6 +26,9 @@ from pelican_town_specials.domain.draft import DraftRecord
 from pelican_town_specials.persistence.asset_store import (
     AssetMetadata,
     FileAssetStore,
+)
+from pelican_town_specials.persistence.canonical_registry import (
+    SQLiteCanonicalRegistry,
 )
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
@@ -51,6 +57,7 @@ class ApiServices:
     catalog: VanillaCatalog
     security: SecurityState
     trial_service: TrialAccessService
+    canonical_registry: SQLiteCanonicalRegistry
     client: TestClient
 
 
@@ -68,15 +75,23 @@ def services(tmp_path: Path) -> ApiServices:
     draft_repository = DraftRepository(workspace)
     archive_repository = ArchiveRepository(workspace)
     catalog = VanillaCatalog.from_json(_CATALOG_PATH)
+    canonical_registry = SQLiteCanonicalRegistry(workspace)
 
     attempt_repository = GenerationAttemptRepository(workspace)
     asset_service = AssetService(asset_store)
+    canonical_registration = CanonicalRegistrationService(
+        registry=canonical_registry,
+        archive_repository=archive_repository,
+        draft_repository=draft_repository,
+        asset_store=asset_store,
+    )
     draft_service = DraftService(
         draft_repository=draft_repository,
         archive_repository=archive_repository,
         asset_store=asset_store,
         catalog=catalog,
         attempt_repository=attempt_repository,
+        canonical_registration_service=canonical_registration,
     )
     cookbook_service = CookbookService(archive_repository)
 
@@ -101,6 +116,7 @@ def services(tmp_path: Path) -> ApiServices:
             asset_store=asset_store,
             draft_repository=draft_repository,
             archive_repository=archive_repository,
+            canonical_registry=canonical_registry,
             vanilla_catalog=catalog,
             security_state=security,
             trial_access_service=trial_service,
@@ -115,6 +131,7 @@ def services(tmp_path: Path) -> ApiServices:
         catalog=catalog,
         security=security,
         trial_service=trial_service,
+        canonical_registry=canonical_registry,
         client=client,
     )
 
@@ -163,11 +180,18 @@ def put_png(
 
 def make_reviewable_draft(services: ApiServices, *, revision: int = 1) -> DraftRecord:
     preview_ref = put_png(services.asset_store, kind=AssetKind.PREVIEW, color="purple")
+    source_icon_ref = put_png(
+        services.asset_store,
+        kind=AssetKind.ICON_SOURCE,
+        size=32,
+        color="green",
+    )
     icon_ref = put_png(services.asset_store, kind=AssetKind.ICON_16, color="gold")
     draft = ask_gus_reviewable_fixture(revision=revision)
     visuals = draft.visuals.model_copy(
         update={
             "preview_asset_id": preview_ref.asset_id,
+            "icon_source_asset_id": source_icon_ref.asset_id,
             "icon_16_asset_id": icon_ref.asset_id,
         }
     )
