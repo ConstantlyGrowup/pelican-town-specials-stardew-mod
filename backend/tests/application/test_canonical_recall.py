@@ -406,6 +406,43 @@ async def test_invalid_match_response_is_internal_miss(
 
 
 @pytest.mark.asyncio
+async def test_conflicting_supplemental_context_is_a_recall_miss() -> None:
+    candidate = _candidate()
+    canonical = _canonical(candidate)
+
+    class _ConflictAwareMatcher(_Matcher):
+        async def match_canonical(
+            self,
+            request: Any,
+            *,
+            json_only: bool = False,
+        ) -> CanonicalMatchResponse:
+            assert request.context_text == "make this a dessert without noodles"
+            # The provider-facing contract requires a conflicting supplemental
+            # request to fall below the frozen 0.90 reuse threshold.
+            self.calls.append((request, json_only))
+            return CanonicalMatchResponse(
+                candidateId=candidate.canonical_id,
+                confidence=0.899,
+            )
+
+    matcher = _ConflictAwareMatcher(CanonicalMatchResponse(candidateId=None, confidence=0.0))
+    registry = _Registry(pool=[candidate], valid={candidate.canonical_id: canonical})
+
+    result = await _service(registry, matcher).recall(
+        _analysis(),
+        "make this a dessert without noodles",
+        Language.ZH_CN,
+        "catalog-v1",
+        uuid4(),
+    )
+
+    assert result.canonical_dish is None
+    assert result.trace.outcome is RecallDecision.MATCH_MISS
+    assert len(matcher.calls) == 1
+
+
+@pytest.mark.asyncio
 async def test_registry_and_matcher_failures_fail_open_to_fallback_error() -> None:
     count_failure = _Registry(error=RuntimeError("registry unavailable"))
     count_result = await _service(

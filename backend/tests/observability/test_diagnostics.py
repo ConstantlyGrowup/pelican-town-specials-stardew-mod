@@ -7,6 +7,7 @@ T19-OBSERVABILITY-001 (structured log field whitelist).
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import logging
@@ -16,7 +17,11 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from backend.tests.domain.factories import canonical_registration_fixture
+from PIL import Image
 
+from pelican_town_specials.domain.assets import MediaType
+from pelican_town_specials.domain.canonical import CanonicalIconInput
 from pelican_town_specials.observability.diagnostics import DiagnosticsBuilder
 from pelican_town_specials.observability.logging import (
     configure_logging,
@@ -25,6 +30,7 @@ from pelican_town_specials.observability.logging import (
     read_log_lines,
 )
 from pelican_town_specials.observability.redaction import LOG_FIELD_WHITELIST
+from pelican_town_specials.persistence.canonical_registry import SQLiteCanonicalRegistry
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 
 
@@ -80,6 +86,79 @@ def test_diagnostic_bundle_excludes_secrets_and_business_records(
     assert "drafts/" not in text
     assert "sk-test-secret" not in text
     assert "data:image" not in text
+
+
+def test_diagnostic_bundle_excludes_registry_icons_and_raw_generation_context(
+    diagnostics: DiagnosticsBuilder,
+    workspace: WorkspacePaths,
+) -> None:
+    """Diagnostics remain aggregate-only even when the workspace is populated."""
+
+    def png_bytes(size: int, color: str) -> bytes:
+        output = io.BytesIO()
+        Image.new("RGBA", (size, size), color).save(output, format="PNG")
+        return output.getvalue()
+
+    def icon_input(data: bytes, size: int) -> CanonicalIconInput:
+        return CanonicalIconInput(
+            data=data,
+            mediaType=MediaType.PNG,
+            sha256=hashlib.sha256(data).hexdigest(),
+            byteSize=len(data),
+            width=size,
+            height=size,
+        )
+
+    # Seed the real SQLite Registry and its private icon store. The diagnostic
+    # builder must not copy either into its support bundle.
+    registry = SQLiteCanonicalRegistry(workspace)
+    registration = canonical_registration_fixture()
+    source_icon = png_bytes(32, "gold")
+    icon_16 = png_bytes(16, "orange")
+    registry.register(
+        registration,
+        icon_source=icon_input(source_icon, 32),
+        icon_16=icon_input(icon_16, 16),
+    )
+
+    raw_original = workspace.assets_dir / "raw-original-photo.png"
+    raw_preview = workspace.assets_dir / "raw-preview-photo.png"
+    raw_original.write_bytes(png_bytes(8, "navy"))
+    raw_preview.write_bytes(png_bytes(8, "orchid"))
+    logs_dir = workspace.app_state_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    (logs_dir / "pts-structured.log").write_text(
+        json.dumps(
+            {
+                "timestamp": "2026-08-25T00:00:00Z",
+                "level": "INFO",
+                "requestId": "req-task36-privacy",
+                "stage": "DISH_ANALYSIS",
+                "usage": {
+                    "contextText": "RAW_CONTEXT_SHOULD_NOT_LEAK",
+                    "matcherPayload": "RAW_MATCHER_PAYLOAD_SHOULD_NOT_LEAK",
+                    "prompt": "sk-fake-task36-secret",
+                    "image": "data:image/png;base64,RAW_IMAGE_SHOULD_NOT_LEAK",
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    names, text = inspect_zip(diagnostics.build(request_id="req-task36-privacy"))
+
+    assert "canonical/registry.sqlite3" not in names
+    assert all("canonical/" not in name for name in names)
+    assert all("raw-original-photo.png" not in name for name in names)
+    assert all("raw-preview-photo.png" not in name for name in names)
+    for forbidden in (
+        "RAW_CONTEXT_SHOULD_NOT_LEAK",
+        "RAW_MATCHER_PAYLOAD_SHOULD_NOT_LEAK",
+        "sk-fake-task36-secret",
+        "data:image/png",
+    ):
+        assert forbidden not in text
 
 
 def test_diagnostic_bundle_contains_summary_files(

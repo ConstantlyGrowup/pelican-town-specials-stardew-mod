@@ -85,6 +85,43 @@ function New-FastHttpClient {
     return $client
 }
 
+$tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+$tempRootPrefix = $tempRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+
+function New-TempWorkspace {
+    return Join-Path ([System.IO.Path]::GetTempPath()) ('pts-inst-' + [guid]::NewGuid().ToString('N'))
+}
+
+function Assert-TempWorkspacePath([string]$workspace) {
+    if ([string]::IsNullOrWhiteSpace($workspace)) {
+        throw 'Temporary workspace path must not be empty.'
+    }
+    $resolved = [System.IO.Path]::GetFullPath($workspace)
+    if (-not $resolved.StartsWith($tempRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to use a workspace outside the temp root: $resolved"
+    }
+    if ([System.IO.Path]::GetFileName($resolved) -notmatch '^pts-inst-[0-9a-f]{32}$') {
+        throw "Refusing to use an unrecognized installer smoke workspace: $resolved"
+    }
+}
+
+function Remove-TempWorkspace([string]$workspace) {
+    Assert-TempWorkspacePath $workspace
+    if (Test-Path -LiteralPath $workspace) {
+        Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Assert-TempSetupLogPath([string]$path) {
+    $resolved = [System.IO.Path]::GetFullPath($path)
+    if (-not $resolved.StartsWith($tempRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to delete a setup log outside the temp root: $resolved"
+    }
+    if ([System.IO.Path]::GetFileName($resolved) -ne 'pts-setup.log') {
+        throw "Refusing to delete an unexpected setup log: $resolved"
+    }
+}
+
 try {
     # 0. A fresh machine must have no half shortcuts before install.
     if (Test-Path -LiteralPath $startLnk) {
@@ -94,6 +131,7 @@ try {
     # 1. Silent install.
     Write-Host "==> silent install"
     $setupLog = Join-Path $env:TEMP 'pts-setup.log'
+    Assert-TempSetupLogPath $setupLog
     Remove-Item -LiteralPath $setupLog -ErrorAction SilentlyContinue
     $code = Invoke-Silent $setupFull @("/LOG=$setupLog")
     if ($code -ne 0) {
@@ -102,6 +140,13 @@ try {
     if (-not (Test-Path -LiteralPath $appExe)) {
         throw "Install did not create $appExe"
     }
+    $sqliteExtension = @(
+        Get-ChildItem -LiteralPath $appDir -Recurse -File -Filter '_sqlite3*.pyd' -ErrorAction Stop
+    )
+    if ($sqliteExtension.Count -eq 0) {
+        throw "Installed app is missing the recursive _sqlite3 extension: $appDir"
+    }
+    Write-Host "OK: installed app includes recursive SQLite extension at $($sqliteExtension[0].FullName)."
     if (-not (Test-Path -LiteralPath $startLnk)) {
         throw "Required start-menu shortcut missing: $startLnk"
     }
@@ -121,11 +166,16 @@ try {
     [System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell) | Out-Null
     Write-Host "OK: install created program + start-menu shortcut (target=$appExe); desktop shortcut correctly absent."
 
-    # 2. Health smoke of the installed app (isolated temp workspace).
-    Write-Host "==> installed app health"
-    $workspace = Join-Path ([System.IO.Path]::GetTempPath()) ('pts-inst-' + [guid]::NewGuid().ToString('N'))
+    # 2. Two clean launches of the installed app against one isolated
+    # workspace. The second launch proves the packaged SQLite registry can be
+    # reopened without changing the user's persisted data.
+    Write-Host "==> installed app health + persistent registry"
+    $workspace = New-TempWorkspace
+    Assert-TempWorkspacePath $workspace
     $port = 43141
+    $secondPort = 43142
     $proc = $null
+    $secondProc = $null
     $client = $null
     try {
         $arguments = @('--no-browser', '--workspace', $workspace, '--port', $port.ToString())
@@ -156,6 +206,46 @@ try {
             throw "Installed app health check did not become ready within 30s at $healthUrl"
         }
         Write-Host "OK: installed app served /api/v1/health."
+
+        if ($client) {
+            $client.Dispose()
+            $client = $null
+        }
+        if ($proc -and -not $proc.HasExited) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            Wait-Process -Id $proc.Id -Timeout 10 -ErrorAction SilentlyContinue
+        }
+        $registryPath = Join-Path $workspace 'canonical\registry.sqlite3'
+        if (-not (Test-Path -LiteralPath $registryPath -PathType Leaf)) {
+            throw "Installed app did not create the Canonical registry: $registryPath"
+        }
+        $registryBytesAfterFirstLaunch = (Get-Item -LiteralPath $registryPath).Length
+        if ($registryBytesAfterFirstLaunch -le 0) {
+            throw "Installed app created an empty Canonical registry: $registryPath"
+        }
+        Write-Host "OK: first clean launch created non-empty registry.sqlite3 ($registryBytesAfterFirstLaunch bytes)."
+
+        $secondArguments = @(
+            '--no-browser',
+            '--workspace', $workspace,
+            '--port', $secondPort.ToString(),
+            '--exit-after-health-check'
+        )
+        $secondProc = Start-Process -FilePath $startLnk -ArgumentList $secondArguments -PassThru
+        Wait-Process -Id $secondProc.Id -Timeout 60 -ErrorAction Stop
+        $secondProc.Refresh()
+        if ($secondProc.ExitCode -ne 0) {
+            throw "Second installed app launch exited with code $($secondProc.ExitCode)."
+        }
+        $registryBytesAfterSecondLaunch = (Get-Item -LiteralPath $registryPath -ErrorAction Stop).Length
+        if ($registryBytesAfterSecondLaunch -le 0) {
+            throw "Second installed app launch left an empty Canonical registry: $registryPath"
+        }
+        $runtimeJson = Join-Path $workspace 'app-state\runtime.json'
+        if (Test-Path -LiteralPath $runtimeJson) {
+            throw "Second installed app launch left a runtime record: $runtimeJson"
+        }
+        Write-Host "OK: second clean launch reopened the same non-empty registry and exited 0."
     }
     finally {
         if ($client) {
@@ -164,7 +254,10 @@ try {
         if ($proc -and -not $proc.HasExited) {
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
         }
-        Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue
+        if ($secondProc -and -not $secondProc.HasExited) {
+            Stop-Process -Id $secondProc.Id -Force -ErrorAction SilentlyContinue
+        }
+        Remove-TempWorkspace $workspace
     }
 
     # 3. Workspace preservation marker (represents user data).

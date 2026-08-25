@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_9_task_35_auto_accepted |
-| project_phase | Milestone 8 与 Task 30 均已完成，正式版本 v1.3.0 已发布并核验。M9/M10 规划已验收；M9 Task 31–35 已本地完成，M10 仅规划验收、尚未授权实施 |
+| overall_state | awaiting_milestone_9_acceptance |
+| project_phase | Milestone 8 与 Task 30 均已完成，正式版本 v1.3.0 已发布并核验。M9 Task 31–36 已全部本地完成并通过独立审阅/全量验收，等待用户 Milestone 级验收；M10 仅规划验收、尚未授权实施 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-25-task-35-generation-timing` |
-| active_session_state | auto_accepted |
-| active_session_type | milestone-9-task-implementation |
-| current_task | Task 35“生成耗时卡片与 Gus 命中叙事”经 `luna_worker` round 1 修复、`detector` 独立复审和主 Agent 复验后 PASS，进入 auto_accepted |
+| active_session_id | 无（Task 36 已 `auto_accepted`） |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | Task 36“Milestone 9 全链路、打包与指标验收”round 1 detector **PASS**；M9 Task 31–36 全部完成，进入 `awaiting_milestone_acceptance` |
 | blocker | 无 |
-| next_action | 创建 Task 36“Milestone 9 全链路、打包与指标验收”Context Packet，随后实施验收闭包、独立审阅并完成 M9 总验收；不 push、不发布 |
+| next_action | 用户统一验收 M9；验收后如需同步远端/发布，分别明确授权 push 与版本/tag/GitHub Release。当前不 push、不发布，也不开始 M10 |
 | collaboration_model | M9 临时由 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `feat/mvp-implementation` 本地 Task 31–35 focused commits 已串行完成；本文件所在提交为 Task 35（message `feat: show generation timing and Gus memory feedback`），origin 仍位于 `7addfb8`；M9 commits 不 push；tag `v1.3.0` 位于 `4de82ad` |
+| 最新提交 | `feat/mvp-implementation` 本地 Task 31–35 focused commits 已串行完成；Task 36 将与本次 STATUS/Session 形成 message `test: verify Milestone 9 canonical memory end to end` 的 focused commit。origin 仍位于 `7addfb8`；M9 commits 不 push；tag `v1.3.0` 位于 `4de82ad` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送，本地与 origin 同步。M9 自治开发期间的 Task commits 暂不 push。 |
-| 当前工作树范围 | Task 35 的 generation timing store/hook、共享 badge、Ask Gus/Blueprint 接线、双语/CSS/测试与 Session/STATUS 进入单一 focused commit；用户已有 prototype、samples、Claude worktree 与 review/pytest 临时目录等未跟踪文件保持原样且未纳入。下一步只创建 Task 36 Packet/Session 与其冻结闭包文件。 |
+| 当前工作树范围 | Task 36 的生产边界集成/并发/隐私/Playwright、Windows smoke、README、Session/STATUS 进入单一 focused commit；用户已有 prototype、samples、Claude worktree 与 review/pytest 临时目录等未跟踪文件保持原样且不纳入。构建产物保持 Git ignored。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -52,6 +52,27 @@
 - Milestone 9 已定义为“Gus 的全局生成记忆与 Canonical 召回”，严格串行 Task 31–36：SQLite Registry；正式存档登记/启动修复；候选与 matcher；Orchestrator 命中复用；耗时/Gus 叙事；全链路与打包验收。
 - 技术设计：`docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0；详细计划：`docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0；MVP 技术设计/实施计划当前索引为 v2.3/v1.6（同时登记 M10）。
 - 2026-08-25 用户已验收 M9/M10 规划并授权开始 M9；本规划 Session 已关闭，Task 31 Context Packet 准备中。
+
+## Milestone 9 实施完成（awaiting_milestone_acceptance）
+
+用户授权 Codex 临时全量接管 M9，主 Agent 按 `luna_worker` 实施、`detector` 独立只读审阅、主 Agent 验收的范式严格串行完成 Task 31–36；每 Task PASS 后只创建本地 focused commit，不 push：
+
+| Task | commit | 结果 |
+|---|---|---|
+| 31 | `a14f128` | SQLite Canonical Registry 基础、owned icon 与迁移/损坏降级 |
+| 32 | `735a7c5` | 正式 Ask Gus 归档登记、usage 与启动修复 |
+| 33 | `591d722` | 候选筛选、matcher、阈值/语言/context miss |
+| 34 | `0cda23d` | INITIAL HIT 复用结构化词条/icon，当前照片重做 preview；异常降级 miss |
+| 35 | `5b5cb8c` | fresh/HIT/Blueprint 总耗时与 Gus 记忆叙事、刷新恢复 |
+| 36 | 本次 focused commit | 全链路、并发、隐私、Playwright、bundle/installer SQLite 与最终验收 |
+
+- Task 36 detector：round 0 `REVISE` → round 1 **PASS**，M9-T36-001..008、R01..R10 全部满足，无 must-fix/optional hardening。
+- 最终主门禁：Task 36 focused **109 passed**；backend **780 passed/2 skipped**；frontend **149 passed**；Playwright **34 passed**；Ruff（backend src/tests）、mypy（92 source files）、TypeScript/Vite、ESLint、locale、OpenAPI drift、diff-check 全绿。
+- Windows：PyInstaller onedir 和 v1.3.0 installer 构建/内容门禁通过；bundle 与安装态均含 `_sqlite3.pyd`，同一隔离工作区二次启动可重开非空 Registry；installer 的覆盖重装、卸载和用户工作区保留通过。
+- 隐私：diagnostics/release 不包含 Registry DB、Canonical icon、原图/预览、context、matcher payload 或 secret；numeric token usage 保留。M10 未实施。
+- 指标边界：总耗时已自动记录并显示；所有测试使用 fake/intercepted Provider。真实单任务成本对照仍待用户另行授权，不声称调用数/步骤数/成本节省。
+- 已知非 M9 门禁债务：Packet 的扩展 Ruff 命令会在未改动的 `scripts/validate_mod_zip.py` 报既存 PIE810/BLE001；M9 改动范围内 Ruff 全绿。
+- 当前等待用户统一验收 M9。验收不自动授权 push、tag、版本提升或 GitHub Release；M10 仍只完成规划。
 
 ## 已验收、待实施授权的 Milestone 10 规划
 

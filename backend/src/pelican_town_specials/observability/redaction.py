@@ -84,6 +84,21 @@ _SENSITIVE_VALUE_KEYS = frozenset(
         "x-pts-csrf",
         "x-pts-session",
         "x-pts-launch-token",
+        # User context and matcher payloads are business content, not
+        # aggregate usage telemetry. Keep token-count keys below untouched.
+        "contexttext",
+        "context_text",
+        "matcherpayload",
+        "matcher_payload",
+        "matcherprompt",
+        "matcher_prompt",
+        "matcherrequest",
+        "matcher_request",
+        "matcherresponse",
+        "matcher_response",
+        "matchresponse",
+        "match_response",
+        "response",
     }
 )
 

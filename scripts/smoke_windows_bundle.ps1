@@ -1,12 +1,13 @@
 # Smoke-test a built Windows onedir bundle (Task 19 Step 5).
 #
-# Two launch phases exercise the two launcher paths:
+# Two clean launches exercise both launcher paths against the same verified
+# temporary workspace:
 #
 #   Phase A (normal launch)  -- --no-browser --workspace <temp> --port <p>
 #       The server stays up, so we can externally poll /api/v1/health and
 #       fetch the static homepage. This proves the bundle really serves HTTP.
 #
-#   Phase B (self-check exit) -- --no-browser --workspace <temp> --port 43132
+#   Phase B (self-check exit) -- --no-browser --workspace <same-temp> --port 43132
 #       --exit-after-health-check
 #       The launcher itself waits for health and exits 0 only if it passed
 #       (launcher/main.py), so exit code 0 IS the health evidence. We wait for
@@ -40,11 +41,39 @@ if (-not (Test-Path -LiteralPath $indexPath)) {
     throw "Missing static homepage: $indexPath"
 }
 
+# PyInstaller must carry the stdlib SQLite extension in the onedir tree. Do
+# this recursively because the extension may live below an architecture- or
+# Python-version-specific subdirectory.
+$sqliteExtension = @(
+    Get-ChildItem -LiteralPath $bundleFull -Recurse -File -Filter '_sqlite3*.pyd' -ErrorAction Stop
+)
+if ($sqliteExtension.Count -eq 0) {
+    throw "Missing recursive _sqlite3 extension in bundle: $bundleFull"
+}
+Write-Host "OK: recursive SQLite extension found at $($sqliteExtension[0].FullName)."
+
+$tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+$tempRootPrefix = $tempRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+
 function New-TempWorkspace {
     return Join-Path ([System.IO.Path]::GetTempPath()) ('pts-smoke-' + [guid]::NewGuid().ToString('N'))
 }
 
+function Assert-TempWorkspacePath([string]$workspace) {
+    if ([string]::IsNullOrWhiteSpace($workspace)) {
+        throw 'Temporary workspace path must not be empty.'
+    }
+    $resolved = [System.IO.Path]::GetFullPath($workspace)
+    if (-not $resolved.StartsWith($tempRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to use a workspace outside the temp root: $resolved"
+    }
+    if ([System.IO.Path]::GetFileName($resolved) -notmatch '^pts-smoke-[0-9a-f]{32}$') {
+        throw "Refusing to use an unrecognized smoke workspace: $resolved"
+    }
+}
+
 function Remove-TempWorkspace([string]$workspace) {
+    Assert-TempWorkspacePath $workspace
     if (Test-Path -LiteralPath $workspace) {
         Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -59,13 +88,17 @@ function New-FastHttpClient {
     return $client
 }
 
-# ---- Phase A: normal launch, real HTTP health + homepage ----
-$workspaceA = New-TempWorkspace
+# ---- Phase A + B: two clean launches against one persistent workspace ----
+$workspace = New-TempWorkspace
+Assert-TempWorkspacePath $workspace
 $portA = 43133
+$portB = 43132
 $procA = $null
 $clientA = $null
+$procB = $null
+$clientB = $null
 try {
-    $argumentsA = @('--no-browser', '--workspace', $workspaceA, '--port', $portA.ToString())
+    $argumentsA = @('--no-browser', '--workspace', $workspace, '--port', $portA.ToString())
     $procA = Start-Process -FilePath $exePath -ArgumentList $argumentsA -PassThru
     $clientA = New-FastHttpClient
     $healthUrl = "http://127.0.0.1:$portA/api/v1/health"
@@ -98,6 +131,46 @@ try {
         throw "Phase A static homepage did not serve expected content (status=$($homeResponse.StatusCode))."
     }
     Write-Host "Phase A OK: health + static homepage served."
+
+    if ($clientA) {
+        $clientA.Dispose()
+        $clientA = $null
+    }
+    if ($procA -and -not $procA.HasExited) {
+        Stop-Process -Id $procA.Id -Force -ErrorAction SilentlyContinue
+        Wait-Process -Id $procA.Id -Timeout 10 -ErrorAction SilentlyContinue
+    }
+    $registryPath = Join-Path $workspace 'canonical\registry.sqlite3'
+    if (-not (Test-Path -LiteralPath $registryPath -PathType Leaf)) {
+        throw "Phase A did not create the Canonical registry: $registryPath"
+    }
+    $registryBytesAfterFirstLaunch = (Get-Item -LiteralPath $registryPath).Length
+    if ($registryBytesAfterFirstLaunch -le 0) {
+        throw "Phase A created an empty Canonical registry: $registryPath"
+    }
+    Write-Host "Phase A OK: non-empty registry.sqlite3 created ($registryBytesAfterFirstLaunch bytes)."
+
+    $argumentsB = @(
+        '--no-browser',
+        '--workspace', $workspace,
+        '--port', $portB.ToString(),
+        '--exit-after-health-check'
+    )
+    $procB = Start-Process -FilePath $exePath -ArgumentList $argumentsB -PassThru
+    Wait-Process -Id $procB.Id -Timeout 60 -ErrorAction Stop
+    $procB.Refresh()
+    if ($procB.ExitCode -ne 0) {
+        throw "Phase B launcher exited with non-zero code $($procB.ExitCode)."
+    }
+    $registryBytesAfterSecondLaunch = (Get-Item -LiteralPath $registryPath -ErrorAction Stop).Length
+    if ($registryBytesAfterSecondLaunch -le 0) {
+        throw "Phase B left an empty Canonical registry: $registryPath"
+    }
+    $runtimeJson = Join-Path $workspace 'app-state\runtime.json'
+    if (Test-Path -LiteralPath $runtimeJson) {
+        throw "Phase B residual runtime record left behind: $runtimeJson"
+    }
+    Write-Host "Phase B OK: second clean launch reopened the same non-empty registry and exited 0."
 }
 finally {
     if ($clientA) {
@@ -106,38 +179,13 @@ finally {
     if ($procA -and -not $procA.HasExited) {
         Stop-Process -Id $procA.Id -Force -ErrorAction SilentlyContinue
     }
-    Remove-TempWorkspace $workspaceA
-}
-
-# ---- Phase B: --exit-after-health-check self-check exit + no residual lock ----
-$workspaceB = New-TempWorkspace
-$portB = 43132
-$procB = $null
-try {
-    $argumentsB = @(
-        '--no-browser',
-        '--workspace', $workspaceB,
-        '--port', $portB.ToString(),
-        '--exit-after-health-check'
-    )
-    $procB = Start-Process -FilePath $exePath -ArgumentList $argumentsB -PassThru
-    # The launcher self-verifies health and exits 0 only on success.
-    Wait-Process -Id $procB.Id -Timeout 60 -ErrorAction Stop
-    if ($procB.ExitCode -ne 0) {
-        throw "Phase B launcher exited with non-zero code $($procB.ExitCode)."
+    if ($clientB) {
+        $clientB.Dispose()
     }
-
-    $runtimeJson = Join-Path $workspaceB 'app-state\runtime.json'
-    if (Test-Path -LiteralPath $runtimeJson) {
-        throw "Phase B residual runtime record left behind: $runtimeJson"
-    }
-    Write-Host "Phase B OK: self-check exit 0, no residual runtime lock."
-}
-finally {
     if ($procB -and -not $procB.HasExited) {
         Stop-Process -Id $procB.Id -Force -ErrorAction SilentlyContinue
     }
-    Remove-TempWorkspace $workspaceB
+    Remove-TempWorkspace $workspace
 }
 
-Write-Host "OK: bundle smoke passed (exe + static homepage + health + clean self-check exit)."
+Write-Host "OK: bundle smoke passed (exe + recursive _sqlite3 + static homepage + two clean launches + persistent registry)."

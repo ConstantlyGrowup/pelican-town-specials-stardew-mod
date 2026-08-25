@@ -538,6 +538,7 @@ test.describe("generation experience", () => {
         `{"type":"attempt.started","attemptId":"${draftId}-1"}\n` +
         `{"type":"stage.started","stage":"${stageByDraft[draftId]}","ordinal":2,"total":9}\n`;
     }
+    const generationProgress: Record<string, unknown> = {};
     const state: RouteState = {
       drafts,
       generateBody: "",
@@ -550,28 +551,33 @@ test.describe("generation experience", () => {
           presentation: null,
           gameplay: null,
         });
-      },
-      generationProgress: {
-        "draft-b": {
-          draftId: "draft-b",
+        generationProgress[draftId] = {
+          draftId,
           active: true,
           attempt: {
-            attemptId: "draft-b-1",
-            draftId: "draft-b",
+            attemptId: `${draftId}-1`,
+            draftId,
             kind: "INITIAL",
             sourceRevision: 1,
             status: "RUNNING",
-            currentStage: "INGREDIENT_MAPPING",
+            currentStage: stageByDraft[draftId],
             stages: [
-              { stage: "INPUT_VALIDATION", status: "SUCCEEDED", retryCount: 0, startedAt: "2026-08-04T00:00:00Z", finishedAt: "2026-08-04T00:00:00Z", error: null },
-              { stage: "INGREDIENT_MAPPING", status: "RUNNING", retryCount: 0, startedAt: "2026-08-04T00:00:00Z", finishedAt: null, error: null },
+              {
+                stage: stageByDraft[draftId],
+                status: "RUNNING",
+                retryCount: 0,
+                startedAt: "2026-08-04T00:00:00Z",
+                finishedAt: null,
+                error: null,
+              },
             ],
             startedAt: "2026-08-04T00:00:00Z",
             finishedAt: null,
             error: null,
           },
-        },
+        };
       },
+      generationProgress,
     };
 
     const pageA = await context.newPage();

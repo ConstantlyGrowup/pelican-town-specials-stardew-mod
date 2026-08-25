@@ -10,20 +10,41 @@ their own slot; a client disconnect only detaches its subscriber.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import io
 import time
 from uuid import UUID
 
 import pytest
+from backend.tests.domain.factories import canonical_registration_fixture
 from backend.tests.domain.factories import make_draft as make_domain_draft
+from PIL import Image
 
+from pelican_town_specials.domain.assets import MediaType
+from pelican_town_specials.domain.canonical import (
+    CanonicalIconInput,
+    CanonicalIconKind,
+)
 from pelican_town_specials.domain.common import DraftMode
+from pelican_town_specials.domain.dish import GenerationSource
 from pelican_town_specials.domain.draft import (
     AttemptStatus,
     DraftRecord,
     DraftStatus,
 )
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.events import GenerationEvent
+from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
+from pelican_town_specials.persistence.canonical_registry import (
+    SQLiteCanonicalRegistry,
+)
+from pelican_town_specials.providers.contracts import (
+    CanonicalMatchResponse,
+    GeneratedImage,
+    ImageMediaType,
+    ImageOperation,
+)
 
 from .conftest import GenerationHarness, initial_command, put_original_image
 
@@ -65,6 +86,269 @@ async def _wait_for(predicate, *, timeout: float = 10.0) -> None:
 
 def _attempt_ids(holders: list[list[GenerationEvent]]) -> list[UUID | None]:
     return [holder[0].attempt_id for holder in holders]
+
+
+def _read_asset(asset_store, asset_id: UUID) -> bytes:
+    with asset_store.open(asset_id) as handle:
+        return handle.read()
+
+
+def _canonical_icon_input(size: int, color: str) -> CanonicalIconInput:
+    output = io.BytesIO()
+    Image.new("RGBA", (size, size), color).save(output, format="PNG")
+    data = output.getvalue()
+    return CanonicalIconInput(
+        data=data,
+        mediaType=MediaType.PNG,
+        sha256=hashlib.sha256(data).hexdigest(),
+        byteSize=len(data),
+        width=size,
+        height=size,
+    )
+
+
+def _enable_canonical_recall(
+    harness: GenerationHarness,
+) -> tuple[SQLiteCanonicalRegistry, UUID, UUID]:
+    """Install two real Registry rows and rebuild the orchestrator owner."""
+
+    canonical_registry = SQLiteCanonicalRegistry(harness.workspace)
+    first_registration = canonical_registration_fixture(
+        catalog_version=harness.catalog.version
+    )
+    second_registration = canonical_registration_fixture(
+        catalog_version=harness.catalog.version
+    )
+    canonical_registry.register(
+        first_registration,
+        icon_source=_canonical_icon_input(32, "gold"),
+        icon_16=_canonical_icon_input(16, "orange"),
+    )
+    canonical_registry.register(
+        second_registration,
+        icon_source=_canonical_icon_input(32, "royalblue"),
+        icon_16=_canonical_icon_input(16, "deepskyblue"),
+    )
+    assert canonical_registry.count_valid() == 2
+    harness.orchestrator = GenerationOrchestrator(
+        draft_repository=harness.draft_repository,
+        attempt_repository=harness.attempt_repository,
+        asset_store=harness.asset_store,
+        catalog=harness.catalog,
+        gateway_factory=lambda: harness.gateway,
+        registry=AttemptRegistry(),
+        min_confidence=0.5,
+        canonical_repository=canonical_registry,
+    )
+    return (
+        canonical_registry,
+        first_registration.canonical_id,
+        second_registration.canonical_id,
+    )
+
+
+async def test_three_canonical_attempts_isolate_hit_miss_assets_and_fourth_busy(
+    harness: GenerationHarness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """M9-T36-004: mixed Canonical outcomes stay isolated under the M8 limit."""
+
+    canonical_registry, first_canonical_id, second_canonical_id = (
+        _enable_canonical_recall(harness)
+    )
+    drafts = _ready_drafts(harness, 4)
+    contexts = [draft.source.context_text for draft in drafts]
+    assert all(context is not None for context in contexts)
+
+    original_analyze = harness.gateway.analyze_dish
+    analyze_entries: list[str | None] = []
+    analyze_entered = asyncio.Event()
+    release_analyze = asyncio.Event()
+
+    async def gated_analyze(request, *, json_only: bool = False):
+        analyze_entries.append(request.context_text)
+        if len(analyze_entries) == 3:
+            analyze_entered.set()
+        await release_analyze.wait()
+        return await original_analyze(request, json_only=json_only)
+
+    monkeypatch.setattr(harness.gateway, "analyze_dish", gated_analyze)
+
+    outcomes = {
+        contexts[0]: CanonicalMatchResponse(
+            candidateId=first_canonical_id,
+            confidence=0.97,
+        ),
+        contexts[1]: CanonicalMatchResponse(
+            candidateId=None,
+            confidence=0.899,
+        ),
+        contexts[2]: CanonicalMatchResponse(
+            candidateId=second_canonical_id,
+            confidence=0.96,
+        ),
+    }
+    match_requests: dict[UUID, str | None] = {}
+    match_barrier = asyncio.Barrier(3)
+
+    async def deterministic_match(request, *, json_only: bool = False):
+        harness.gateway.calls.append("match")
+        match_requests[request.request_id] = request.context_text
+        await match_barrier.wait()
+        return outcomes[request.context_text]
+
+    monkeypatch.setattr(harness.gateway, "match_canonical", deterministic_match)
+
+    original_generate_image = harness.gateway.generate_image
+
+    async def distinct_preview(request):
+        generated = await original_generate_image(request)
+        if request.operation is not ImageOperation.EDIT:
+            return generated
+        output = io.BytesIO()
+        color = f"#{request.request_id.hex[:6]}"
+        Image.new("RGBA", (96, 64), color).save(output, format="PNG")
+        return GeneratedImage(
+            data=output.getvalue(),
+            media_type=ImageMediaType.PNG,
+        )
+
+    monkeypatch.setattr(harness.gateway, "generate_image", distinct_preview)
+
+    streams = [harness.orchestrator.run(initial_command(draft)) for draft in drafts[:3]]
+    tasks = [asyncio.create_task(_consume(stream)) for stream in streams]
+    try:
+        # The event is set only after all three attempts have entered the first
+        # Provider operation. No polling or sleep is needed for this gate.
+        await asyncio.wait_for(analyze_entered.wait(), timeout=5.0)
+        assert sorted(analyze_entries) == sorted(contexts[:3])
+        assert harness.orchestrator._registry.active_count() == 3
+
+        fourth_before = harness.orchestrator.drafts.get(drafts[3].draft_id)
+        attempt_dirs_before = tuple(
+            sorted(path.name for path in harness.workspace.staging_dir.glob("attempt-*"))
+        )
+        running_attempt_ids_before = {
+            attempt.attempt_id
+            for attempt in harness.orchestrator.attempts.list_running()
+        }
+        provider_calls_before = list(harness.gateway.calls)
+        with pytest.raises(AppError) as excinfo:
+            harness.orchestrator.run(initial_command(drafts[3]))
+        assert excinfo.value.code == "PTS_GEN_BUSY"
+        assert excinfo.value.details["activeCount"] == 3
+        assert excinfo.value.details["maxConcurrent"] == 3
+        assert excinfo.value.details["draftId"] == str(drafts[3].draft_id)
+
+        # The rejected request happened while all three first Provider entries
+        # were held. It creates no attempt/staging write, draft mutation, or
+        # Provider call of its own.
+        assert harness.gateway.calls == provider_calls_before
+        assert tuple(
+            sorted(path.name for path in harness.workspace.staging_dir.glob("attempt-*"))
+        ) == attempt_dirs_before
+        assert {
+            attempt.attempt_id
+            for attempt in harness.orchestrator.attempts.list_running()
+        } == running_attempt_ids_before
+        assert harness.orchestrator.drafts.get(drafts[3].draft_id) == fourth_before
+
+        release_analyze.set()
+        results = await asyncio.gather(*tasks)
+
+        attempt_ids = [events[0].attempt_id for events in results]
+        assert all(attempt_id is not None for attempt_id in attempt_ids)
+        assert len(set(attempt_ids)) == 3
+        assert len(match_requests) == 3
+        assert sorted(match_requests.values()) == sorted(contexts[:3])
+
+        final_drafts = [
+            harness.orchestrator.drafts.get(draft.draft_id) for draft in drafts[:3]
+        ]
+        assert all(final.status is DraftStatus.REVIEWABLE for final in final_drafts)
+        assert all(
+            events[-1].type == "attempt.succeeded" for events in results
+        )
+        for events, final, attempt_id in zip(results, final_drafts, attempt_ids):
+            assert events[-1].attempt_id == attempt_id
+            assert final.last_attempt_id == attempt_id
+            assert attempt_id is not None
+            persisted = harness.orchestrator.attempts.get(attempt_id)
+            assert persisted.status is AttemptStatus.SUCCEEDED
+            assert final.visuals is not None
+            visual_ids = (
+                final.visuals.icon_source_asset_id,
+                final.visuals.icon_16_asset_id,
+                final.visuals.preview_asset_id,
+            )
+            assert all(asset_id is not None for asset_id in visual_ids)
+            refs = [
+                harness.asset_store.stat(asset_id)
+                for asset_id in visual_ids
+                if asset_id is not None
+            ]
+            assert {ref.asset_id for ref in refs} == {
+                asset_id for asset_id in visual_ids if asset_id is not None
+            }
+
+        # Draft 0 and draft 2 are independent HITs; draft 1 is a deterministic
+        # 0.899 miss and therefore follows the fresh-generation path.
+        first_hit, miss, second_hit = final_drafts
+        assert first_hit.provenance.generation_source is GenerationSource.CANONICAL_REUSED
+        assert first_hit.provenance.canonical_dish_id == first_canonical_id
+        assert first_hit.provenance.recall_confidence == 0.97
+        assert miss.provenance.generation_source is GenerationSource.FRESH_GENERATION
+        assert miss.provenance.canonical_dish_id is None
+        assert miss.provenance.recall_confidence is None
+        assert second_hit.provenance.generation_source is GenerationSource.CANONICAL_REUSED
+        assert second_hit.provenance.canonical_dish_id == second_canonical_id
+        assert second_hit.provenance.recall_confidence == 0.96
+
+        for hit in (first_hit, second_hit):
+            assert hit.last_attempt_id is not None
+            assert hit.visuals is not None
+            for asset_id in (
+                hit.visuals.icon_source_asset_id,
+                hit.visuals.icon_16_asset_id,
+            ):
+                assert asset_id is not None
+                imported_ref = harness.asset_store.stat(asset_id)
+                assert imported_ref.attempt_id == hit.last_attempt_id
+                assert imported_ref.source_revision == hit.revision
+
+        visual_asset_ids = []
+        for final in final_drafts:
+            assert final.visuals is not None
+            visual_asset_ids.extend(
+                [
+                    final.visuals.icon_source_asset_id,
+                    final.visuals.icon_16_asset_id,
+                    final.visuals.preview_asset_id,
+                ]
+            )
+        assert len(visual_asset_ids) == len(set(visual_asset_ids))
+        assert (
+            _read_asset(harness.asset_store, first_hit.visuals.icon_source_asset_id)
+            == canonical_registry.load_owned_icon(
+                first_canonical_id, CanonicalIconKind.SOURCE
+            )
+        )
+        assert (
+            _read_asset(harness.asset_store, second_hit.visuals.icon_source_asset_id)
+            == canonical_registry.load_owned_icon(
+                second_canonical_id, CanonicalIconKind.SOURCE
+            )
+        )
+
+        assert harness.gateway.calls.count("analyze") == 3
+        assert harness.gateway.calls.count("match") == 3
+        assert harness.gateway.calls.count("design") == 1
+        assert harness.gateway.calls.count("image") == 4
+        assert harness.orchestrator._registry.active_count() == 0
+    finally:
+        release_analyze.set()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        for stream in streams:
+            await stream.aclose()
 
 
 async def test_three_generations_truly_overlap_at_provider(

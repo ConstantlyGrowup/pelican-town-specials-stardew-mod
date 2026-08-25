@@ -220,3 +220,34 @@ def test_redact_value_preserves_numeric_telemetry_substring_keys() -> None:
     redacted = redact_value("usage", usage)
 
     assert redacted == usage
+
+
+def test_redact_value_removes_context_and_matcher_content_but_keeps_token_counts() -> None:
+    usage = {
+        "contextText": "user context",
+        "context_text": "user context snake case",
+        "matcherPayload": "candidate payload",
+        "matcher_prompt": "candidate prompt",
+        "matcherResponse": "candidate response",
+        "response": "raw matcher response",
+        "prompt": "raw user prompt",
+        "prompt_tokens": 123,
+        "completion_tokens": 456,
+        "total_tokens": 579,
+    }
+
+    redacted = redact_value("usage", usage)
+
+    for key in (
+        "contextText",
+        "context_text",
+        "matcherPayload",
+        "matcher_prompt",
+        "matcherResponse",
+        "response",
+        "prompt",
+    ):
+        assert redacted[key] == REDACTED
+    assert redacted["prompt_tokens"] == 123
+    assert redacted["completion_tokens"] == 456
+    assert redacted["total_tokens"] == 579
