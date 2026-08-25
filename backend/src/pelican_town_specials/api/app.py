@@ -222,6 +222,7 @@ def create_app(
             trial_access=resolved_trial_service,
             trial_gateway_factory=_trial_gateway_factory(resolved_trial_service),
             personal_configured=_personal_key_configured(resolved_secret_store),
+            canonical_repository=resolved_canonical_registry,
         ),
         draft_repository=resolved_draft_repository,
     )

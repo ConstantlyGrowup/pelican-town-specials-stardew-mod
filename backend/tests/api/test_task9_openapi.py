@@ -78,3 +78,32 @@ def test_asset_view_openapi_excludes_relative_path(services: ApiServices) -> Non
     properties = schema["components"]["schemas"]["AssetView"]["properties"]
 
     assert "relativePath" not in properties
+
+
+def test_provenance_openapi_contains_canonical_reuse_extension(
+    services: ApiServices,
+) -> None:
+    schema = services.client.app.openapi()
+    provenance = schema["components"]["schemas"]["Provenance"]
+    properties = provenance["properties"]
+
+    assert properties["generationSource"]["$ref"] == (
+        "#/components/schemas/GenerationSource"
+    )
+    assert properties["canonicalDishId"]["anyOf"] == [
+        {"type": "string", "format": "uuid"},
+        {"type": "null"},
+    ]
+    assert properties["recallConfidence"]["anyOf"] == [
+        {"type": "number", "maximum": 1.0, "minimum": 0.0},
+        {"type": "null"},
+    ]
+    assert properties["recallElapsedMs"]["anyOf"] == [
+        {"type": "integer", "minimum": 0},
+        {"type": "null"},
+    ]
+    assert schema["components"]["schemas"]["GenerationSource"]["enum"] == [
+        "FRESH_GENERATION",
+        "USER_AUTHORED",
+        "CANONICAL_REUSED",
+    ]

@@ -1104,7 +1104,7 @@ export interface components {
          * GenerationSource
          * @enum {string}
          */
-        GenerationSource: "FRESH_GENERATION" | "USER_AUTHORED";
+        GenerationSource: "FRESH_GENERATION" | "USER_AUTHORED" | "CANONICAL_REUSED";
         /**
          * GenerationStage
          * @enum {string}
@@ -1236,6 +1236,12 @@ export interface components {
             generationSource: components["schemas"]["GenerationSource"];
             /** Canonicaldishsignature */
             canonicalDishSignature?: string | null;
+            /** Canonicaldishid */
+            canonicalDishId?: string | null;
+            /** Recallconfidence */
+            recallConfidence?: number | null;
+            /** Recallelapsedms */
+            recallElapsedMs?: number | null;
             /** Cacheeligibility */
             cacheEligibility: boolean;
         };

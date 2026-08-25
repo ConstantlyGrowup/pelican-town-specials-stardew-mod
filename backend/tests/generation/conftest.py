@@ -46,6 +46,7 @@ from pelican_town_specials.persistence.repositories import (
 )
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import (
+    CanonicalMatchResponse,
     GeneratedDishCore,
     GeneratedImage,
     ImageGenerationRequest,
@@ -148,6 +149,7 @@ class FakeGateway:
         self.hold = hold
         self.calls: list[str] = []
         self.image_requests: list[ImageGenerationRequest] = []
+        self.canonical_match_response: CanonicalMatchResponse | None = None
 
     async def analyze_dish(
         self, request, *, json_only: bool = False
@@ -172,6 +174,15 @@ class FakeGateway:
         if self.fail_stage is GenerationStage.GAMEPLAY_DESIGN:
             raise RuntimeError("fake design failure")
         return core_fixture()
+
+    async def match_canonical(
+        self, request, *, json_only: bool = False
+    ) -> CanonicalMatchResponse:
+        self.calls.append("match")
+        return self.canonical_match_response or CanonicalMatchResponse(
+            candidateId=None,
+            confidence=0.0,
+        )
 
     async def generate_image(self, request) -> GeneratedImage:
         self.calls.append("image")

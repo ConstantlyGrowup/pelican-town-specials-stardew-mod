@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pelican_town_specials.domain.common import GenerationStage
+from pelican_town_specials.domain.dish import GenerationSource
 from pelican_town_specials.domain.draft import DraftStatus
 from pelican_town_specials.providers.contracts import ImageOperation
 
@@ -66,6 +67,11 @@ async def test_successful_full_regeneration_replaces_all_fields(
     assert restored.visuals.preview_asset_id != old_visuals.preview_asset_id
     assert restored.visuals.generated_art_asset_id is None
     assert restored.visuals.source_revision == restored.revision
+    assert restored.provenance.generation_source is GenerationSource.FRESH_GENERATION
+    assert restored.provenance.canonical_dish_id is None
+    assert restored.provenance.canonical_dish_signature is None
+    assert restored.provenance.recall_confidence is None
+    assert restored.provenance.recall_elapsed_ms is None
 
     # The attempt is finished; no active attempt remains on the promoted draft.
     assert restored.active_attempt_id is None

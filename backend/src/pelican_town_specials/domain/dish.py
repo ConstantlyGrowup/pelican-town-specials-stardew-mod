@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from enum import Enum
-from math import ceil, floor
+from math import ceil, floor, isfinite
 from typing import Any
 from uuid import UUID
 
@@ -25,6 +25,7 @@ class FieldAuthority(str, Enum):
 class GenerationSource(str, Enum):
     FRESH_GENERATION = "FRESH_GENERATION"
     USER_AUTHORED = "USER_AUTHORED"
+    CANONICAL_REUSED = "CANONICAL_REUSED"
 
 
 class RecipeUnlock(str, Enum):
@@ -253,6 +254,18 @@ class Provenance(_FrozenStrictModel):
         min_length=1,
         max_length=200,
     )
+    canonical_dish_id: UUID | None = Field(default=None, alias="canonicalDishId")
+    recall_confidence: float | None = Field(
+        default=None,
+        alias="recallConfidence",
+        ge=0.0,
+        le=1.0,
+    )
+    recall_elapsed_ms: int | None = Field(
+        default=None,
+        alias="recallElapsedMs",
+        ge=0,
+    )
     cache_eligibility: bool = Field(alias="cacheEligibility")
 
     @model_validator(mode="before")
@@ -271,6 +284,25 @@ class Provenance(_FrozenStrictModel):
                 for key, value in mutable["authorityByField"].items()
             }
         return mutable
+
+    @field_validator("canonical_dish_id", mode="before")
+    @classmethod
+    def _validate_optional_canonical_uuid4(cls, value: object) -> UUID | None:
+        if value is None:
+            return None
+        if isinstance(value, UUID):
+            return ensure_uuid4(value)
+        try:
+            return ensure_uuid4(UUID(str(value)))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("canonical_dish_id must be a UUID v4") from exc
+
+    @field_validator("recall_confidence")
+    @classmethod
+    def _validate_finite_recall_confidence(cls, value: float | None) -> float | None:
+        if value is not None and not isfinite(value):
+            raise ValueError("recall_confidence must be finite")
+        return value
 
     @model_validator(mode="after")
     def _validate_blueprint_cache(self) -> Provenance:

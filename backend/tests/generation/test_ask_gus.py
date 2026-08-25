@@ -2,26 +2,45 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 import pytest
 from backend.tests.domain.factories import make_draft as make_domain_draft
 from PIL import Image
 
-from pelican_town_specials.domain.assets import AssetRef
+from pelican_town_specials.domain.assets import AssetRef, MediaType
+from pelican_town_specials.domain.canonical import (
+    CanonicalDish,
+    CanonicalIconKind,
+    CanonicalIconMetadata,
+    CanonicalRecallCandidate,
+)
 from pelican_town_specials.domain.common import DraftMode, GenerationStage
-from pelican_town_specials.domain.draft import AttemptStatus, DraftStatus
+from pelican_town_specials.domain.dish import GenerationSource
+from pelican_town_specials.domain.draft import (
+    AttemptStatus,
+    DraftStatus,
+    GenerationAttemptKind,
+)
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
-from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
+from pelican_town_specials.generation.orchestrator import (
+    GenerationCommand,
+    GenerationOrchestrator,
+)
 from pelican_town_specials.images import downscale_for_vision
 from pelican_town_specials.images.vision_input import EDIT_MIN_PIXELS
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.providers.contracts import (
+    CanonicalMatchResponse,
     ImageMediaType,
     ImageOperation,
     SemanticRecipeIngredient,
 )
+from tests.domain.factories import canonical_registration_fixture
 
 from .conftest import (
     EXPECTED_ASK_GUS_STAGES,
@@ -37,6 +56,171 @@ from .conftest import (
 def _read_asset(asset_store: FileAssetStore, ref: AssetRef) -> bytes:
     with asset_store.open(ref) as handle:
         return handle.read()
+
+
+def _icon_bytes(size: int, color: str) -> bytes:
+    output = io.BytesIO()
+    Image.new("RGBA", (size, size), color).save(output, format="PNG")
+    return output.getvalue()
+
+
+def _canonical_dish(canonical_id: UUID) -> tuple[CanonicalDish, bytes, bytes]:
+    registration = canonical_registration_fixture(canonical_id=canonical_id)
+    source = _icon_bytes(32, "gold")
+    icon_16 = _icon_bytes(16, "orange")
+    registration_payload = registration.model_dump(by_alias=True)
+    recovery = registration_payload["gameplay"]["recovery"]
+    for field in ("calculationVersion", "energyRestore", "healthRestore"):
+        recovery.pop(field, None)
+    canonical = CanonicalDish(
+        **registration_payload,
+        iconSource=CanonicalIconMetadata(
+            relativePath=f"{canonical_id}/icon-source.png",
+            mediaType=MediaType.PNG,
+            sha256=hashlib.sha256(source).hexdigest(),
+            byteSize=len(source),
+            width=32,
+            height=32,
+        ),
+        icon16=CanonicalIconMetadata(
+            relativePath=f"{canonical_id}/icon-16.png",
+            mediaType=MediaType.PNG,
+            sha256=hashlib.sha256(icon_16).hexdigest(),
+            byteSize=len(icon_16),
+            width=16,
+            height=16,
+        ),
+        registeredAt=datetime.now(UTC),
+    )
+    return canonical, source, icon_16
+
+
+class _RecallRegistry:
+    def __init__(
+        self,
+        canonical: CanonicalDish,
+        source: bytes,
+        icon_16: bytes,
+        *,
+        second: CanonicalDish | None = None,
+    ) -> None:
+        self.canonical = canonical
+        self.source = source
+        self.icon_16 = icon_16
+        self.second = second
+        self.calls: list[str] = []
+
+    def count_valid(self) -> int:
+        self.calls.append("count")
+        return 2
+
+    def list_recall_candidate_pool(self, **_kwargs):
+        self.calls.append("pool")
+        candidates = [self.canonical, self.second or self.canonical]
+        return [
+            CanonicalRecallCandidate(
+                canonicalId=item.canonical_id,
+                dishSignature=item.dish_signature,
+                language=item.language,
+                catalogVersion=item.catalog_version,
+                recallDocument=item.recall_document,
+                displayName=item.presentation.display_name,
+                registeredAt=item.registered_at,
+                useCount=item.use_count,
+                lastUsedAt=item.last_used_at,
+            )
+            for item in candidates
+        ]
+
+    def get_valid(self, canonical_id: UUID) -> CanonicalDish | None:
+        self.calls.append("get")
+        if canonical_id == self.canonical.canonical_id:
+            return self.canonical
+        if self.second is not None and canonical_id == self.second.canonical_id:
+            return self.second
+        return None
+
+    def load_owned_icon(self, canonical_id: UUID, kind: CanonicalIconKind) -> bytes:
+        self.calls.append(f"icon:{kind.value}")
+        if canonical_id != self.canonical.canonical_id:
+            raise FileNotFoundError(canonical_id)
+        return self.source if kind is CanonicalIconKind.SOURCE else self.icon_16
+
+
+def _canonical_orchestrator(harness: GenerationHarness, registry: object):
+    return GenerationOrchestrator(
+        draft_repository=harness.draft_repository,
+        attempt_repository=harness.attempt_repository,
+        asset_store=harness.asset_store,
+        catalog=harness.catalog,
+        gateway_factory=lambda: harness.gateway,
+        registry=AttemptRegistry(),
+        min_confidence=0.5,
+        canonical_repository=registry,
+    )
+
+
+async def test_canonical_hit_uses_one_trial_claim_for_analysis_match_and_preview(
+    harness: GenerationHarness,
+) -> None:
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    second, _, _ = _canonical_dish(uuid4())
+    registry = _RecallRegistry(
+        canonical,
+        source_icon,
+        icon_16,
+        second=second,
+    )
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.94,
+    )
+
+    class _Trial:
+        def __init__(self) -> None:
+            self.claims = 0
+
+        def is_active(self) -> bool:
+            return True
+
+        def trial_opportunity(self) -> bool:
+            return True
+
+        def claim_attempt(self) -> bool:
+            self.claims += 1
+            return True
+
+    trial = _Trial()
+    local = GenerationOrchestrator(
+        draft_repository=harness.draft_repository,
+        attempt_repository=harness.attempt_repository,
+        asset_store=harness.asset_store,
+        catalog=harness.catalog,
+        gateway_factory=lambda: harness.gateway,
+        registry=AttemptRegistry(),
+        min_confidence=0.5,
+        trial_access=trial,
+        trial_gateway_factory=lambda: harness.gateway,
+        canonical_repository=registry,
+    )
+    original = put_original_image(harness)
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert trial.claims == 1
+    assert harness.gateway.calls == ["analyze", "match", "image"]
 
 
 async def test_ask_gus_stage_order(
@@ -109,6 +293,226 @@ async def test_ask_gus_stage_order(
     ).convert("RGBA")
     assert preview.size == (96, 64)
     assert preview.size != original.size
+
+
+async def test_initial_ask_gus_hit_reuses_canonical_fields_icons_and_current_preview(
+    harness: GenerationHarness,
+) -> None:
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    second, _, _ = _canonical_dish(uuid4())
+    registry = _RecallRegistry(
+        canonical,
+        source_icon,
+        icon_16,
+        second=second,
+    )
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.97,
+    )
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness, color="navy")
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert harness.gateway.calls == ["analyze", "match", "image"]
+    assert len(harness.gateway.image_requests) == 1
+    preview_request = harness.gateway.image_requests[0]
+    assert preview_request.operation is ImageOperation.EDIT
+    assert len(preview_request.source_images) == 2
+
+    restored = local.drafts.get(saved.draft_id)
+    assert restored.presentation is not None
+    assert canonical.presentation is not None
+    assert restored.presentation.display_name == canonical.presentation.display_name
+    assert restored.presentation.category_label == canonical.presentation.category_label
+    assert restored.presentation.description == canonical.presentation.description
+    assert restored.presentation.gus_comment == canonical.presentation.gus_comment
+    assert restored.presentation.tags == canonical.presentation.tags
+    assert restored.presentation.internal_name != canonical.presentation.internal_name
+    assert restored.presentation.internal_name.startswith(
+        f"{canonical.presentation.internal_name}_"
+    )
+    assert restored.gameplay == canonical.gameplay
+    assert restored.visuals is not None
+    assert restored.visuals.visual_brief == canonical.visual_brief
+    assert restored.visuals.source_revision == restored.revision
+    assert restored.visuals.preview_asset_id is not None
+    assert restored.visuals.icon_source_asset_id is not None
+    assert restored.visuals.icon_16_asset_id is not None
+    source_ref = harness.asset_store.stat(restored.visuals.icon_source_asset_id)
+    icon_16_ref = harness.asset_store.stat(restored.visuals.icon_16_asset_id)
+    assert source_ref.source_revision == restored.revision
+    assert icon_16_ref.source_revision == restored.revision
+    assert source_ref.attempt_id == restored.last_attempt_id
+    assert icon_16_ref.attempt_id == restored.last_attempt_id
+    assert restored.visuals.preview_asset_id != saved.visuals.preview_asset_id
+    assert restored.visuals.icon_source_asset_id != saved.visuals.icon_source_asset_id
+    assert restored.visuals.icon_16_asset_id != saved.visuals.icon_16_asset_id
+    assert _read_asset(
+        harness.asset_store,
+        source_ref,
+    ) == source_icon
+    assert _read_asset(
+        harness.asset_store,
+        icon_16_ref,
+    ) == icon_16
+    assert preview_request.source_images[1].data == source_icon
+    assert preview_request.source_images[0].data != source_icon
+    assert restored.provenance.generation_source is GenerationSource.CANONICAL_REUSED
+    assert restored.provenance.canonical_dish_id == canonical.canonical_id
+    assert restored.provenance.canonical_dish_signature == canonical.dish_signature
+    assert restored.provenance.recall_confidence == 0.97
+    assert restored.provenance.recall_elapsed_ms is not None
+    assert restored.provenance.recall_elapsed_ms >= 0
+    for field in (
+        "presentation.display_name",
+        "presentation.category_label",
+        "presentation.description",
+        "presentation.gus_comment",
+        "presentation.tags",
+        "gameplay.ingredients",
+        "gameplay.recovery",
+        "gameplay.sell_price",
+        "gameplay.is_drink",
+        "gameplay.buff",
+        "gameplay.recipe_unlock",
+        "visuals.visual_brief",
+        "visuals.icon_source_asset_id",
+        "visuals.icon_16_asset_id",
+    ):
+        assert restored.provenance.authority_by_field[field].value == "CACHE_REUSED"
+    assert (
+        restored.provenance.authority_by_field["presentation.internal_name"].value
+        == "SYSTEM_GENERATED"
+    )
+    assert (
+        restored.provenance.authority_by_field["visuals.preview_asset_id"].value
+        == "SYSTEM_GENERATED"
+    )
+
+
+def test_canonical_internal_name_is_stable_and_distinct() -> None:
+    from pelican_town_specials.generation.orchestrator import _canonical_internal_name
+
+    canonical_name = "A" * 48
+    first = UUID("12345678-1234-4234-8234-123456789abc")
+    second = UUID("87654321-1234-4234-8234-123456789abc")
+    assert _canonical_internal_name(canonical_name, first) == _canonical_internal_name(
+        canonical_name, first
+    )
+    assert _canonical_internal_name(canonical_name, first) != _canonical_internal_name(
+        canonical_name, second
+    )
+    assert len(_canonical_internal_name(canonical_name, first)) == 48
+    assert _canonical_internal_name(canonical_name, first).endswith("_12345678")
+
+
+async def test_canonical_miss_falls_back_and_clears_hit_provenance(
+    harness: GenerationHarness,
+) -> None:
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    registry = _RecallRegistry(canonical, source_icon, icon_16)
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=None,
+        confidence=0.0,
+    )
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness)
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert harness.gateway.calls == ["analyze", "match", "design", "image", "image"]
+    restored = local.drafts.get(saved.draft_id)
+    assert restored.provenance.generation_source is GenerationSource.FRESH_GENERATION
+    assert restored.provenance.canonical_dish_id is None
+    assert restored.provenance.canonical_dish_signature is None
+    assert restored.provenance.recall_confidence is None
+    assert restored.provenance.recall_elapsed_ms is None
+
+
+async def test_canonical_icon_integrity_failure_falls_back_before_hit_promotion(
+    harness: GenerationHarness,
+) -> None:
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    registry = _RecallRegistry(canonical, source_icon, icon_16)
+    registry.source = b"not-a-valid-png"
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.99,
+    )
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness)
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert harness.gateway.calls == ["analyze", "match", "design", "image", "image"]
+    restored = local.drafts.get(saved.draft_id)
+    assert restored.provenance.generation_source is GenerationSource.FRESH_GENERATION
+    assert restored.provenance.canonical_dish_id is None
+
+
+async def test_full_regenerate_and_blueprint_never_touch_canonical_registry(
+    harness: GenerationHarness,
+    reviewable_draft,
+    blueprint_stale,
+) -> None:
+    class _ForbiddenRegistry:
+        def __getattr__(self, name: str):
+            raise AssertionError(f"canonical registry accessed: {name}")
+
+    local = _canonical_orchestrator(harness, _ForbiddenRegistry())
+    events = [event async for event in local.run(full_regen_command(reviewable_draft))]
+    assert events[-1].type == "attempt.succeeded"
+
+    harness.gateway.calls.clear()
+    harness.gateway.image_requests.clear()
+    blueprint_events = [
+        event async for event in local.run(
+            GenerationCommand(
+                draftId=blueprint_stale.draft_id,
+                kind=GenerationAttemptKind.BLUEPRINT_PREVIEW,
+                requestId=uuid4(),
+            )
+        )
+    ]
+    assert blueprint_events[-1].type == "attempt.succeeded"
 
 
 async def test_preview_stops_without_two_image_edit_capability(

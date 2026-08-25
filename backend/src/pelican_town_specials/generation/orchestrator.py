@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import io
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from time import monotonic
@@ -12,10 +13,19 @@ from uuid import UUID, uuid4
 from PIL import Image
 from pydantic import Field
 
+from pelican_town_specials.application.canonical_memory import RecallService
+from pelican_town_specials.catalog.gameplay_rules import validate_gameplay
 from pelican_town_specials.catalog.mapping import ensure_main_protein, map_ingredient
 from pelican_town_specials.catalog.models import CatalogCandidate
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
+from pelican_town_specials.domain.canonical import (
+    CanonicalDish,
+    CanonicalIconKind,
+    CanonicalIconMetadata,
+    CanonicalRepository,
+    RecallDecision,
+)
 from pelican_town_specials.domain.common import (
     DraftMode,
     GenerationStage,
@@ -28,6 +38,7 @@ from pelican_town_specials.domain.dish import (
     FieldAuthority,
     GameIngredient,
     GameplaySpec,
+    GenerationSource,
     PresentationSpec,
     Provenance,
     RecipeUnlock,
@@ -103,6 +114,26 @@ _ANALYSIS_PROMPT_VERSION = "analysis-v1"
 _VISUAL_PROMPT_VERSION = "visual-v3-multi-image-edit"
 _ICON_SIZE = "1024x1024"
 
+_CANONICAL_REUSED_AUTHORITY = {
+    "presentation.display_name": FieldAuthority.CACHE_REUSED,
+    "presentation.category_label": FieldAuthority.CACHE_REUSED,
+    "presentation.description": FieldAuthority.CACHE_REUSED,
+    "presentation.gus_comment": FieldAuthority.CACHE_REUSED,
+    "presentation.tags": FieldAuthority.CACHE_REUSED,
+    "presentation.internal_name": FieldAuthority.SYSTEM_GENERATED,
+    "gameplay.ingredients": FieldAuthority.CACHE_REUSED,
+    "gameplay.recovery": FieldAuthority.CACHE_REUSED,
+    "gameplay.sell_price": FieldAuthority.CACHE_REUSED,
+    "gameplay.is_drink": FieldAuthority.CACHE_REUSED,
+    "gameplay.buff": FieldAuthority.CACHE_REUSED,
+    "gameplay.recipe_unlock": FieldAuthority.CACHE_REUSED,
+    "visuals.visual_brief": FieldAuthority.CACHE_REUSED,
+    "visuals.icon_source_asset_id": FieldAuthority.CACHE_REUSED,
+    "visuals.icon_16_asset_id": FieldAuthority.CACHE_REUSED,
+    "visuals.preview_asset_id": FieldAuthority.SYSTEM_GENERATED,
+    "visuals.source_revision": FieldAuthority.SYSTEM_GENERATED,
+}
+
 
 def _language_suffix(language: Language) -> str:
     return "en" if language is Language.EN_US else "zh"
@@ -114,6 +145,7 @@ class _RunState:
         "attempt",
         "attempt_id",
         "candidate",
+        "canonical",
         "command",
         "core",
         "draft",
@@ -124,6 +156,8 @@ class _RunState:
         "icon_source_asset_id",
         "presentation",
         "preview",
+        "recall_confidence",
+        "recall_elapsed_ms",
         "staged",
         "visual_brief",
     )
@@ -132,6 +166,7 @@ class _RunState:
     command: GenerationCommand
     draft: DraftRecord
     candidate: DraftRecord
+    canonical: CanonicalDish | None
     gateway: ModelGateway | None
     attempt: GenerationAttempt
     staged: DraftRecord
@@ -144,6 +179,8 @@ class _RunState:
     icon_source_asset_id: UUID | None
     icon_16: AssetRef | None
     preview: AssetRef | None
+    recall_confidence: float | None
+    recall_elapsed_ms: int | None
 
     def __init__(
         self,
@@ -165,6 +202,7 @@ class _RunState:
         self.staged = staged
         self.analysis = None
         self.core = None
+        self.canonical = None
         self.gameplay = None
         self.presentation = None
         self.visual_brief = None
@@ -172,6 +210,8 @@ class _RunState:
         self.icon_source_asset_id = None
         self.icon_16 = None
         self.preview = None
+        self.recall_confidence = None
+        self.recall_elapsed_ms = None
 
 
 def _map_gameplay(
@@ -276,6 +316,51 @@ def _extension_for_media_type(value: ImageMediaType) -> str:
     return ".png"
 
 
+def _canonical_internal_name(canonical_internal_name: str, draft_id: UUID) -> str:
+    """Keep a reused dish's readable ID while making each draft unique."""
+    suffix = f"_{draft_id.hex[:8]}"
+    prefix_length = 48 - len(suffix)
+    return f"{canonical_internal_name[:prefix_length]}{suffix}"
+
+
+def _expected_image_format(media_type: MediaType) -> str:
+    if media_type is MediaType.PNG:
+        return "PNG"
+    if media_type is MediaType.JPEG:
+        return "JPEG"
+    if media_type is MediaType.WEBP:
+        return "WEBP"
+    raise ValueError("canonical icon media type is unsupported")
+
+
+def _validate_canonical_icon_data(
+    data: bytes,
+    metadata: CanonicalIconMetadata,
+    *,
+    icon_16: bool,
+) -> None:
+    if len(data) != metadata.byte_size:
+        raise ValueError("canonical icon byte size does not match metadata")
+    if hashlib.sha256(data).hexdigest() != metadata.sha256:
+        raise ValueError("canonical icon hash does not match metadata")
+    if icon_16 and (
+        metadata.media_type is not MediaType.PNG
+        or (metadata.width, metadata.height) != (16, 16)
+    ):
+        raise ValueError("canonical icon16 must be PNG and exactly 16x16")
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            actual_format = image.format
+            actual_size = image.size
+            image.verify()
+    except Exception as exc:
+        raise ValueError("canonical icon bytes are not a valid image") from exc
+    if actual_format != _expected_image_format(metadata.media_type):
+        raise ValueError("canonical icon media type does not match its bytes")
+    if actual_size != (metadata.width, metadata.height):
+        raise ValueError("canonical icon dimensions do not match metadata")
+
+
 def _image_dimensions(data: bytes) -> tuple[int, int]:
     with Image.open(io.BytesIO(data)) as image:
         return image.size
@@ -334,6 +419,7 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
         "presentation.internal_name": FieldAuthority.AGENT_ASSIGNED,
         "presentation.category_label": FieldAuthority.AGENT_ASSIGNED,
         "presentation.description": FieldAuthority.AGENT_ASSIGNED,
+        "presentation.gus_comment": FieldAuthority.AGENT_ASSIGNED,
         "presentation.tags": FieldAuthority.AGENT_ASSIGNED,
         "gameplay.ingredients": FieldAuthority.SYSTEM_GENERATED,
         "gameplay.recovery": FieldAuthority.AGENT_ASSIGNED,
@@ -341,6 +427,11 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
         "gameplay.is_drink": FieldAuthority.AGENT_ASSIGNED,
         "gameplay.buff": FieldAuthority.AGENT_ASSIGNED,
         "gameplay.recipe_unlock": FieldAuthority.AGENT_ASSIGNED,
+        "visuals.visual_brief": FieldAuthority.AGENT_ASSIGNED,
+        "visuals.icon_source_asset_id": FieldAuthority.SYSTEM_GENERATED,
+        "visuals.icon_16_asset_id": FieldAuthority.SYSTEM_GENERATED,
+        "visuals.preview_asset_id": FieldAuthority.SYSTEM_GENERATED,
+        "visuals.source_revision": FieldAuthority.SYSTEM_GENERATED,
     }
     suffix = _language_suffix(draft.source.language)
     return base.model_copy(
@@ -352,6 +443,42 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
                 "ask-gus": f"{_ASK_GUS_PROMPT_VERSION}-{suffix}",
                 "visual": f"{_VISUAL_PROMPT_VERSION}-{suffix}",
             },
+            "generation_source": GenerationSource.FRESH_GENERATION,
+            "canonical_dish_id": None,
+            "canonical_dish_signature": None,
+            "recall_confidence": None,
+            "recall_elapsed_ms": None,
+        }
+    )
+
+
+def _canonical_reused_provenance(state: _RunState) -> Provenance:
+    assert state.canonical is not None
+    base = state.draft.provenance
+    suffix = _language_suffix(state.draft.source.language)
+    prompt_versions = {
+        key: value
+        for key, value in base.prompt_versions.items()
+        if key != "ask-gus"
+    }
+    prompt_versions.update(
+        {
+            "analysis": f"{_ANALYSIS_PROMPT_VERSION}-{suffix}",
+            "visual": f"{_VISUAL_PROMPT_VERSION}-{suffix}",
+        }
+    )
+    return base.model_copy(
+        update={
+            "authority_by_field": {
+                **base.authority_by_field,
+                **_CANONICAL_REUSED_AUTHORITY,
+            },
+            "prompt_versions": prompt_versions,
+            "generation_source": GenerationSource.CANONICAL_REUSED,
+            "canonical_dish_id": state.canonical.canonical_id,
+            "canonical_dish_signature": state.canonical.dish_signature,
+            "recall_confidence": state.recall_confidence,
+            "recall_elapsed_ms": state.recall_elapsed_ms,
         }
     )
 
@@ -588,6 +715,7 @@ class GenerationOrchestrator:
         trial_access: TrialAccess | None = None,
         trial_gateway_factory: GatewayFactory | None = None,
         personal_configured: Callable[[], bool] = lambda: False,
+        canonical_repository: CanonicalRepository | None = None,
     ) -> None:
         self._drafts = draft_repository
         self._attempts = attempt_repository
@@ -597,6 +725,7 @@ class GenerationOrchestrator:
         self._trial_access = trial_access
         self._trial_gateway_factory = trial_gateway_factory
         self._personal_configured = personal_configured
+        self._canonical_repository = canonical_repository
         self._registry = registry
         self._min_confidence = min_confidence
         self._clock = clock
@@ -861,6 +990,126 @@ class GenerationOrchestrator:
         state.gateway = self._gateway_factory()
         return state.gateway
 
+    def _import_canonical_icons(
+        self,
+        state: _RunState,
+        canonical: CanonicalDish,
+    ) -> tuple[GeneratedImage, AssetRef, AssetRef]:
+        repository = self._canonical_repository
+        if repository is None:
+            raise ValueError("canonical Registry is unavailable")
+
+        source_data = repository.load_owned_icon(
+            canonical.canonical_id,
+            CanonicalIconKind.SOURCE,
+        )
+        icon_16_data = repository.load_owned_icon(
+            canonical.canonical_id,
+            CanonicalIconKind.ICON_16,
+        )
+        _validate_canonical_icon_data(
+            source_data,
+            canonical.icon_source,
+            icon_16=False,
+        )
+        _validate_canonical_icon_data(
+            icon_16_data,
+            canonical.icon_16,
+            icon_16=True,
+        )
+        source_media_type = ImageMediaType(canonical.icon_source.media_type.value)
+        icon_16_media_type = ImageMediaType(canonical.icon_16.media_type.value)
+        source_revision = state.draft.revision + 1
+        source_ref = self._assets.put(
+            source_data,
+            AssetMetadata(
+                kind=AssetKind.ICON_SOURCE,
+                mediaType=canonical.icon_source.media_type,
+                fileExtension=_extension_for_media_type(source_media_type),
+                width=canonical.icon_source.width,
+                height=canonical.icon_source.height,
+                sourceRevision=source_revision,
+                attemptId=state.attempt_id,
+            ),
+        )
+        icon_16_ref = self._assets.put(
+            icon_16_data,
+            AssetMetadata(
+                kind=AssetKind.ICON_16,
+                mediaType=canonical.icon_16.media_type,
+                fileExtension=_extension_for_media_type(icon_16_media_type),
+                width=canonical.icon_16.width,
+                height=canonical.icon_16.height,
+                sourceRevision=source_revision,
+                attemptId=state.attempt_id,
+            ),
+        )
+        return (
+            GeneratedImage(data=source_data, media_type=source_media_type),
+            source_ref,
+            icon_16_ref,
+        )
+
+    async def _try_canonical_recall(self, state: _RunState) -> bool:
+        if (
+            self._canonical_repository is None
+            or state.command.kind is not GenerationAttemptKind.INITIAL
+            or state.draft.mode is not DraftMode.ASK_GUS
+        ):
+            return False
+        assert state.analysis is not None
+        # Keep _ensure_gateway outside the fail-open recall boundary: a trial
+        # limit error is the existing generation error and must not cause a
+        # second claim attempt while falling back to design.
+        gateway = self._ensure_gateway(state)
+        try:
+            result = await RecallService(
+                registry=self._canonical_repository,
+                gateway=gateway,
+            ).recall(
+                state.analysis,
+                state.draft.source.context_text,
+                state.draft.source.language,
+                self._catalog.version,
+                state.command.request_id,
+            )
+            if result.decision is not RecallDecision.MATCH_HIT:
+                return False
+            canonical = result.canonical_dish
+            if canonical is None:
+                return False
+            gameplay_report = validate_gameplay(canonical.gameplay, self._catalog)
+            if any(
+                issue.severity is ValidationSeverity.ERROR
+                for issue in gameplay_report.issues
+            ):
+                return False
+            icon_source, icon_source_ref, icon_16_ref = self._import_canonical_icons(
+                state,
+                canonical,
+            )
+            state.canonical = canonical
+            state.recall_confidence = result.trace.confidence
+            state.recall_elapsed_ms = result.trace.elapsed_ms
+            state.presentation = canonical.presentation.model_copy(
+                update={
+                    "internal_name": _canonical_internal_name(
+                        canonical.presentation.internal_name,
+                        state.draft.draft_id,
+                    )
+                }
+            )
+            state.gameplay = canonical.gameplay
+            state.visual_brief = canonical.visual_brief
+            state.icon_source = icon_source
+            state.icon_source_asset_id = icon_source_ref.asset_id
+            state.icon_16 = icon_16_ref
+            return True
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 - memory failures degrade to fresh
+            return False
+
     async def _execute_stage(self, state: _RunState, stage: GenerationStage) -> None:
         draft = state.draft
         if stage is GenerationStage.INPUT_VALIDATION:
@@ -885,24 +1134,33 @@ class GenerationOrchestrator:
             self._update_candidate(state, analysis=state.analysis)
         elif stage is GenerationStage.GAMEPLAY_DESIGN:
             assert state.analysis is not None
-            state.core = await self._ensure_gateway(state).design_ask_gus(
-                AskGusDesignRequest(
-                    analysis=state.analysis,
-                    context_text=draft.source.context_text,
-                    language=draft.source.language,
-                    request_id=state.command.request_id,
+            if await self._try_canonical_recall(state):
+                assert state.presentation is not None
+                self._update_candidate(state, presentation=state.presentation)
+            else:
+                state.core = await self._ensure_gateway(state).design_ask_gus(
+                    AskGusDesignRequest(
+                        analysis=state.analysis,
+                        context_text=draft.source.context_text,
+                        language=draft.source.language,
+                        request_id=state.command.request_id,
+                    )
                 )
-            )
-            state.presentation = state.core.presentation
-            self._update_candidate(state, presentation=state.presentation)
+                state.presentation = state.core.presentation
+                self._update_candidate(state, presentation=state.presentation)
         elif stage is GenerationStage.INGREDIENT_MAPPING:
-            assert state.core is not None
-            state.gameplay = _map_gameplay(
-                state.core, self._catalog, language=draft.source.language
-            )
+            if state.canonical is None:
+                assert state.core is not None
+                state.gameplay = _map_gameplay(
+                    state.core, self._catalog, language=draft.source.language
+                )
+            else:
+                assert state.gameplay is not None
             self._update_candidate(state, gameplay=state.gameplay)
         elif stage is GenerationStage.VISUAL_BRIEF:
-            if draft.mode is DraftMode.BLUEPRINT:
+            if state.canonical is not None:
+                assert state.visual_brief is not None
+            elif draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
                 assert draft.gameplay is not None
                 state.visual_brief = build_blueprint_visual_brief(
@@ -914,6 +1172,11 @@ class GenerationOrchestrator:
                 assert state.core is not None
                 state.visual_brief = state.core.visual_brief
         elif stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION:
+            if state.canonical is not None:
+                assert state.icon_source is not None
+                assert state.icon_source_asset_id is not None
+                assert state.icon_16 is not None
+                return
             if draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
                 icon_prompt = blueprint_icon_prompt(
@@ -973,6 +1236,16 @@ class GenerationOrchestrator:
                 snapshot_presentation = draft.presentation
                 snapshot_gameplay = draft.gameplay
                 prompt = blueprint_preview_prompt(
+                    snapshot_presentation,
+                    snapshot_gameplay,
+                    language=draft.source.language,
+                )
+            elif state.canonical is not None:
+                assert state.presentation is not None
+                assert state.gameplay is not None
+                snapshot_presentation = state.presentation
+                snapshot_gameplay = state.gameplay
+                prompt = _preview_prompt(
                     snapshot_presentation,
                     snapshot_gameplay,
                     language=draft.source.language,
@@ -1129,6 +1402,8 @@ class GenerationOrchestrator:
                     },
                 }
             )
+        elif state.canonical is not None:
+            provenance = _canonical_reused_provenance(state)
         else:
             provenance = _generated_provenance(state.draft)
         return state.candidate.model_copy(

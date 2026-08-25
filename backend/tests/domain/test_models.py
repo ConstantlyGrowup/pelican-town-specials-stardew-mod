@@ -23,6 +23,7 @@ from pelican_town_specials.domain.dish import (
     FieldAuthority,
     GameIngredient,
     GameplaySpec,
+    GenerationSource,
     Provenance,
     RecoverySpec,
 )
@@ -381,6 +382,37 @@ def test_blueprint_provenance_cannot_reuse_cache() -> None:
             generationSource="USER_AUTHORED",
             cacheEligibility=True,
         )
+
+
+def test_provenance_supports_canonical_reuse_and_historical_signature_only() -> None:
+    canonical_id = uuid4()
+    hit = Provenance(
+        mode=DraftMode.ASK_GUS,
+        authorityByField={},
+        promptVersions={},
+        generationSource=GenerationSource.CANONICAL_REUSED,
+        canonicalDishId=canonical_id,
+        canonicalDishSignature="a" * 64,
+        recallConfidence=0.95,
+        recallElapsedMs=12,
+        cacheEligibility=True,
+    )
+    assert hit.generation_source is GenerationSource.CANONICAL_REUSED
+    assert hit.canonical_dish_id == canonical_id
+    assert hit.recall_confidence == 0.95
+    assert hit.recall_elapsed_ms == 12
+
+    historical = Provenance(
+        mode=DraftMode.ASK_GUS,
+        authorityByField={},
+        promptVersions={},
+        generationSource=GenerationSource.FRESH_GENERATION,
+        canonicalDishSignature="legacy-signature",
+        cacheEligibility=True,
+    )
+    assert historical.canonical_dish_id is None
+    assert historical.recall_confidence is None
+    assert historical.recall_elapsed_ms is None
 
 
 def test_archived_dish_rejects_top_level_and_nested_mutation() -> None:

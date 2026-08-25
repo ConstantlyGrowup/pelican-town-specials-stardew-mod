@@ -2701,7 +2701,8 @@
         "type": "string",
         "enum": [
           "FRESH_GENERATION",
-          "USER_AUTHORED"
+          "USER_AUTHORED",
+          "CANONICAL_REUSED"
         ],
         "title": "GenerationSource"
       },
@@ -3099,6 +3100,43 @@
               }
             ],
             "title": "Canonicaldishsignature"
+          },
+          "canonicalDishId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonicaldishid"
+          },
+          "recallConfidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recallconfidence"
+          },
+          "recallElapsedMs": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recallelapsedms"
           },
           "cacheEligibility": {
             "type": "boolean",

@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_9_task_34_planning |
-| project_phase | Milestone 8 与 Task 30 均已完成，正式版本 v1.3.0 已发布并核验。M9/M10 规划已验收；M9 Task 31–33 已本地完成，M10 仅规划验收、尚未授权实施 |
+| overall_state | milestone_9_task_34_auto_accepted |
+| project_phase | Milestone 8 与 Task 30 均已完成，正式版本 v1.3.0 已发布并核验。M9/M10 规划已验收；M9 Task 31–34 已本地完成，M10 仅规划验收、尚未授权实施 |
 | product_implementation_started | true |
-| active_session_id | none（Task 33 已 committed；Task 34 Session/Packet 待创建） |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | 为 Task 34“Ask Gus 命中复用、资产导入与 Provenance”完成依赖闭包、Context Packet 和新 Session |
+| active_session_id | `2026-08-25-task-34-canonical-reuse` |
+| active_session_state | auto_accepted |
+| active_session_type | milestone-9-task-implementation |
+| current_task | Task 34“Ask Gus 命中复用、资产导入与 Provenance”经 `luna_worker` 实施、`detector` 独立审阅和主 Agent 复验后 PASS，进入 auto_accepted |
 | blocker | 无 |
-| next_action | 以 Task 33 本地 focused commit 为 base 完成 Task 34 Context Packet（READY_FOR_IMPLEMENTATION）→ 新 `luna_worker` 实施 → 新 `detector` 独立审阅 → PASS 后主 Agent 复验并本地提交；不 push、不逐 Task 打断 |
+| next_action | 创建 Task 35“生成耗时卡片与 Gus 命中叙事”Context Packet，随后按 Codex 接管模式串行实施、审阅、复验和本地提交；不 push、不逐 Task 打断 |
 | collaboration_model | M9 临时由 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `feat/mvp-implementation` 本地 HEAD 为 Task 31 focused commit（本文件所在提交，message `feat: add SQLite canonical registry foundation`），origin 仍位于 `7addfb8`；M9 commits 不 push；tag `v1.3.0` 位于 `4de82ad` |
+| 最新提交 | `feat/mvp-implementation` 本地 Task 31–34 focused commits 已串行完成；本文件所在提交为 Task 34（message `feat: reuse canonical dishes in Ask Gus generation`），origin 仍位于 `7addfb8`；M9 commits 不 push；tag `v1.3.0` 位于 `4de82ad` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送，本地与 origin 同步。M9 自治开发期间的 Task commits 暂不 push。 |
-| 当前工作树范围 | Task 31 的 7 个实现/测试文件与 3 个控制面文件已进入 focused commit；用户已有 prototype、samples、Claude worktree 与 review 临时目录等未跟踪文件保持原样且未纳入。下一步只创建 Task 32 Packet/Session 与其冻结闭包文件。 |
+| 当前工作树范围 | Task 34 的 Canonical 复用、Provenance/OpenAPI 与测试、Session/STATUS 进入单一 focused commit；用户已有 prototype、samples、Claude worktree 与 review/pytest 临时目录等未跟踪文件保持原样且未纳入。下一步只创建 Task 35 Packet/Session 与其冻结闭包文件。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
