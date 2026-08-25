@@ -6,16 +6,16 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | task30_implementation |
-| project_phase | Milestone 8/v1.2.0 已发布；用户 2026-08-16 明确要求实现 Task 30 新手试用入口（覆盖此前 deferred 状态）；第三期全局生成记忆仍为独立需求发现（暂停等待用户回答，Task 30 期间不开发） |
+| overall_state | milestone_9_authorized |
+| project_phase | Milestone 8 与 Task 30 均已完成，正式版本 v1.3.0 已发布并核验。Milestone 9 Task 31–36 与 Milestone 10 Task 37–39 规划已于 2026-08-25 获用户统一验收；M9 已授权按 Milestone 粒度自治开发，M10 仅规划验收、尚未授权实施 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-16-task-30-trial-entry-impl` |
-| active_session_state | accepted（用户 2026-08-17 验收 Task 30 含 R-09，授权 push + 发布 v1.3.0；分支已推送至 `4de82ad`，tag `v1.3.0` 已推送，**GitHub Release v1.3.0 已发布并核验**：setup.exe + windows-x64 ZIP + SHA256SUMS.txt，release run 31952659305 全绿） |
-| active_session_type | task-30-implementation |
-| current_task | 实施 Task 30 新手试用入口：隐藏试用档案 + trial-state.json 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + CI Secret 注入试用资源 |
+| active_session_id | none（Task 31 Session 待创建） |
+| active_session_state | none（规划 Session 已 accepted / closed；Task 31 Packet 准备中） |
+| active_session_type | none |
+| current_task | 为 Milestone 9 Task 31“Canonical 领域模型、SQLite Registry 与自有图标”完成依赖闭包、Context Packet 和新实施 Session |
 | blocker | 无 |
-| next_action | **v1.3.0 已发布并核验**（release run 31952659305 全绿：resolve-version → verify-and-build 10m48s → create-release 17s；`gh release view v1.3.0` 确认产物 setup.exe + windows-x64 ZIP + SHA256SUMS.txt，非 draft/pre-release）。发布期间分支 CI（run 31952234049）曾因 M8 并发 flaky 测试 `test_fourth_concurrent_generation_returns_409_busy_with_details` 失败一次（`assert 5 == 3`）——已诊断与 R-09 无关，为在途生成在快照后继续追加 design 调用的时间竞态，并用 FakeGateway `hold` 门控做了确定性修复（generation/stream 73 测试通过，flaky 测试 8/8 通过），作为维护 commit 本地提交（未 push）。此前链路：Task 30（含 R-09）验收通过并授权 push（`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）。 |
-| collaboration_model | 主会话（Claude Code）直接实施 + 自动验证；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；里程碑粒度不打断 |
+| next_action | 创建 Task 31 Context Packet（READY_FOR_IMPLEMENTATION）与独立 Session；随后按 31→36 串行执行新 implementer → Codex gpt-5.6-luna/max 独立 Review → PASS auto_accept → 本地 focused commit。普通 Task 不打断用户、不 push；只在 M9 完成、BLOCKED 或确需人工介入时通知 |
+| collaboration_model | 主会话（Claude Code）规划协调；每 Task 新 implementer；Codex MCP 独立审阅（gpt-5.6-luna/max，新 thread）；PASS → auto_accepted → 本地 focused commit；Milestone 粒度不打断 |
 
 ## 当前 Git 状态事实
 
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `feat/mvp-implementation` 本地与 origin 均位于 `4de82ad`（release: bump version to 1.3.0，Task 30 发布链路）；v1.3.0 版本提升为 `4de82ad`，验收/发布记录为 `1a0c53a`，annotated tag `v1.3.0` 指向该链路；v1.2.0 链路（`3b6ea33`/`3604713`/tag `v1.2.0`）、tag `v1.1.0` 位于 `b39b50d` |
-| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。 |
-| 当前工作树范围 | Task 30 实施改动（backend `application/trial.py`、orchestrator/errors/app/settings 路由、新测试、前端 SettingsPage/GenerationError/copy、OpenAPI 契约、E2E、build.yml、.gitignore）＋控制面文档（STATUS.md、Task 30 Session、AGENTS.md、CONSTRAINTS.md）。另保留用户已有的 prototype、official-assets、samples、`.pytest_tmp/`、`.review_tmp_task20_workspace/` 等未跟踪文件。 |
+| 最新提交 | `feat/mvp-implementation` 本地与 origin 均位于 `7addfb8`（记录 v1.3.0 发布与 M8 flaky 测试修复）；测试稳定性修复为 `e6582f7`；tag `v1.3.0` 位于版本提升提交 `4de82ad` |
+| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送，本地与 origin 同步。 |
+| 当前工作树范围 | 当前有 M9/M10 规划与状态同步产生的 tracked 文档修改，以及 Git ignored 的正式技术设计/实施计划；无产品源码、OpenAPI、测试或发布配置修改。用户已有 prototype、samples 与 review 临时目录等未跟踪文件保持原样；无待推送提交。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -38,17 +38,28 @@
 - 2026-08-16 用户将当前工作重排为第三期全局生成记忆规划；Task 30 保留为 deferred backlog。规划文件仍保留（gitignored），未创建 Context Packet、未修改产品源码、未接触真实 Key。
 - **2026-08-16 用户明确指令“实现完 task30 并更新相关文档”，覆盖 deferred 状态**：规划 Session 使命完成并关闭；批准启用本机软额度 N=2、接受“删除应用数据可绕过”的软限制、接受“桌面包内专用 Key 可被有意提取、供应商控制台消费上限为硬兜底”边界（即规划 §9 三项待确认，均按计划推荐值接受，无需再打断用户）。
 
-## 当前 Task 30 实施 Session（active）
+## 已关闭 Task 30 实施 Session（committed / released）
 
-- `2026-08-16-task-30-trial-entry-impl`：本 Session 只处理 Task 30（新手试用入口）。Context Packet：`mvp-task-30-trial-entry-v1`（`docs/plans/2026-08-16-task-30-trial-entry-packet.md`，gitignored），base_commit `b6df1f3`，revise_round 0，规划裁决 R-01..R-08；2026-08-16 用户授权扩展 R-09「已配置用户优先试用」→ 本地 commit `9cb35a8`（Codex round 0 PASS → auto_accepted，未 push）。Task 30 整体仍在 awaiting_user_acceptance。
+- `2026-08-16-task-30-trial-entry-impl`：Task 30（新手试用入口）及 R-09「已配置用户优先试用」已通过用户验收；实现提交 `96e9988` / `9cb35a8`，v1.3.0 版本提升 `4de82ad`，均已推送并发布。
 - 方案：独立隐藏试用档案 + `app-state/trial-state.json`（`claimedAttempts` 本机软限额，N=2）；试用 gateway 在首次 Provider 调用（Ask Gus `DISH_ANALYSIS` / Blueprint `ICON_GENERATION`）前原子 claim 一次，`INPUT_VALIDATION` 本地失败不扣；保存个人 Provider 参数或 Key 自动退出且不重置次数；耗尽返回 `PTS_TRIAL_LIMIT_REACHED`；试用 Key 由 `build.yml` 从 `secrets.PTS_TRIAL_API_KEY` 注入 `resources/trial/trial_api_key.txt`（gitignored），本地/测试只用 fake key。
-- 第三期发现 Session `2026-08-16-phase-3-global-memory-planning` 保持存在但不修改源码，暂停等待用户回答，Task 30 期间不开发第三期。
+- 发布后 M8 并发测试稳定性维护修复 `e6582f7` 与收尾记录 `7addfb8` 也已推送；本 Session 已关闭，当前工作恢复到第三期发现 Session。
 
-## 当前第三期需求发现 Session
+## 已关闭第三期规划 Session
 
 - `2026-08-16-phase-3-global-memory-planning`：第三期只规划全局生成记忆与 Canonical 召回，先在本地版验证。
-- 已冻结：最终预览必须使用当前用户原图重新生成；允许候选复用结构化词条和像素图标；夜间批处理/Redis 后移第四期；在线后端后移第四期；管理端后移第五期。
-- 当前无产品源码、分支、提交或外部部署操作。等待用户统一回答需求清单后再更新设计。
+- 已确认：全局 Registry 至少有 `N=2` 道有效菜品才召回；仅正式存档的 Ask Gus 成品写入；先按现实原料等字段筛少量同语言候选，再由模型选择最高置信度项，只有 `>=90%` 才命中；命中复用完整结构化词条与像素图标，最终预览仍用本次原图重新生成。
+- 补充要求参与匹配且冲突即 miss；完整重新生成不直接复用；料理蓝图不进入记忆；异常统一降级为 miss。效果指标只保留单次生成耗时和单次任务成本，不使用调用数/步骤数作为成功指标。
+- Milestone 9 已定义为“Gus 的全局生成记忆与 Canonical 召回”，严格串行 Task 31–36：SQLite Registry；正式存档登记/启动修复；候选与 matcher；Orchestrator 命中复用；耗时/Gus 叙事；全链路与打包验收。
+- 技术设计：`docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0；详细计划：`docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0；MVP 技术设计/实施计划当前索引为 v2.3/v1.6（同时登记 M10）。
+- 2026-08-25 用户已验收 M9/M10 规划并授权开始 M9；本规划 Session 已关闭，Task 31 Context Packet 准备中。
+
+## 已验收、待实施授权的 Milestone 10 规划
+
+- Milestone 10 定义为“EXE 无感使用统计”，技术设计 `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1，详细计划 `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1。
+- 方案：PostHog Cloud 只写采集端点 + 后端人工类型化事件 + 随机安装 ID；配置完整的 Windows Release 自动启用，不新增首次说明、确认步骤、设置开关、前端页面、公开 API 或用户文档入口，M10 完成前后用户体验不变。
+- 禁止发送图片、菜品文本、用户输入、Key、中转站、模型 ID、业务 ID、异常正文、路径、设备指纹、IP/Geo、DOM/点击或 session replay；不记录应用版本，不统计新版本采用比例；项目使用 personless 事件并在 PostHog 关闭 IP 保存。
+- 后端只做有界内存队列和异步短超时发送，collector 故障不影响业务；GitHub Release 下载量只作旁证。M10 减负为 Task 37 统计核心、38 业务事件、39 Release 配置/看板/E2E。
+- M10 与 M9 无硬代码依赖，默认排在 M9 后；如排期要求先获得 EXE 量化能力，需用户明确重排。当前未创建 PostHog 项目、Repository Variables、Task 37 Packet 或源码修改。
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 

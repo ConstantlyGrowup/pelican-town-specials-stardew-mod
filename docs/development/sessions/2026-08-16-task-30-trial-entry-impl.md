@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-16-task-30-trial-entry-impl` |
-| status | `accepted` |
+| status | `committed / released / closed` |
 | session_type | `task-30-implementation` |
 | owner | Codex 主会话（包工） |
 | started_at | `2026-08-16` |
@@ -81,3 +81,9 @@
 - `backend/tests/api/test_generation_stream.py`：并发 409 测试设置 `hold`，冻结三个在途生成后快照；断言期间在途生成无法追加新调用，`len(calls) == calls_before` 由竞态变为确定；finally 先 `hold.set()` 再取消任务。
 - 验证：generation + stream 全量 73 passed；flaky 测试连续 8/8 通过；全量 CI 命令 `python -m pytest backend/tests tests/repo tests/integration -q` 全绿。
 - 状态：测试-only、无用户可见行为变化、测试全覆盖 → 按自动审批例外本地维护 commit（未 push）。
+
+## 最终关闭（2026-08-25 状态核对）
+
+- 维护修复已提交为 `e6582f7`，发布与修复收尾记录为 `7addfb8`；两者均已推送，当前分支与 origin 同位于 `7addfb8`。
+- Task 30 已验收、提交、推送并随 GitHub Release v1.3.0 发布；本 Session 正式关闭，不再是当前活动 Session。
+- 当前工作恢复到 `2026-08-16-phase-3-global-memory-planning`，仍只做需求发现，未授权第三期产品开发。

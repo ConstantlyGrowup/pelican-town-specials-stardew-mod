@@ -6,10 +6,14 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v1.9 | 已发布本地版的运行形态、模块、数据模型、API、工作流、错误处理、Mod 编译协议和 Yibu API probe 结论；M8 已实现，Task 30 已实现并进入验收 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v1.2 | 已完成 MVP/M8 与 Task 30 的文件、依赖、Task、测试、人工验证、里程碑和提交边界；Task 30 已实施，不属于第三期 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.3 | v1.3.0 已发布本地版协议，并链接 Milestone 9/10 编码扩展 |
+| `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
+| `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；用户已验收规划，尚未授权实施 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v1.6 | 已完成 Task 1–30，并登记 Milestone 9 Task 31–36 与 Milestone 10 Task 37–39 顺序和边界 |
+| `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
+| `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已验收，等待实施授权 |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |
-| `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` | 当前第三期需求发现真源；只冻结已确认范围，未决机制等待统一回答 |
+| `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.2 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
 | `design docs/StarValleyCook_第二期产品体验与品牌化设计_v1.1.docx` | 二期体验、首页/导航与品牌叙事（Git ignored） |
 | `StarValleyCook_项目设计源索引与状态快照.md` | 设计源索引、产品命名、阶段状态和文档同步线索；保持 ignored |
@@ -25,7 +29,7 @@
 - 用户发布媒介冻结为 PyInstaller onedir：发布包自带 Python 运行时与依赖，普通用户不安装 uv、Python、Node.js 或包管理器。开发态使用 backend/pyproject.toml 和当前 Python 环境；uv 仅为可选开发便利，不作为产品或功能 Task 的依赖。
 - 默认工作区为 `%LOCALAPPDATA%\\PelicanTownSpecials\\workspace`；浏览器不直接访问任意本地文件路径。
 - 为降低小白用户配置门槛，应用维护当前 Windows 用户级环境变量 PTS_OPENAI_API_KEY；支持新增、更新和删除，不写机器级环境变量，不要求管理员权限。Key 不得进入 JSON、日志、错误正文、前端状态、测试快照、Context Packet 或 Git。
-- Task 30 新手试用入口已实施（用户 2026-08-16 指令覆盖 deferred，Session `2026-08-16-task-30-trial-entry-impl`）：独立隐藏试用档案 + `app-state/trial-state.json` 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + CI Secret 注入 gitignored 资源 Key；试用 Key 不进入 Git/API/前端/日志；仍不属于第三期。
+- Task 30 新手试用入口已实施、验收并随 v1.3.0 发布（Session `2026-08-16-task-30-trial-entry-impl`）：独立隐藏试用档案 + `app-state/trial-state.json` 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + 已配置用户优先消耗试用额度 + CI Secret 注入 gitignored 资源 Key；试用 Key 不进入 Git/API/前端/日志；仍不属于第三期。
 - Milestone 8 将生成执行扩展为进程级固定 3 个并行运行槽；第 4 个请求在创建 attempt、改变草稿状态和调用 Provider 前返回 `PTS_GEN_BUSY`，提示最多同时运行 3 个任务并由用户稍后手动重试。
 - 三个运行任务必须按 draftId/attemptId 隔离 owner、task、cancel、NDJSON 和进度；完成、失败、取消、删除或异常 cleanup 只释放自己的槽。
 - M8 不实现 QUEUED 状态、排队、排位、自动补位或队列持久化。完整队列留到未来在线化或数据库/分布式消息队列/worker 架构时重新设计。
@@ -37,7 +41,14 @@
 - Mod 目标为 Stardew Valley 1.6.15、Content Patcher 2.9.0、纯 JSON/PNG 内容包；本地 Mods 路径只从 `PTS_STARDEW_MODS_DIR` 获取。
 - `AuthorName` 在工作区首次创建时生成并持久化为 `D<YYYYMMDD>`；身份/账号策略后移第四期重新讨论。
 - 第三期只规划并验证问问 Gus 的本地 Canonical 召回：可复用结构化词条与像素图标，但最终专属预览必须使用本次用户原图重新生成。
+- Milestone 9 冻结：全局有效 Canonical 至少 N=2；同语言现实原料主导 Top 5；模型只选最高候选且 `>=90%` 命中；仅正式 Ask Gus 存档写入；完整重新生成/Blueprint 不召回；效果只衡量总耗时和真实单次任务成本。
+- 第三期使用 Python 标准库 SQLite 和 Registry 自有图标目录，不要求用户安装数据库；调用/步骤数只用于正确性测试，不作为产品指标。
 - 第三期不引入登录、云端工作区、Redis、Bloom Filter、夜间批处理、分布式队列、Gallery 或管理端；这些分别留到第四期/第五期规划。
+- Milestone 10 统计口径冻结为“匿名活跃安装”，不宣称精确人数；随机 UUID v4 不与账号、机器指纹、用户名、路径或硬件绑定。
+- M10 在配置完整的 Windows Release 中自动启用，不新增首次说明、用户确认、设置开关、前端页面、公开 API 或用户文档入口；开发、测试和缺少 Release 配置时使用 no-op。
+- M10 只允许人工定义的模式/结果/耗时/试用/M9 命中枚举；不记录应用版本，也不统计新版本采用比例；禁止图片、菜品文本、用户输入、Key、Provider/模型、业务 ID、异常正文、IP/Geo、DOM、自动点击和 session replay。
+- M10 第一版使用 PostHog Cloud personless capture（`$process_person_profile=false`）与项目级 IP discard；只用现有 `httpx`、进程内有界队列和可替换 `TelemetryRecorder`，采集故障不得影响业务。
+- GitHub Release `download_count` 只作触达旁证，不等于安装或用户；M10 数据不用于计费、权限、安全审计或试用限额。
 
 ## Yibu API 用户实测记录
 

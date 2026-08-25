@@ -33,4 +33,4 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-本项目已完成 MVP Task 3 与本地启动闭环、Task 4 领域模型、Task 5 本地持久化和 Task 6 用户级 Key 配置。Task 7 的 Launcher、会话安全、同源静态托管、前端 bootstrap、heartbeat 和空闲退出已验收、创建 focused commit 并推送。当前按 STATUS.md 处于 Task8 committed 阶段，Task1–4 已完成、用户验收通过，focused commit 已创建并推送。
+Task 1–30 均已完成；当前正式版本为 v1.3.0，Task 30 新手试用入口及发布后的 M8 并发测试稳定性修复均已推送。Milestone 9“全局生成记忆与 Canonical 召回”Task 31–36 和 Milestone 10“EXE 无感使用统计”Task 37–39 的技术设计与计划已于 2026-08-25 获用户验收；M9 已授权按 Task 31→36 串行自治开发，当前准备 Task 31 Context Packet，M10 尚未授权实施。
