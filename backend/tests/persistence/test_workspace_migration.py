@@ -25,6 +25,10 @@ def test_workspace_paths_create_bootstraps_directories_author_name_and_metadata(
     assert paths.drafts_dir.is_dir()
     assert paths.cookbook_dir.is_dir()
     assert paths.assets_dir.is_dir()
+    assert paths.canonical_dir.is_dir()
+    assert paths.canonical_assets_dir.is_dir()
+    assert paths.canonical_registry_path == paths.canonical_dir / "registry.sqlite3"
+    assert not paths.canonical_registry_path.exists()
     assert paths.exports_dir.is_dir()
     assert paths.staging_dir.is_dir()
     assert paths.trash_dir.is_dir()
@@ -60,6 +64,12 @@ def test_migrate_workspace_copies_and_verifies_source_then_keeps_old_workspace(
     draft_path = source_paths.drafts_dir / "draft-1" / "record.json"
     draft_path.parent.mkdir(parents=True)
     draft_path.write_text('{\n  "value": "source"\n}\n', encoding="utf-8")
+    registry_bytes = b"SQLite format 3\\x00canonical-registry-bytes"
+    icon_bytes = b"owned-canonical-icon-bytes"
+    source_paths.canonical_registry_path.write_bytes(registry_bytes)
+    canonical_icon = source_paths.canonical_assets_dir / "dish-1" / "icon-16.png"
+    canonical_icon.parent.mkdir(parents=True)
+    canonical_icon.write_bytes(icon_bytes)
 
     target_root = tmp_path / "target-workspace"
 
@@ -77,6 +87,12 @@ def test_migrate_workspace_copies_and_verifies_source_then_keeps_old_workspace(
     assert (source_root / "drafts" / "draft-1" / "record.json").read_text(
         encoding="utf-8"
     ) == '{\n  "value": "source"\n}\n'
+    assert migrated.canonical_registry_path.read_bytes() == registry_bytes
+    assert source_paths.canonical_registry_path.read_bytes() == registry_bytes
+    assert (
+        migrated.canonical_assets_dir / "dish-1" / "icon-16.png"
+    ).read_bytes() == icon_bytes
+    assert canonical_icon.read_bytes() == icon_bytes
     assert json.loads(migrated.bootstrap_path.read_text(encoding="utf-8")) == {
         "schemaVersion": 1,
         "workspacePath": str(target_root.resolve()),

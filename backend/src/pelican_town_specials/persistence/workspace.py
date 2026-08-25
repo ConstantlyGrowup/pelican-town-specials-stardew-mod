@@ -63,6 +63,9 @@ class WorkspacePaths:
     drafts_dir: Path
     cookbook_dir: Path
     assets_dir: Path
+    canonical_dir: Path
+    canonical_assets_dir: Path
+    canonical_registry_path: Path
     exports_dir: Path
     staging_dir: Path
     trash_dir: Path
@@ -77,6 +80,9 @@ class WorkspacePaths:
         drafts_dir = resolved_root / "drafts"
         cookbook_dir = resolved_root / "cookbook"
         assets_dir = resolved_root / "assets"
+        canonical_dir = resolved_root / "canonical"
+        canonical_assets_dir = canonical_dir / "assets"
+        canonical_registry_path = canonical_dir / "registry.sqlite3"
         exports_dir = resolved_root / "exports"
         staging_dir = resolved_root / "staging"
         trash_dir = resolved_root / "trash"
@@ -86,6 +92,8 @@ class WorkspacePaths:
             drafts_dir,
             cookbook_dir,
             assets_dir,
+            canonical_dir,
+            canonical_assets_dir,
             exports_dir,
             staging_dir,
             trash_dir,
@@ -115,6 +123,9 @@ class WorkspacePaths:
             drafts_dir=drafts_dir,
             cookbook_dir=cookbook_dir,
             assets_dir=assets_dir,
+            canonical_dir=canonical_dir,
+            canonical_assets_dir=canonical_assets_dir,
+            canonical_registry_path=canonical_registry_path,
             exports_dir=exports_dir,
             staging_dir=staging_dir,
             trash_dir=trash_dir,

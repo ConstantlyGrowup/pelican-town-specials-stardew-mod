@@ -19,6 +19,16 @@ Milestone 6–8 与 Task 30 均已完成并发布，当前正式版本为 v1.3.0
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 
+### Milestone 9 临时 Codex 全量接管（2026-08-25 用户明确授权）
+
+本节仅在 Milestone 9 Task 31–36 期间优先于下方历史/default 的 Claude+Codex 通信流；它不删除或永久改写原协作模式。M9 完成后是否继续使用本范式，由用户另行决定。
+
+- Codex 主 Agent 作为 M9 常驻协调者和最终验收者：持有状态真源、生成/冻结 Context Packet、串行派发、复核证据、编排返工、更新控制面并创建 PASS 后的本地 focused commit。
+- 每个 Task 使用新的自定义 `luna_worker`（`gpt-5.6-luna` / `max`）实施；worker 只处理一个范围明确、边界清晰、可独立完成的委派任务，不改变主任务目标、不扩大冻结范围、不提交或 push。
+- 实施完成后使用新的自定义 `detector`（`gpt-5.6-sol` / `medium`，read-only）按冻结 Acceptance Ledger 和 `REVIEW_PROTOCOL.md` 独立审阅，返回 `PASS` / `REVISE` / `BLOCKED`；当前会话若尚未热加载角色名，可用相同模型、effort 与只读 instructions 显式派发，不得降低审阅标准。
+- Codex 主 Agent 只在 detector `PASS` 后复跑验收并自动进入 `auto_accepted`；Task 31→36 仍严格串行、每 Task 一个本地 focused commit、不 push，M9 全量完成后统一用户验收。
+- 原 Claude Code 主会话、Codex MCP Review 和既有 Session 记录继续作为历史/default 协作协议保留，不在本次临时接管中删除或改写历史事实。
+
 - Claude Code 主会话作为常驻包工/协调者：持有状态真源（`STATUS.md`、Session、约束），为每个 Task 生成 Context Packet，组装前置文档包并分发；桥接 Codex 审阅，编排返工与本地提交，维持 Milestone 粒度下的长时间自动开发。
 - 每个 Task 使用新的实施子代理（干净上下文）；它只接收该 Task 的 Context Packet、关键项目规则、相关设计/计划章节和测试命令，实施完成后返回 `TASK_HANDOFF`，不提交。
 - 实施结果经主会话桥接给 Codex（经 codex-mcp，新建独立 thread 路由 `gpt-Luna`、`effort: max`）做独立只读审阅，返回 `PASS` / `REVISE` / `BLOCKED`。

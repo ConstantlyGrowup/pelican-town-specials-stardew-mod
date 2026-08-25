@@ -5,6 +5,11 @@ from uuid import UUID, uuid4
 
 from pelican_town_specials.domain.archive import ArchivedDish
 from pelican_town_specials.domain.assets import SourceInput
+from pelican_town_specials.domain.canonical import (
+    CanonicalDishRegistration,
+    RecallDocument,
+    RecallIngredient,
+)
 from pelican_town_specials.domain.common import DraftMode, Language, utc_now
 from pelican_town_specials.domain.dish import (
     DishAnalysis,
@@ -219,6 +224,56 @@ def initial_attempt_fixture(
         startedAt=now,
         finishedAt=None,
         error=None,
+    )
+
+
+def canonical_registration_fixture(
+    *,
+    canonical_id: UUID | None = None,
+    source_archive_id: UUID | None = None,
+    dish_signature: str = "a" * 64,
+    language: Language = Language.ZH_CN,
+    catalog_version: str = "stardew-1.6.15-v1",
+) -> CanonicalDishRegistration:
+    gameplay = _gameplay_spec().model_copy(
+        update={
+            "ingredients": [
+                ingredient.model_copy(
+                    update={"catalog_version": catalog_version}
+                )
+                for ingredient in _gameplay_spec().ingredients
+            ]
+        }
+    )
+    return CanonicalDishRegistration(
+        canonicalId=canonical_id or uuid4(),
+        sourceArchiveId=source_archive_id or uuid4(),
+        dishSignature=dish_signature,
+        language=language,
+        recallDocument=RecallDocument(
+            recognizedDish="Spring Noodles",
+            normalizedName="spring noodle bowl",
+            summary="A warm spring noodle bowl with greens.",
+            cuisine="Farmhouse",
+            semanticIngredients=[
+                RecallIngredient(
+                    name="Egg",
+                    normalizedName="egg",
+                    visibleConfidence=0.98,
+                ),
+                RecallIngredient(
+                    name="Spring Onion",
+                    normalizedName="spring onion",
+                    visibleConfidence=0.87,
+                ),
+            ],
+            cookingMethods=["boiled"],
+            flavorProfile=["savory", "fresh"],
+        ),
+        presentation=_presentation_spec(),
+        gameplay=gameplay,
+        visualBrief="Warm ceramic bowl on a rustic tavern table.",
+        catalogVersion=catalog_version,
     )
 
 
