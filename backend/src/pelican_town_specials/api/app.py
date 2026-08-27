@@ -7,6 +7,7 @@ import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 from fastapi import FastAPI, Request, Response
@@ -162,6 +163,7 @@ def create_app(
         )
     else:
         resolved_telemetry_state_store = resolved_telemetry_service.state_store
+    business_telemetry = cast(TelemetryRecorder, resolved_telemetry_service)
     resolved_secret_store = secret_store or WindowsEnvironmentSecretStore()
     logs_dir = resolved_workspace.app_state_dir / "logs"
     configure_logging(logs_dir)
@@ -214,6 +216,7 @@ def create_app(
         attempt_repository=resolved_attempt_repository,
         attempt_registry=attempt_registry,
         canonical_registration_service=resolved_canonical_registration,
+        telemetry=business_telemetry,
     )
     resolved_cookbook_service = cookbook_service or CookbookService(
         resolved_archive_repository,
@@ -232,6 +235,7 @@ def create_app(
         compiler=resolved_compiler,
         workspace=resolved_workspace,
         open_folder=_default_open_folder(),
+        telemetry=business_telemetry,
     )
     resolved_catalog_service = CatalogService(resolved_catalog)
     resolved_meta_service = MetaService()
@@ -263,8 +267,10 @@ def create_app(
             trial_gateway_factory=_trial_gateway_factory(resolved_trial_service),
             personal_configured=_personal_key_configured(resolved_secret_store),
             canonical_repository=resolved_canonical_registry,
+            telemetry=business_telemetry,
         ),
         draft_repository=resolved_draft_repository,
+        telemetry=business_telemetry,
     )
 
     @asynccontextmanager

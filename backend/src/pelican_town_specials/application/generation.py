@@ -14,6 +14,7 @@ from pelican_town_specials.domain.draft import (
     GenerationProgressPublic,
 )
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.domain.telemetry import RejectionReason, TelemetryEvent
 from pelican_town_specials.generation.blueprint import run_blueprint_preview
 from pelican_town_specials.generation.events import GenerationEvent
 from pelican_town_specials.generation.orchestrator import (
@@ -22,6 +23,8 @@ from pelican_town_specials.generation.orchestrator import (
 )
 from pelican_town_specials.persistence.repositories import DraftRepository
 
+from .telemetry import NoopTelemetryRecorder, TelemetryRecorder
+
 
 class GenerationService:
     def __init__(
@@ -29,9 +32,13 @@ class GenerationService:
         *,
         orchestrator: GenerationOrchestrator,
         draft_repository: DraftRepository,
+        telemetry: TelemetryRecorder | None = None,
     ) -> None:
         self._orchestrator = orchestrator
         self._drafts = draft_repository
+        self._telemetry = (
+            telemetry if telemetry is not None else NoopTelemetryRecorder()
+        )
 
     def begin_generation(self, draft_id: UUID) -> AsyncIterator[str]:
         """Validate the draft and start a generation attempt.
@@ -40,7 +47,17 @@ class GenerationService:
         409 illegal state or busy) is raised before the stream begins so the
         route can return a structured HTTP error instead of a broken stream.
         """
-        kind = self._resolve_kind(draft_id)
+        try:
+            kind = self._resolve_kind(draft_id)
+        except AppError:
+            # This boundary runs before an attempt exists.  Keep the public
+            # error response unchanged while exposing only the frozen reason.
+            self._record_telemetry(
+                TelemetryEvent.generation_rejected(
+                    reason=RejectionReason.VALIDATION
+                )
+            )
+            raise
         command = GenerationCommand(
             draftId=draft_id, kind=kind, requestId=uuid4()
         )
@@ -126,6 +143,12 @@ class GenerationService:
             return self._drafts.get(draft_id)
         except (FileNotFoundError, OSError) as exc:
             raise _draft_not_found_error() from exc
+
+    def _record_telemetry(self, event: TelemetryEvent) -> None:
+        try:
+            self._telemetry.record(event)
+        except Exception:  # noqa: BLE001 - telemetry is explicitly fail-open
+            return
 
 
 async def _ndjson_lines(

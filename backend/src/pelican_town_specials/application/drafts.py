@@ -39,6 +39,7 @@ from pelican_town_specials.domain.dish import (
 from pelican_town_specials.domain.draft import DraftRecord, DraftStatus
 from pelican_town_specials.domain.errors import AppError, ErrorSummary
 from pelican_town_specials.domain.state_machine import DraftAction, transition
+from pelican_town_specials.domain.telemetry import TelemetryEvent, TelemetryMode
 from pelican_town_specials.domain.validation import ValidationSeverity, validate_draft
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.persistence.asset_store import (
@@ -55,6 +56,16 @@ from pelican_town_specials.persistence.repositories import (
 
 from .canonical_memory import CanonicalRegistrationService
 from .common import Page
+from .telemetry import NoopTelemetryRecorder, TelemetryRecorder
+
+
+def _telemetry_mode(mode: DraftMode) -> TelemetryMode:
+    return (
+        TelemetryMode.BLUEPRINT
+        if mode is DraftMode.BLUEPRINT
+        else TelemetryMode.ASK_GUS
+    )
+
 
 _BLUEPRINT_TEMPLATE_VERSION: Literal["blueprint-v1"] = "blueprint-v1"
 _BLUEPRINT_USER_ASSIGNED_FIELDS = frozenset(
@@ -410,6 +421,7 @@ class DraftService:
         attempt_repository: GenerationAttemptRepository,
         attempt_registry: AttemptRegistry | None = None,
         canonical_registration_service: CanonicalRegistrationService | None = None,
+        telemetry: TelemetryRecorder | None = None,
     ) -> None:
         self._drafts = draft_repository
         self._archives = archive_repository
@@ -418,6 +430,9 @@ class DraftService:
         self._attempts = attempt_repository
         self._registry = attempt_registry
         self._canonical_registration = canonical_registration_service
+        self._telemetry = (
+            telemetry if telemetry is not None else NoopTelemetryRecorder()
+        )
 
     def create_draft(self, request: DraftCreateRequest) -> DraftRecord:
         self._require_source_asset(request.source.original_image_asset_id)
@@ -650,7 +665,16 @@ class DraftService:
             expected_revision=draft.revision,
         )
         self._register_canonical_archive(archive)
+        self._record_telemetry(
+            TelemetryEvent.dish_archived(mode=_telemetry_mode(draft.mode))
+        )
         return archive
+
+    def _record_telemetry(self, event: TelemetryEvent) -> None:
+        try:
+            self._telemetry.record(event)
+        except Exception:  # noqa: BLE001 - telemetry is explicitly fail-open
+            return
 
     def _register_canonical_archive(self, archive: ArchivedDish) -> None:
         if self._canonical_registration is None:

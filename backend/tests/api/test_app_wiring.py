@@ -390,3 +390,26 @@ def test_telemetry_failures_do_not_change_application_health_or_shutdown(
 
     with TestClient(app) as client:
         assert client.get("/api/v1/health").status_code == 200
+
+
+def test_default_business_services_share_the_telemetry_service(
+    tmp_path: Path,
+) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace")
+    recorder = RecordingTelemetryRecorder()
+    app = create_app(
+        workspace_paths=workspace,
+        security_state=_test_security(),
+        telemetry_recorder=recorder,
+        enable_docs=False,
+    )
+
+    telemetry_service = app.state.telemetry_service
+    assert telemetry_service is not None
+    assert app.state.draft_service._telemetry is telemetry_service
+    assert app.state.export_service._telemetry is telemetry_service
+    assert app.state.generation_service._telemetry is telemetry_service
+    assert (
+        app.state.generation_service._orchestrator._telemetry
+        is telemetry_service
+    )

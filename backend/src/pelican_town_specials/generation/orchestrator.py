@@ -14,6 +14,10 @@ from PIL import Image
 from pydantic import Field
 
 from pelican_town_specials.application.canonical_memory import RecallService
+from pelican_town_specials.application.telemetry import (
+    NoopTelemetryRecorder,
+    TelemetryRecorder,
+)
 from pelican_town_specials.catalog.gameplay_rules import validate_gameplay
 from pelican_town_specials.catalog.mapping import ensure_main_protein, map_ingredient
 from pelican_town_specials.catalog.models import CatalogCandidate
@@ -60,6 +64,16 @@ from pelican_town_specials.domain.errors import (
     trial_limit_error,
 )
 from pelican_town_specials.domain.state_machine import DraftAction, transition
+from pelican_town_specials.domain.telemetry import (
+    MAX_DURATION_MS,
+    ErrorCategory,
+    GenerationKind,
+    GenerationOutcome,
+    MemoryOutcome,
+    RejectionReason,
+    TelemetryEvent,
+    TelemetryMode,
+)
 from pelican_town_specials.domain.validation import ValidationSeverity, validate_draft
 from pelican_town_specials.images import (
     build_icon_16,
@@ -156,9 +170,15 @@ class _RunState:
         "icon_source_asset_id",
         "presentation",
         "preview",
+        "provider_started",
         "recall_confidence",
+        "recall_decision",
         "recall_elapsed_ms",
         "staged",
+        "started_monotonic",
+        "telemetry_finished",
+        "telemetry_started",
+        "trial_used",
         "visual_brief",
     )
 
@@ -180,7 +200,13 @@ class _RunState:
     icon_16: AssetRef | None
     preview: AssetRef | None
     recall_confidence: float | None
+    recall_decision: MemoryOutcome
     recall_elapsed_ms: int | None
+    started_monotonic: float | None
+    telemetry_started: bool
+    telemetry_finished: bool
+    provider_started: bool
+    trial_used: bool
 
     def __init__(
         self,
@@ -192,6 +218,7 @@ class _RunState:
         gateway: ModelGateway | None = None,
         attempt: GenerationAttempt,
         staged: DraftRecord,
+        started_monotonic: float | None,
     ) -> None:
         self.attempt_id = attempt_id
         self.command = command
@@ -212,6 +239,17 @@ class _RunState:
         self.preview = None
         self.recall_confidence = None
         self.recall_elapsed_ms = None
+        self.recall_decision = (
+            MemoryOutcome.NOT_ELIGIBLE
+            if command.kind is not GenerationAttemptKind.INITIAL
+            or draft.mode is not DraftMode.ASK_GUS
+            else MemoryOutcome.UNAVAILABLE
+        )
+        self.started_monotonic = started_monotonic
+        self.telemetry_started = False
+        self.telemetry_finished = False
+        self.provider_started = False
+        self.trial_used = False
 
 
 def _map_gameplay(
@@ -722,6 +760,7 @@ class GenerationOrchestrator:
         trial_gateway_factory: GatewayFactory | None = None,
         personal_configured: Callable[[], bool] = lambda: False,
         canonical_repository: CanonicalRepository | None = None,
+        telemetry: TelemetryRecorder | None = None,
     ) -> None:
         self._drafts = draft_repository
         self._attempts = attempt_repository
@@ -735,13 +774,18 @@ class GenerationOrchestrator:
         self._registry = registry
         self._min_confidence = min_confidence
         self._clock = clock
+        self._telemetry = (
+            telemetry if telemetry is not None else NoopTelemetryRecorder()
+        )
 
     def run(self, command: GenerationCommand) -> AsyncIterator[GenerationEvent]:
         # The attempt id is created up front so the slot can be attributed to
         # its owning draft and attempt before any stream begins.
         attempt_id = uuid4()
         if not self._registry.reserve_slot(command.draft_id, attempt_id):
-            raise _busy_error(self._registry, command.draft_id)
+            error = _busy_error(self._registry, command.draft_id)
+            self._record_rejection_for_error(error)
+            raise error
         return _ServerOwnedStream(self, command, attempt_id, self._registry)
 
     def cancel(self, attempt_id: UUID) -> bool:
@@ -825,6 +869,66 @@ class GenerationOrchestrator:
     def assets(self) -> FileAssetStore:
         return self._assets
 
+    def _record_telemetry(self, event: TelemetryEvent) -> None:
+        try:
+            self._telemetry.record(event)
+        except Exception:  # noqa: BLE001 - telemetry is explicitly fail-open
+            return
+
+    def _capture_monotonic(self) -> float | None:
+        try:
+            return self._clock()
+        except Exception:  # noqa: BLE001 - telemetry clock is fail-open
+            return None
+
+    def _record_generation_started(self, state: _RunState) -> None:
+        if state.telemetry_started:
+            return
+        state.telemetry_started = True
+        if state.started_monotonic is None:
+            state.started_monotonic = self._capture_monotonic()
+        self._record_telemetry(
+            TelemetryEvent.generation_started(
+                mode=_telemetry_mode(state.draft.mode),
+                trial_used=state.trial_used,
+                generation_kind=_telemetry_generation_kind(state.command.kind),
+            )
+        )
+
+    def _record_generation_finished(
+        self,
+        state: _RunState,
+        *,
+        outcome: GenerationOutcome,
+        error_category: ErrorCategory,
+        error: AppError | None = None,
+    ) -> None:
+        if state.telemetry_finished:
+            return
+        state.telemetry_finished = True
+        self._record_generation_started(state)
+        if error is not None:
+            reason = _rejection_reason(error, provider_started=state.provider_started)
+            if reason is not None:
+                self._record_telemetry(
+                    TelemetryEvent.generation_rejected(reason=reason)
+                )
+        self._record_telemetry(
+            TelemetryEvent.generation_finished(
+                mode=_telemetry_mode(state.draft.mode),
+                outcome=outcome,
+                duration_ms=_duration_ms(self._clock, state.started_monotonic),
+                trial_used=state.trial_used,
+                memory_outcome=state.recall_decision,
+                error_category=error_category,
+            )
+        )
+
+    def _record_rejection_for_error(self, error: AppError) -> None:
+        reason = _rejection_reason(error, provider_started=False)
+        if reason is not None:
+            self._record_telemetry(TelemetryEvent.generation_rejected(reason=reason))
+
     async def _run_server_owned(
         self,
         command: GenerationCommand,
@@ -852,6 +956,7 @@ class GenerationOrchestrator:
                     # A pre-stage AppError (e.g. illegal state) is raised by
                     # _run before it yields any terminal event. Surface it to
                     # the subscriber exactly like the old stream contract did.
+                    self._record_rejection_for_error(exc)
                     queue.put_nowait(exc)
                 finally:
                     await inner.aclose()
@@ -904,6 +1009,7 @@ class GenerationOrchestrator:
             total_stages=len(stage_order),
         )
         self._attempts.save(attempt)
+        started_monotonic = self._capture_monotonic()
 
         state = _RunState(
             attempt_id=attempt_id,
@@ -912,6 +1018,7 @@ class GenerationOrchestrator:
             candidate=draft.model_copy(),
             attempt=attempt,
             staged=staged,
+            started_monotonic=started_monotonic,
         )
         try:
             for ordinal, stage in enumerate(stage_order, start=1):
@@ -958,6 +1065,11 @@ class GenerationOrchestrator:
             return
         finished = self._finish_success(state, promoted)
         self._attempts.save(finished)
+        self._record_generation_finished(
+            state,
+            outcome=GenerationOutcome.SUCCEEDED,
+            error_category=ErrorCategory.NONE,
+        )
         yield attempt_succeeded(
             attempt_id,
             promoted.revision,
@@ -983,17 +1095,23 @@ class GenerationOrchestrator:
                     self._trial_access.trial_opportunity()
                     and self._trial_access.claim_attempt()
                 ):
+                    state.trial_used = True
                     state.gateway = self._trial_gateway_factory()
+                    self._record_generation_started(state)
                     return state.gateway
                 state.gateway = self._gateway_factory()
+                self._record_generation_started(state)
                 return state.gateway
             # Users without a personal provider keep the opt-in trial flow.
             if self._trial_access.is_active():
                 if not self._trial_access.claim_attempt():
                     raise trial_limit_error()
+                state.trial_used = True
                 state.gateway = self._trial_gateway_factory()
+                self._record_generation_started(state)
                 return state.gateway
         state.gateway = self._gateway_factory()
+        self._record_generation_started(state)
         return state.gateway
 
     def _import_canonical_icons(
@@ -1069,6 +1187,7 @@ class GenerationOrchestrator:
         # second claim attempt while falling back to design.
         gateway = self._ensure_gateway(state)
         try:
+            state.provider_started = True
             result = await RecallService(
                 registry=self._canonical_repository,
                 gateway=gateway,
@@ -1079,16 +1198,19 @@ class GenerationOrchestrator:
                 self._catalog.version,
                 state.command.request_id,
             )
+            state.recall_decision = _memory_outcome_for_recall(result.decision)
             if result.decision is not RecallDecision.MATCH_HIT:
                 return False
             canonical = result.canonical_dish
             if canonical is None:
+                state.recall_decision = MemoryOutcome.FALLBACK_ERROR
                 return False
             gameplay_report = validate_gameplay(canonical.gameplay, self._catalog)
             if any(
                 issue.severity is ValidationSeverity.ERROR
                 for issue in gameplay_report.issues
             ):
+                state.recall_decision = MemoryOutcome.FALLBACK_ERROR
                 return False
             icon_source, icon_source_ref, icon_16_ref = self._import_canonical_icons(
                 state,
@@ -1114,6 +1236,7 @@ class GenerationOrchestrator:
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001 - memory failures degrade to fresh
+            state.recall_decision = MemoryOutcome.FALLBACK_ERROR
             return False
 
     async def _execute_stage(self, state: _RunState, stage: GenerationStage) -> None:
@@ -1124,7 +1247,9 @@ class GenerationOrchestrator:
             vision_data, vision_media = _prepare_vision_input(
                 _read_source_image(self._assets, draft)
             )
-            state.analysis = await self._ensure_gateway(state).analyze_dish(
+            gateway = self._ensure_gateway(state)
+            state.provider_started = True
+            state.analysis = await gateway.analyze_dish(
                 DishAnalysisRequest(
                     image=ProviderImageInput(
                         data=vision_data,
@@ -1144,7 +1269,9 @@ class GenerationOrchestrator:
                 assert state.presentation is not None
                 self._update_candidate(state, presentation=state.presentation)
             else:
-                state.core = await self._ensure_gateway(state).design_ask_gus(
+                gateway = self._ensure_gateway(state)
+                state.provider_started = True
+                state.core = await gateway.design_ask_gus(
                     AskGusDesignRequest(
                         analysis=state.analysis,
                         context_text=draft.source.context_text,
@@ -1198,6 +1325,7 @@ class GenerationOrchestrator:
             icon_image, icon_media_type = _prepare_vision_input(
                 _read_source_image(self._assets, draft), min_pixels=EDIT_MIN_PIXELS
             )
+            state.provider_started = True
             generated_icon = await gateway.generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.EDIT,
@@ -1283,7 +1411,8 @@ class GenerationOrchestrator:
             enforce_preview_prompt_budget(prompt)
             assert state.icon_source_asset_id is not None
             assert state.icon_source is not None
-            _ensure_image_edit_capability(self._ensure_gateway(state))
+            gateway = self._ensure_gateway(state)
+            _ensure_image_edit_capability(gateway)
             original_image = _read_source_image(self._assets, draft)
             edit_image, edit_media_type = _prepare_vision_input(
                 original_image, min_pixels=EDIT_MIN_PIXELS
@@ -1291,7 +1420,8 @@ class GenerationOrchestrator:
             icon_source_ref = self._assets.stat(state.icon_source_asset_id)
             with self._assets.open(icon_source_ref) as handle:
                 icon_source = handle.read()
-            generated_preview = await self._ensure_gateway(state).generate_image(
+            state.provider_started = True
+            generated_preview = await gateway.generate_image(
                 ImageGenerationRequest(
                     operation=ImageOperation.EDIT,
                     prompt=prompt,
@@ -1496,6 +1626,12 @@ class GenerationOrchestrator:
                 }
             )
             self._attempts.save(failed)
+            self._record_generation_finished(
+                state,
+                outcome=GenerationOutcome.FAILED,
+                error_category=_error_category(error),
+                error=error,
+            )
             return attempt_failed(
                 attempt_id,
                 ErrorPayload.from_app_error(
@@ -1510,6 +1646,12 @@ class GenerationOrchestrator:
             }
         )
         self._attempts.save(failed)
+        self._record_generation_finished(
+            state,
+            outcome=GenerationOutcome.FAILED,
+            error_category=_error_category(error),
+            error=error,
+        )
         return attempt_failed(
             attempt_id,
             ErrorPayload.from_app_error(error, request_id=state.command.request_id),
@@ -1582,12 +1724,124 @@ class GenerationOrchestrator:
         staged: DraftRecord,
     ) -> GenerationEvent:
         self._rollback_cancelled(state, staged)
+        self._record_generation_finished(
+            state,
+            outcome=GenerationOutcome.CANCELLED,
+            error_category=ErrorCategory.CANCELLED,
+        )
         return attempt_failed(
             state.attempt_id,
             ErrorPayload.from_app_error(
                 _cancelled_error(), request_id=state.command.request_id
             ),
         )
+
+
+def _telemetry_mode(mode: DraftMode) -> TelemetryMode:
+    return (
+        TelemetryMode.BLUEPRINT
+        if mode is DraftMode.BLUEPRINT
+        else TelemetryMode.ASK_GUS
+    )
+
+
+def _telemetry_generation_kind(
+    kind: GenerationAttemptKind,
+) -> GenerationKind:
+    return {
+        GenerationAttemptKind.INITIAL: GenerationKind.INITIAL,
+        GenerationAttemptKind.FULL_REGENERATE: GenerationKind.FULL_REGENERATE,
+        GenerationAttemptKind.BLUEPRINT_PREVIEW: GenerationKind.BLUEPRINT_PREVIEW,
+    }.get(kind, GenerationKind.RETRY_FAILED_STAGE)
+
+
+def _default_memory_outcome(
+    mode: DraftMode,
+    kind: GenerationAttemptKind,
+) -> MemoryOutcome:
+    if mode is DraftMode.ASK_GUS and kind is GenerationAttemptKind.INITIAL:
+        return MemoryOutcome.UNAVAILABLE
+    return MemoryOutcome.NOT_ELIGIBLE
+
+
+def _memory_outcome_for_recall(decision: RecallDecision) -> MemoryOutcome:
+    if decision is RecallDecision.MATCH_HIT:
+        return MemoryOutcome.HIT
+    if decision in {
+        RecallDecision.NOT_ATTEMPTED_BELOW_MINIMUM,
+        RecallDecision.NO_CANDIDATES,
+        RecallDecision.MATCH_MISS,
+    }:
+        return MemoryOutcome.MISS
+    if decision is RecallDecision.FALLBACK_ERROR:
+        return MemoryOutcome.FALLBACK_ERROR
+    return MemoryOutcome.UNAVAILABLE
+
+
+def _error_category(error: AppError) -> ErrorCategory:
+    """Map stable error codes without inspecting messages or details."""
+
+    code = error.code
+    if code == "PTS_GEN_CANCELLED":
+        return ErrorCategory.CANCELLED
+    if code == "PTS_GEN_INTERRUPTED":
+        return ErrorCategory.INTERRUPTED
+    if code == "PTS_GEN_BUSY":
+        return ErrorCategory.BUSY
+    if code == "PTS_TRIAL_LIMIT_REACHED":
+        return ErrorCategory.TRIAL_LIMIT
+    if code in {
+        "PTS_PROVIDER_NOT_CONFIGURED",
+        "PTS_PROVIDER_AUTH_FAILED",
+        "PTS_INPUT_API_KEY_INVALID",
+        "PTS_WORKSPACE_SETTINGS_INVALID",
+        "PTS_WORKSPACE_SETTINGS_UNAVAILABLE",
+        "PTS_WORKSPACE_SECRET_STORE_UNAVAILABLE",
+    }:
+        return ErrorCategory.SETTINGS
+    if code == "PTS_PROVIDER_UNAVAILABLE":
+        return ErrorCategory.NETWORK
+    if code in {
+        "PTS_GEN_LOW_CONFIDENCE",
+        "PTS_GEN_VALIDATION_FAILED",
+        "PTS_IMAGE_INPUT_UNSUPPORTED",
+        "PTS_PROVIDER_IMAGE_EDIT_UNSUPPORTED",
+        "PTS_PREVIEW_PROMPT_TOO_LONG",
+    } or code.startswith(("PTS_INPUT_", "PTS_STATE_")):
+        return ErrorCategory.VALIDATION
+    if code.startswith("PTS_PROVIDER_"):
+        return ErrorCategory.PROVIDER
+    return ErrorCategory.INTERNAL
+
+
+def _rejection_reason(
+    error: AppError,
+    *,
+    provider_started: bool,
+) -> RejectionReason | None:
+    if provider_started:
+        return None
+    category = _error_category(error)
+    if category is ErrorCategory.BUSY:
+        return RejectionReason.BUSY
+    if category is ErrorCategory.TRIAL_LIMIT:
+        return RejectionReason.TRIAL_LIMIT
+    if category is ErrorCategory.SETTINGS:
+        return RejectionReason.SETTINGS
+    if category is ErrorCategory.VALIDATION:
+        return RejectionReason.VALIDATION
+    return None
+
+
+def _duration_ms(
+    clock: Callable[[], float],
+    started_monotonic: float | None,
+) -> int:
+    try:
+        elapsed = 0.0 if started_monotonic is None else clock() - started_monotonic
+        return min(MAX_DURATION_MS, max(0, round(max(0.0, elapsed) * 1000)))
+    except Exception:  # noqa: BLE001 - telemetry timing is fail-open
+        return 0
 
 
 def _build_visual_spec(state: _RunState, source_revision: int) -> VisualSpec:

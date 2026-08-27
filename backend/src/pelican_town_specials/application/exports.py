@@ -24,6 +24,11 @@ from pelican_town_specials.domain.export import (
     ExportSpec,
     ExportStatus,
 )
+from pelican_town_specials.domain.telemetry import (
+    DishCountBucket,
+    ExportOutcome,
+    TelemetryEvent,
+)
 from pelican_town_specials.domain.validation import ValidationReport
 from pelican_town_specials.mod_compiler.compiler import (
     ContentPatcherCompiler,
@@ -50,8 +55,20 @@ from pelican_town_specials.persistence.repositories import (
 )
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 
+from .telemetry import NoopTelemetryRecorder, TelemetryRecorder
+
 EXPORT_COMPILER_VERSION = "task16-export-compiler-v1"
 _EXPORT_VALIDATOR_VERSION = "task16-export-validator-v1"
+
+
+def _dish_count_bucket(count: int) -> DishCountBucket:
+    if count == 1:
+        return DishCountBucket.ONE
+    if count <= 5:
+        return DishCountBucket.TWO_TO_FIVE
+    if count <= 10:
+        return DishCountBucket.SIX_TO_TEN
+    return DishCountBucket.ELEVEN_PLUS
 
 
 class ExportService:
@@ -65,6 +82,7 @@ class ExportService:
         compiler: ContentPatcherCompiler,
         workspace: WorkspacePaths,
         open_folder: Callable[[Path], None] | None = None,
+        telemetry: TelemetryRecorder | None = None,
     ) -> None:
         self._exports = export_repository
         self._archives = archive_repository
@@ -73,6 +91,9 @@ class ExportService:
         self._compiler = compiler
         self._workspace = workspace
         self._open_folder = open_folder
+        self._telemetry = (
+            telemetry if telemetry is not None else NoopTelemetryRecorder()
+        )
 
     def validate(self, spec: ExportSpec) -> ValidationReport:
         dishes = self._resolve_dishes(spec.dish_ids)
@@ -148,7 +169,7 @@ class ExportService:
                 fileExtension=".zip",
             ),
         )
-        return self._exports.save(
+        succeeded = self._exports.save(
             building.model_copy(
                 update={
                     "status": ExportStatus.SUCCEEDED,
@@ -157,6 +178,13 @@ class ExportService:
                 }
             )
         )
+        self._record_telemetry(
+            TelemetryEvent.menu_export_finished(
+                outcome=ExportOutcome.SUCCEEDED,
+                dish_count_bucket=_dish_count_bucket(len(succeeded.spec.dish_ids)),
+            )
+        )
+        return succeeded
 
     def get_export(self, export_id: UUID) -> ExportRecordView:
         record = self._get_record(export_id)
@@ -239,7 +267,7 @@ class ExportService:
         error_code: str,
         message: str,
     ) -> ExportRecord:
-        return self._exports.save(
+        failed = self._exports.save(
             record.model_copy(
                 update={
                     "status": ExportStatus.FAILED,
@@ -256,6 +284,19 @@ class ExportService:
                 }
             )
         )
+        self._record_telemetry(
+            TelemetryEvent.menu_export_finished(
+                outcome=ExportOutcome.FAILED,
+                dish_count_bucket=_dish_count_bucket(len(failed.spec.dish_ids)),
+            )
+        )
+        return failed
+
+    def _record_telemetry(self, event: TelemetryEvent) -> None:
+        try:
+            self._telemetry.record(event)
+        except Exception:  # noqa: BLE001 - telemetry is explicitly fail-open
+            return
 
     def _get_record(self, export_id: UUID) -> ExportRecord:
         try:
