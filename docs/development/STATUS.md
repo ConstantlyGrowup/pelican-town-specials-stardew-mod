@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | task_36_1_36_2_accepted_committed_push_authorized |
-| project_phase | Milestone 8、Task 30 与 Milestone 9 均已完成；M9 已同步当前分支。Task 36.1 与重新定义为“官方/非官方 OpenAI-compatible 端点适配补丁”的 Task 36.2 已于 2026-08-27 获用户联合验收并授权提交、push；当前按两个 focused commit 边界收尾。正式 Release 仍为 v1.3.0，M10 仅规划验收、尚未授权实施 |
+| overall_state | task_36_1_36_2_accepted_and_pushed |
+| project_phase | Milestone 8、Task 30、Milestone 9、Task 36.1 与 Task 36.2 均已完成；36.1 与重新定义为“官方/非官方 OpenAI-compatible 端点适配补丁”的 36.2 已于 2026-08-27 获用户联合验收并同步当前分支。正式 Release 仍为 v1.3.0，M10 仅规划验收、尚未授权实施 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-26-task-36-2-official-openai-provider-compatibility` |
-| active_session_state | accepted / committed / push_authorized |
-| active_session_type | task-implementation |
-| current_task | 推送 Task 36.1 `a2d3756` 与 Task 36.2 `bf3d1ed` 及验收控制面记录 |
+| active_session_id | 无（Task 36.1 与 36.2 均已 accepted / committed / pushed） |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | 无；等待用户明确授权下一项工作 |
 | blocker | 无 |
-| next_action | 提交验收控制面记录并推送 `feat/mvp-implementation`，随后核验远端；不提升版本、不 tag、不发布 GitHub Release，也不开始 M10 |
+| next_action | 等待用户明确授权下一项工作；不提升版本、不 tag、不发布 GitHub Release，也不开始 M10 |
 | collaboration_model | M9 临时由 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | M9 Task 31–36 提交已完成至 `3c3496b test: verify Milestone 9 canonical memory end to end`；本次验收控制面记录随后形成 focused commit 并同步当前分支。tag `v1.3.0` 仍位于 `4de82ad`，未创建新 tag |
-| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | Task 36.1 产品提交 `a2d3756`、Task 36.2 产品提交 `bf3d1ed` 已创建，当前只提交验收控制面。用户已有 `canonical.py` 阈值 `0.90 → 0.80`、prototype、samples、Claude worktree 与历史 review/pytest 临时目录均保持原样且不纳入。 |
+| 最新提交 | Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed`、联合验收控制面 `93b408d` 已创建并推送；本收尾状态记录随后同步当前分支。tag `v1.3.0` 仍位于 `4de82ad`，未创建新 tag |
+| 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
+| 当前工作树范围 | Task 36.1、36.2 产品与验收控制面均已提交并推送。用户已有 `canonical.py` 阈值 `0.90 → 0.80`、prototype、samples、Claude worktree 与历史 review/pytest 临时目录均保持原样且未纳入。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -74,7 +74,7 @@
 - 已知非 M9 门禁债务：Packet 的扩展 Ruff 命令会在未改动的 `scripts/validate_mod_zip.py` 报既存 PIE810/BLE001；M9 改动范围内 Ruff 全绿。
 - 用户于 2026-08-26 明确“验收通过，可以推送”；M9 实施提交 `7addfb8..3c3496b` 与本验收记录均同步至 `origin/feat/mvp-implementation`。该授权不包含 tag、版本提升或 GitHub Release；M10 仍只完成规划。
 
-## Task 36.2 官方/非官方 OpenAI-compatible 端点适配（accepted / push authorized）
+## Task 36.2 官方/非官方 OpenAI-compatible 端点适配（accepted / pushed）
 
 - 用户于 2026-08-26 登记兼容问题，并于 2026-08-27 将其正式定义为 **Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”**；排在 Task 36.1 后、M10 Task 37 前。
 - 已确认根因：`OpenAICompatibleGateway` 的 Chat 请求固定发送 `temperature=0`，官方 `gpt-5.6` 仅接受默认值，因而在菜品分析阶段返回 HTTP 400；用户的官方 Base URL、`gpt-5.6` 文本/视觉模型、`gpt-image-2` 图像模型和有效 Key 不是本次根因。
@@ -93,6 +93,7 @@
 - detector round 0 **PASS**：T36.2-001..008、R01..R03 全部通过，无 must-fix、可选硬化、新设计或 scope delta。当前与已 PASS 的 36.1 联合等待用户验收。
 - 用户于 2026-08-27 明确联合验收通过并授权两个任务 push；Task 36.2 的定义同时覆盖官方 OpenAI 端点与既有非官方 OpenAI-compatible 端点适配，范围不扩张为 SDK、Provider 自动识别或模型 fallback。
 - focused product commits 已创建：Task 36.1 `a2d3756 fix: generate fresh icons from the source photo`；Task 36.2 `bf3d1ed fix: adapt official and compatible OpenAI endpoints`。当前等待验收控制面提交后统一 push。
+- 上述产品提交与验收控制面 `93b408d` 已同步 `origin/feat/mvp-implementation`；本收尾记录随后同步，Task 36.1/36.2 关闭。
 
 ## 已验收、待实施授权的 Milestone 10 规划
 

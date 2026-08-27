@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-26-task-36-2-official-openai-provider-compatibility` |
-| status | `accepted / committed / push_authorized` |
+| status | `accepted / committed / pushed` |
 | session_type | `task-implementation` |
 | owner | Codex 主 Agent（临时全量接管） |
 | started_at | `2026-08-26` |
@@ -58,6 +58,7 @@ Task 36.1 已完成主 Agent 全量验证和 detector PASS，用户明确将其�
 - round 1 已完成双重验证并进入 36.1 + 36.2 联合用户验收。未提交、未 push、未提升版本、未 tag、未发布，也未开始 M10。
 - 用户于 2026-08-27 明确联合验收通过并授权两个任务提交、push；仍未授权版本提升、tag 或 GitHub Release。
 - focused product commit 已创建：`bf3d1ed`；控制面记录提交后与 36.1 一并 push。
+- `bf3d1ed` 与联合验收控制面 `93b408d` 已于 2026-08-27 同步至 `origin/feat/mvp-implementation`；Session 关闭。
 
 ## 联合人工验收
 

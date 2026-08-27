@@ -13,7 +13,7 @@
 | `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
 | `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已验收，等待实施授权 |
 | `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已实施并通过独立审阅，与 36.2 联合验收 |
-| `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并授权推送 |
+| `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并推送 |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |
 | `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.2 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |

@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-26-task-36-1-source-referenced-icon-implementation` |
-| status | `accepted / committed / push_authorized` |
+| status | `accepted / committed / pushed` |
 | session_type | `task-implementation` |
 | owner | Codex 主 Agent（临时全量接管） |
 | started_at | `2026-08-26` |
@@ -47,3 +47,4 @@ Canonical HIT 继续复用历史 icon；Ask Gus INITIAL miss、FULL_REGENERATE �
 - push、版本提升、tag 与 GitHub Release 仍需单独授权。
 - 2026-08-27 用户已明确联合验收通过并授权本 Task 与 36.2 提交、push；该授权不包含版本提升、tag 或 GitHub Release。
 - focused product commit 已创建：`a2d3756`；控制面记录提交后与 36.2 一并 push。
+- `a2d3756` 与联合验收控制面 `93b408d` 已于 2026-08-27 同步至 `origin/feat/mvp-implementation`；Session 关闭。

@@ -33,4 +33,4 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-Task 1–30 与 Milestone 9 Task 31–36 均已完成、验收并推送；当前正式 Release 仍为 v1.3.0。Task 36.1“原图参考像素图标生成补丁”和 Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”均已完成实施、全量验证和独立审阅，并于 2026-08-27 获用户联合验收与 push 授权：fresh icon 参考当前原图；官方请求省略不兼容参数并使用正确的单图/多图 multipart 字段，非官方兼容端点保留可配置路由与双响应解析。Milestone 10“EXE 无感使用统计”Task 37–39 已完成规划验收，排在 Task 36.2 后且尚未授权实施。
+Task 1–30、Milestone 9 Task 31–36、Task 36.1“原图参考像素图标生成补丁”和 Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”均已完成、验收并推送；当前正式 Release 仍为 v1.3.0。36.1 让 fresh icon 参考当前原图；36.2 让官方请求省略不兼容参数并使用正确的单图/多图 multipart 字段，同时保留非官方兼容端点的可配置路由与双响应解析。Milestone 10“EXE 无感使用统计”Task 37–39 已完成规划验收，排在 Task 36.2 后且尚未授权实施。
