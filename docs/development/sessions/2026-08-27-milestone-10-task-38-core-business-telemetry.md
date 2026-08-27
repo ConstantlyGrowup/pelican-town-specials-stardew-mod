@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-27-milestone-10-task-38-core-business-telemetry` |
-| status | `auto_accepted` |
+| status | `committed` |
 | session_type | `task-implementation` |
 | owner | Codex 主 Agent（M10 全量接管） |
 | started_at | `2026-08-27` |
@@ -36,3 +36,4 @@
 - 当前等待 fresh `detector` round 2 独立只读审阅；尚未 auto_accept、commit 或开始 Task 39。
 - detector round 2 `PASS`：M10-T38-001..007 全部通过，focused `37 passed`，无 must-fix、optional hardening、new design 或 scope delta；Provider 后鉴权失败只产生 started + finished，Provider 前 settings rejection 保持。
 - Task 38 已按 Milestone 自动路径进入 `auto_accepted`；下一步只创建本地 focused commit，不 push。
+- 本地 focused commit：`3600d09 feat: record anonymous product usage events`；未 push。Task 38 Session 关闭，后续控制面由 Task 39 Session 接管。

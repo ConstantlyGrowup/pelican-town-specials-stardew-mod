@@ -11,7 +11,10 @@
 # failure. Run from anywhere; the script locates the repo root via $PSScriptRoot.
 
 param(
-    [string]$BundleDir = ""
+    [string]$BundleDir = "",
+    [string]$TelemetryHost = "",
+    [string]$TelemetryProjectToken = "",
+    [switch]$TelemetryEnabledForBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,6 +32,18 @@ function Assert-Zero {
         throw "FAILED: $Name"
     }
 }
+
+Write-Host "==> prepare Release telemetry resource"
+$telemetryWriter = Join-Path $PSScriptRoot 'write_telemetry_config.ps1'
+$telemetryArguments = @(
+    '-TelemetryHost', $TelemetryHost,
+    '-TelemetryProjectToken', $TelemetryProjectToken
+)
+if ($TelemetryEnabledForBuild) {
+    $telemetryArguments += '-EnabledForBuild'
+}
+& pwsh -NoProfile -File $telemetryWriter @telemetryArguments
+Assert-Zero "Release telemetry resource"
 
 Write-Host "==> backend tests"
 python -m pytest backend/tests tests/integration -q
@@ -53,6 +68,10 @@ Assert-Zero "OpenAPI drift"
 Write-Host "==> repo ignore policy"
 pwsh -NoProfile -File scripts/verify_local_docs_ignored.ps1
 Assert-Zero "repo ignore policy"
+
+Write-Host "==> internal telemetry dashboard contract"
+python scripts/validate_telemetry_dashboard.py
+Assert-Zero "internal telemetry dashboard contract"
 
 Write-Host "==> PyInstaller build"
 python -m PyInstaller --clean --noconfirm packaging/pyinstaller/PelicanTownSpecials.spec

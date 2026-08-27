@@ -52,6 +52,11 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.resolve-version.outputs.version }}
+      # Only an explicit, complete Repository Variables set enables the
+      # public capture config. Missing values make the build no-op.
+      telemetry_host: ${{ vars.PTS_TELEMETRY_HOST }}
+      telemetry_project_token: ${{ vars.PTS_TELEMETRY_PROJECT_TOKEN }}
+      telemetry_enabled_for_build: ${{ vars.PTS_TELEMETRY_ENABLED_FOR_BUILD == 'true' }}
     secrets:
       PTS_TRIAL_API_KEY: ${{ secrets.PTS_TRIAL_API_KEY }}
 

@@ -19,6 +19,21 @@ on:
         required: false
         default: '1.3.0'
         type: string
+      telemetry_host:
+        description: HTTPS origin for the public Release telemetry capture endpoint; empty keeps telemetry disabled.
+        required: false
+        default: ''
+        type: string
+      telemetry_project_token:
+        description: Public PostHog project token for a configured Release; empty keeps telemetry disabled.
+        required: false
+        default: ''
+        type: string
+      telemetry_enabled_for_build:
+        description: Explicit Release gate; must be true together with the host and project token.
+        required: false
+        default: false
+        type: boolean
     secrets:
       PTS_TRIAL_API_KEY:
         description: Trial API key injected into the gitignored resources/trial/trial_api_key.txt bundle resource.
@@ -103,7 +118,21 @@ jobs:
           PTS_TRIAL_API_KEY: ${{ secrets.PTS_TRIAL_API_KEY }}
 
       - name: Build Windows bundle
-        run: pwsh -NoProfile -File scripts/build_windows.ps1
+        shell: pwsh
+        env:
+          PTS_TELEMETRY_HOST: ${{ inputs.telemetry_host }}
+          PTS_TELEMETRY_PROJECT_TOKEN: ${{ inputs.telemetry_project_token }}
+          PTS_TELEMETRY_ENABLED_FOR_BUILD: ${{ inputs.telemetry_enabled_for_build }}
+        run: |
+          $enabled = $env:PTS_TELEMETRY_ENABLED_FOR_BUILD.Trim().ToLowerInvariant() -eq 'true'
+          $telemetryArguments = @(
+            '-TelemetryHost', $env:PTS_TELEMETRY_HOST,
+            '-TelemetryProjectToken', $env:PTS_TELEMETRY_PROJECT_TOKEN
+          )
+          if ($enabled) {
+            $telemetryArguments += '-TelemetryEnabledForBuild'
+          }
+          pwsh -NoProfile -File scripts/build_windows.ps1 @telemetryArguments
 
       - name: Smoke test Windows bundle
         run: pwsh -NoProfile -File scripts/smoke_windows_bundle.ps1

@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_10_task_38_active |
-| project_phase | Milestone 8、Task 30、Milestone 9、Task 36.1 与 Task 36.2 均已完成并同步；用户于 2026-08-27 授权开始 Milestone 10“EXE 无感使用统计”。Task 37 已完成并创建本地 focused commit，当前严格串行实施 Task 38。正式 Release 仍为 v1.3.0 |
+| overall_state | milestone_10_awaiting_user_acceptance |
+| project_phase | Milestone 8、Task 30、Milestone 9、Task 36.1 与 Task 36.2 均已完成并同步；用户于 2026-08-27 授权开始 Milestone 10“EXE 无感使用统计”。Task 37、38 已完成并分别创建本地 focused commit，当前严格串行实施 Task 39。正式 Release 仍为 v1.3.0 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-27-milestone-10-task-38-core-business-telemetry` |
+| active_session_id | `2026-08-27-milestone-10-task-39-release-telemetry-e2e` |
 | active_session_state | auto_accepted |
 | active_session_type | task-implementation |
-| current_task | M10 Task 38：核心业务事件接入 |
-| blocker | 无 |
-| next_action | Task 38 detector round 2 `PASS`，T38-001..007 全过且无 must-fix/scope delta；已 auto_accepted，创建本地 focused commit 后关闭 Session，再严格串行开始 Task 39。不得 push、版本提升、tag 或 Release |
+| current_task | M10 Task 39：Release 注入、看板、全链路与打包验收 |
+| blocker | 外部 PostHog production project/IP discard/dashboard、GitHub Repository Variables 与标记测试事件尚未配置/核验；属于 M10 联合人工验收，不影响本地实现 PASS |
+| next_action | Task 39 detector round 4 `PASS`，T39-001..009/R01..R10 全过；创建本地 focused commit 后进入 M10 联合用户验收。用户验收并另行授权后才可 push；版本提升、tag 和 GitHub Release 仍需单独授权 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实

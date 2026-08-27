@@ -1,0 +1,174 @@
+{
+  "manifestVersion": 1,
+  "eventSchemaVersion": 1,
+  "distribution": "internal-only",
+  "title": "Pelican Town Specials anonymous usage",
+  "filters": {
+    "production": {
+      "type": "exclude_test_channel",
+      "posthogCohort": "m10-test-channel",
+      "definition": "Exclude installation IDs registered by the marked test installation checklist before reading production trends."
+    }
+  },
+  "dashboards": [
+    {
+      "id": "user-volume",
+      "title": "User volume",
+      "widgets": [
+        {
+          "id": "dau",
+          "kind": "unique_installations",
+          "event": "app opened",
+          "window": "day",
+          "measure": "unique_distinct_id",
+          "filter": "production"
+        },
+        {
+          "id": "wau",
+          "kind": "unique_installations",
+          "event": "app opened",
+          "window": "week",
+          "measure": "unique_distinct_id",
+          "filter": "production"
+        },
+        {
+          "id": "mau",
+          "kind": "unique_installations",
+          "event": "app opened",
+          "window": "month",
+          "measure": "unique_distinct_id",
+          "filter": "production"
+        }
+      ]
+    },
+    {
+      "id": "core-usage",
+      "title": "Core usage",
+      "widgets": [
+        {
+          "id": "mode-mix",
+          "kind": "event_breakdown",
+          "event": "generation started",
+          "breakdown": "mode",
+          "filter": "production"
+        },
+        {
+          "id": "generation-success-rate",
+          "kind": "funnel_ratio",
+          "numerator": {
+            "event": "generation finished",
+            "property": "outcome",
+            "value": "succeeded"
+          },
+          "denominator": {
+            "event": "generation finished"
+          },
+          "filter": "production"
+        },
+        {
+          "id": "generation-duration-p50",
+          "kind": "percentile",
+          "event": "generation finished",
+          "property": "duration_ms",
+          "percentile": 50,
+          "filter": "production"
+        },
+        {
+          "id": "generation-duration-p90",
+          "kind": "percentile",
+          "event": "generation finished",
+          "property": "duration_ms",
+          "percentile": 90,
+          "filter": "production"
+        },
+        {
+          "id": "archive-funnel",
+          "kind": "funnel",
+          "steps": ["generation finished:succeeded", "dish archived"],
+          "filter": "production"
+        },
+        {
+          "id": "export-funnel",
+          "kind": "funnel",
+          "steps": ["dish archived", "menu export finished:succeeded"],
+          "filter": "production"
+        },
+        {
+          "id": "trial-used",
+          "kind": "property_breakdown",
+          "event": "generation started",
+          "property": "trial_used",
+          "filter": "production"
+        }
+      ]
+    },
+    {
+      "id": "quality-and-m9",
+      "title": "Quality and canonical memory",
+      "widgets": [
+        {
+          "id": "terminal-outcomes",
+          "kind": "event_breakdown",
+          "event": "generation finished",
+          "breakdown": "outcome",
+          "filter": "production"
+        },
+        {
+          "id": "memory-outcomes",
+          "kind": "event_breakdown",
+          "event": "generation finished",
+          "breakdown": "memory_outcome",
+          "include": ["hit", "miss", "not_eligible", "unavailable", "fallback_error"],
+          "filter": "production"
+        },
+        {
+          "id": "memory-duration",
+          "kind": "percentile_breakdown",
+          "event": "generation finished",
+          "property": "duration_ms",
+          "breakdown": "memory_outcome",
+          "include": ["hit", "miss"],
+          "percentiles": [50, 90],
+          "filter": "production"
+        }
+      ]
+    }
+  ],
+  "manualAcceptanceChecklist": [
+    {
+      "id": "posthog-project-settings",
+      "status": "pending_external",
+      "checks": [
+        "Use a dedicated production project.",
+        "Disable IP data capture/discard source IP.",
+        "Keep autocapture, session replay, exception capture, and person identify disabled.",
+        "Verify all events use the personless process profile flag."
+      ]
+    },
+    {
+      "id": "marked-test-installation",
+      "status": "pending_external",
+      "checks": [
+        "Install a Release build with a temporary marked test identity.",
+        "Confirm schemaVersion 1 and the typed event allowlist in the received batch.",
+        "Register its installation ID in the m10-test-channel cohort, then verify the production filter excludes it."
+      ]
+    },
+    {
+      "id": "repository-variables",
+      "status": "pending_external",
+      "checks": [
+        "Set PTS_TELEMETRY_HOST, PTS_TELEMETRY_PROJECT_TOKEN, and PTS_TELEMETRY_ENABLED_FOR_BUILD as repository variables.",
+        "Confirm ordinary CI leaves the generated resource absent and Release builds include only the public project token."
+      ]
+    },
+    {
+      "id": "dashboard-and-event-evidence",
+      "status": "pending_external",
+      "checks": [
+        "Capture the actual PostHog dashboard screenshots and a redacted received event sample after the production project is configured.",
+        "Mark this item pending until the event schema, personless flag, IP discard, and test-channel exclusion are observed in the remote project."
+      ]
+    }
+  ]
+}

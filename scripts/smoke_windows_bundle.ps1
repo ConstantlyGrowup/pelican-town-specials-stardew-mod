@@ -97,6 +97,12 @@ $procA = $null
 $clientA = $null
 $procB = $null
 $clientB = $null
+$telemetryDisabledWasSet = Test-Path Env:PTS_TELEMETRY_DISABLED
+$telemetryDisabledPreviousValue = $env:PTS_TELEMETRY_DISABLED
+# Every product process launched by this smoke, including both clean app
+# launches, inherits this gate so a configured Release resource cannot pollute
+# the production project. The original parent value is restored in finally.
+$env:PTS_TELEMETRY_DISABLED = '1'
 try {
     $argumentsA = @('--no-browser', '--workspace', $workspace, '--port', $portA.ToString())
     $procA = Start-Process -FilePath $exePath -ArgumentList $argumentsA -PassThru
@@ -186,6 +192,11 @@ finally {
         Stop-Process -Id $procB.Id -Force -ErrorAction SilentlyContinue
     }
     Remove-TempWorkspace $workspace
+    if ($telemetryDisabledWasSet) {
+        $env:PTS_TELEMETRY_DISABLED = $telemetryDisabledPreviousValue
+    } else {
+        Remove-Item Env:PTS_TELEMETRY_DISABLED -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Host "OK: bundle smoke passed (exe + recursive _sqlite3 + static homepage + two clean launches + persistent registry)."

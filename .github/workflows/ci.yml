@@ -20,5 +20,7 @@ permissions:
 jobs:
   verify-and-build:
     uses: ./.github/workflows/build.yml
+    # Do not pass telemetry inputs here. The reusable workflow defaults all
+    # Release-only values to empty/false, so ordinary CI remains config-free.
     secrets:
       PTS_TRIAL_API_KEY: ${{ secrets.PTS_TRIAL_API_KEY }}
