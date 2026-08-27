@@ -252,16 +252,16 @@ class OpenAICompatibleGateway:
         timeout: int,
     ) -> GeneratedImage:
         files: list[tuple[str, tuple[str, bytes, str]]] = []
+        image_field = "image" if len(request.source_images) == 1 else "image[]"
         for index, image in enumerate(request.source_images):
             files.append(
-                ("image", (f"image-{index}", image.data, image.media_type.value))
+                (image_field, (f"image-{index}", image.data, image.media_type.value))
             )
         data: dict[str, str] = {"model": model, "prompt": request.prompt, "n": "1"}
         if request.size:
             data["size"] = request.size
         if request.quality:
             data["quality"] = request.quality
-        data["response_format"] = "b64_json"
         response = await self._request(
             method="POST",
             url=self._url("images/edits"),
@@ -283,7 +283,6 @@ class OpenAICompatibleGateway:
             "model": model,
             "prompt": request.prompt,
             "n": 1,
-            "response_format": "b64_json",
         }
         if request.size:
             body["size"] = request.size
@@ -351,7 +350,6 @@ class OpenAICompatibleGateway:
         body: dict[str, object] = {
             "model": model,
             "messages": [{"role": "user", "content": content}],
-            "temperature": 0,
         }
         if use_json_schema:
             body["response_format"] = {

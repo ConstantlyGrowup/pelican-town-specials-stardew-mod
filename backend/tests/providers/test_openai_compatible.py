@@ -221,6 +221,7 @@ async def test_canonical_match_uses_text_model_and_sends_no_image_or_reasoning(
     assert result.confidence == 0.95
     body = json.loads(route.calls[0].request.content.decode())
     assert body["model"] == "text-model"
+    assert "temperature" not in body
     assert "reasoning_effort" not in body
     content = body["messages"][0]["content"]
     assert len(content) == 1
@@ -248,6 +249,7 @@ async def test_canonical_match_json_only_uses_existing_structured_fallback(
 
     assert result.candidate_id is None
     body = json.loads(route.calls[0].request.content.decode())
+    assert "temperature" not in body
     assert "response_format" not in body
 
 
@@ -287,6 +289,8 @@ async def test_json_schema_capability_error_degrades_to_json_only(
     assert result.recognized_dish == "Spring Noodles"
     first_body = json.loads(route.calls[0].request.content.decode())
     second_body = json.loads(route.calls[1].request.content.decode())
+    assert "temperature" not in first_body
+    assert "temperature" not in second_body
     assert "response_format" in first_body
     assert "response_format" not in second_body
 
@@ -305,6 +309,10 @@ async def test_structured_output_repairs_once(gateway: OpenAICompatibleGateway) 
 
     assert route.call_count == 2
     assert result.confidence == 0.9
+    assert all(
+        "temperature" not in json.loads(call.request.content.decode())
+        for call in route.calls
+    )
     repair_prompt = json.loads(route.calls[1].request.content.decode())["messages"][0][
         "content"
     ][0]["text"]
@@ -328,6 +336,10 @@ async def test_structured_output_repairs_twice_before_success(
 
     assert route.call_count == 3
     assert result.confidence == 0.9
+    assert all(
+        "temperature" not in json.loads(call.request.content.decode())
+        for call in route.calls
+    )
     repair_prompt = json.loads(route.calls[2].request.content.decode())["messages"][0][
         "content"
     ][0]["text"]
@@ -505,6 +517,15 @@ async def test_image_edit_uses_multipart_and_decodes_b64(
     assert route.called
     assert result.media_type is ImageMediaType.PNG
     assert result.data == png
+    request = route.calls[0].request
+    body = request.content.decode("utf-8", errors="ignore")
+    assert 'name="response_format"' not in body
+    assert body.count('name="image"') == 1
+    assert 'name="image[]"' not in body
+    assert 'name="model"' in body
+    assert 'name="prompt"' in body
+    assert 'name="n"' in body
+    assert 'name="size"' in body
 
 
 @respx.mock
@@ -649,6 +670,47 @@ async def test_generation_endpoint_uses_json(gateway: OpenAICompatibleGateway) -
 
     assert route.called
     assert result.media_type is ImageMediaType.PNG
+    body = json.loads(route.calls[0].request.content.decode())
+    assert body == {
+        "model": "image-model",
+        "prompt": "a red square",
+        "n": 1,
+        "size": "256x256",
+    }
+
+
+@respx.mock
+async def test_generation_preserves_url_response_download(
+    settings: ProviderSettings,
+) -> None:
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    generation_route = respx.post("https://yibuapi.com/v1/images/generations").mock(
+        return_value=httpx.Response(
+            200,
+            json={"data": [{"url": "https://cdn.example.com/generated.png"}]},
+        )
+    )
+    download_route = respx.get("https://cdn.example.com/generated.png").mock(
+        return_value=httpx.Response(
+            200,
+            content=png,
+            headers={"content-type": "image/png"},
+        )
+    )
+    gateway = OpenAICompatibleGateway(
+        settings=settings,
+        secret_store=FakeSecretStore(),
+        dns_resolver=lambda host: ["1.2.3.4"],
+    )
+
+    result = await gateway.generate_image(_image_generation_request())
+
+    assert generation_route.call_count == 1
+    assert download_route.call_count == 1
+    body = json.loads(generation_route.calls[0].request.content.decode())
+    assert "response_format" not in body
+    assert result.data == png
+    assert result.media_type is ImageMediaType.PNG
 
 
 @respx.mock
@@ -674,7 +736,9 @@ async def test_image_edit_sends_images_in_order(gateway: OpenAICompatibleGateway
     request = route.calls[0].request
     assert "multipart" in request.headers.get("content-type", "")
     body = request.content.decode("utf-8", errors="ignore")
-    assert body.count('name="image"') == 2
+    assert 'name="response_format"' not in body
+    assert body.count('name="image[]"') == 2
+    assert 'name="image"' not in body
     assert body.find('"image-0"') < body.find('"image-1"')
 
 
@@ -688,6 +752,7 @@ async def test_analyze_sends_multimodal_image_url(gateway: OpenAICompatibleGatew
 
     body = json.loads(route.calls[0].request.content.decode())
     content = body["messages"][0]["content"]
+    assert "temperature" not in body
     assert any(part.get("type") == "image_url" for part in content)
 
 
@@ -783,6 +848,7 @@ async def test_design_ask_gus_routes_new_calls_through_v3_prompt(
     await gateway.design_ask_gus(_ask_gus_design_request())
 
     outbound = json.loads(route.calls[0].request.content.decode())
+    assert "temperature" not in outbound
     prompt = outbound["messages"][0]["content"][0]["text"]
     assert "不要因为菜品普通就默认将 buff 设为 null" in prompt
     assert "最多两个明确互补的非零属性" in prompt
