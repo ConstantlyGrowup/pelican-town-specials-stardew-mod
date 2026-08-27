@@ -6,12 +6,14 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.3 | v1.3.0 已发布本地版协议，并链接 Milestone 9/10 编码扩展 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.6 | v1.3.0 已发布本地版协议，并链接 Milestone 9、Task 36.1、Task 36.2 与 M10 编码扩展 |
 | `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
 | `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；用户已验收规划，尚未授权实施 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v1.6 | 已完成 Task 1–30，并登记 Milestone 9 Task 31–36 与 Milestone 10 Task 37–39 顺序和边界 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v1.9 | 已完成 Task 1–36，并登记 Task 36.1、Task 36.2 补丁与 Milestone 10 Task 37–39 顺序和边界 |
 | `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
 | `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已验收，等待实施授权 |
+| `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已实施并通过独立审阅，与 36.2 联合验收 |
+| `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并授权推送 |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |
 | `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.2 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
@@ -42,6 +44,8 @@
 - `AuthorName` 在工作区首次创建时生成并持久化为 `D<YYYYMMDD>`；身份/账号策略后移第四期重新讨论。
 - 第三期只规划并验证问问 Gus 的本地 Canonical 召回：可复用结构化词条与像素图标，但最终专属预览必须使用本次用户原图重新生成。
 - Milestone 9 冻结：全局有效 Canonical 至少 N=2；同语言现实原料主导 Top 5；模型只选最高候选且 `>=90%` 命中；仅正式 Ask Gus 存档写入；完整重新生成/Blueprint 不召回；效果只衡量总耗时和真实单次任务成本。
+- Task 36.1 冻结：Canonical HIT 直接复用历史 icon、零图标生成；Ask Gus INITIAL miss、FULL_REGENERATE 与 Blueprint 必须以当前 Draft 原图作为单图 edit 参考生成新 icon，再沿用现有背景透明化和 16×16 归一化。不得新增图片调用次数、设置项、前端/API/schema 或相似度模型。
+- Task 36.2 冻结：面向官方与非官方 OpenAI-compatible 端点；官方 `gpt-5.6` 文本/视觉调用不得固定发送其不支持的 `temperature=0`，官方 `gpt-image-2` generation/edit 不发送 `response_format`，单图 edit 使用 `image`、多图使用有序重复 `image[]`；默认 `b64_json` 与兼容端点 URL 均继续解析。保持 Base URL/模型 ID 可配置，不新增 Provider SDK、设置项、API/schema、Provider 自动分支、额外调用或模型 fallback；真实 API 验证必须由用户明确授权。
 - 第三期使用 Python 标准库 SQLite 和 Registry 自有图标目录，不要求用户安装数据库；调用/步骤数只用于正确性测试，不作为产品指标。
 - 第三期不引入登录、云端工作区、Redis、Bloom Filter、夜间批处理、分布式队列、Gallery 或管理端；这些分别留到第四期/第五期规划。
 - Milestone 10 统计口径冻结为“匿名活跃安装”，不宣称精确人数；随机 UUID v4 不与账号、机器指纹、用户名、路径或硬件绑定。

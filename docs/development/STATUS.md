@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_9_accepted_and_pushed |
-| project_phase | Milestone 8、Task 30 与 Milestone 9 均已完成；M9 已于 2026-08-26 获用户统一验收并同步当前分支。正式 Release 仍为 v1.3.0；M10 仅规划验收、尚未授权实施 |
+| overall_state | task_36_1_36_2_accepted_committed_push_authorized |
+| project_phase | Milestone 8、Task 30 与 Milestone 9 均已完成；M9 已同步当前分支。Task 36.1 与重新定义为“官方/非官方 OpenAI-compatible 端点适配补丁”的 Task 36.2 已于 2026-08-27 获用户联合验收并授权提交、push；当前按两个 focused commit 边界收尾。正式 Release 仍为 v1.3.0，M10 仅规划验收、尚未授权实施 |
 | product_implementation_started | true |
-| active_session_id | 无（Task 36 已 `auto_accepted`） |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | 无；Milestone 9 已 accepted，Task 31–36 实施提交与验收控制面已推送 |
+| active_session_id | `2026-08-26-task-36-2-official-openai-provider-compatibility` |
+| active_session_state | accepted / committed / push_authorized |
+| active_session_type | task-implementation |
+| current_task | 推送 Task 36.1 `a2d3756` 与 Task 36.2 `bf3d1ed` 及验收控制面记录 |
 | blocker | 无 |
-| next_action | 等待用户明确授权下一项工作。当前不提升版本、不 tag、不发布 GitHub Release，也不开始 M10 |
+| next_action | 提交验收控制面记录并推送 `feat/mvp-implementation`，随后核验远端；不提升版本、不 tag、不发布 GitHub Release，也不开始 M10 |
 | collaboration_model | M9 临时由 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -27,7 +27,7 @@
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | M9 Task 31–36 提交已完成至 `3c3496b test: verify Milestone 9 canonical memory end to end`；本次验收控制面记录随后形成 focused commit 并同步当前分支。tag `v1.3.0` 仍位于 `4de82ad`，未创建新 tag |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | M9 产品与验收控制面均已提交；用户已有 prototype、samples、Claude worktree 与 review/pytest 临时目录等未跟踪文件保持原样且未纳入。构建产物保持 Git ignored。 |
+| 当前工作树范围 | Task 36.1 产品提交 `a2d3756`、Task 36.2 产品提交 `bf3d1ed` 已创建，当前只提交验收控制面。用户已有 `canonical.py` 阈值 `0.90 → 0.80`、prototype、samples、Claude worktree 与历史 review/pytest 临时目录均保持原样且不纳入。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -50,7 +50,7 @@
 - 已确认：全局 Registry 至少有 `N=2` 道有效菜品才召回；仅正式存档的 Ask Gus 成品写入；先按现实原料等字段筛少量同语言候选，再由模型选择最高置信度项，只有 `>=90%` 才命中；命中复用完整结构化词条与像素图标，最终预览仍用本次原图重新生成。
 - 补充要求参与匹配且冲突即 miss；完整重新生成不直接复用；料理蓝图不进入记忆；异常统一降级为 miss。效果指标只保留单次生成耗时和单次任务成本，不使用调用数/步骤数作为成功指标。
 - Milestone 9 已定义为“Gus 的全局生成记忆与 Canonical 召回”，严格串行 Task 31–36：SQLite Registry；正式存档登记/启动修复；候选与 matcher；Orchestrator 命中复用；耗时/Gus 叙事；全链路与打包验收。
-- 技术设计：`docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0；详细计划：`docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0；MVP 技术设计/实施计划当前索引为 v2.3/v1.6（同时登记 M10）。
+- 技术设计：`docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0；详细计划：`docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0；MVP 技术设计/实施计划当前索引为 v2.6/v1.9（同时登记 Task 36.1、Task 36.2 与 M10）。
 - 2026-08-25 用户已验收 M9/M10 规划并授权开始 M9；本规划 Session 已关闭，Task 31 Context Packet 准备中。
 
 ## Milestone 9 实施完成（accepted / pushed）
@@ -74,13 +74,33 @@
 - 已知非 M9 门禁债务：Packet 的扩展 Ruff 命令会在未改动的 `scripts/validate_mod_zip.py` 报既存 PIE810/BLE001；M9 改动范围内 Ruff 全绿。
 - 用户于 2026-08-26 明确“验收通过，可以推送”；M9 实施提交 `7addfb8..3c3496b` 与本验收记录均同步至 `origin/feat/mvp-implementation`。该授权不包含 tag、版本提升或 GitHub Release；M10 仍只完成规划。
 
+## Task 36.2 官方/非官方 OpenAI-compatible 端点适配（accepted / push authorized）
+
+- 用户于 2026-08-26 登记兼容问题，并于 2026-08-27 将其正式定义为 **Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”**；排在 Task 36.1 后、M10 Task 37 前。
+- 已确认根因：`OpenAICompatibleGateway` 的 Chat 请求固定发送 `temperature=0`，官方 `gpt-5.6` 仅接受默认值，因而在菜品分析阶段返回 HTTP 400；用户的官方 Base URL、`gpt-5.6` 文本/视觉模型、`gpt-image-2` 图像模型和有效 Key 不是本次根因。
+- 预定最小修复：默认省略不具备跨模型兼容保证的 `temperature` 可选参数，不新增用户设置或 Provider SDK；保持现有可配置 Base URL/模型 ID、结构化输出、视觉输入、重试、错误映射和中转站路径。
+- 验收需覆盖：官方 `gpt-5.6` 文本/视觉/Canonical matcher 请求不携带不受支持的 `temperature=0`；现有 OpenAI-compatible fake 回归不退化；核验 `gpt-image-2` generation/edit 请求与响应参数，如发现官方接口的同类可选参数差异，仅在本 Task 内做最小兼容修复。
+- round 0 已省略 Chat `temperature` 与 Images `response_format`，主 Agent 全量门禁和 detector 均 PASS；但用户 2026-08-27 的真实官方 API 联合验收在多图 edit 返回 HTTP 400：`Duplicate parameter: 'image'`，并明确要求数组语法。
+- 官方 Create image edit 契约确认：单图可用标量 `image`，多图必须以重复 `image[]` multipart 字段发送。round 0 的 T36.2-R03 作为历史裁决保留，新增 T36.2-R04 取代其执行结论：单图继续 `image`，多图改用有序重复 `image[]`，不增加调用、不改变中转站响应解析。
+- 当前 revise round 为 1；仍只允许修改 `openai_compatible.py` 与对应 provider tests，先写会失败的请求捕获测试，再做最小实现并重新经过主 Agent 全量验证和 detector 独立审阅。
+- `luna_worker`（gpt-5.6-luna/max）已完成 RED→GREEN：旧实现聚焦测试 `1 failed, 1 passed`，失败精确为双图 `image[]` 数量 0；最小实现按源图数量选择 `image` / `image[]`，provider GREEN `46 passed`，scope delta `none`。
+- 主 Agent 独立验证：provider `46 passed`；generation/trial/M9 相关 `80 passed`；全后端 `781 passed, 2 skipped`；Ruff、mypy 92 files、OpenAPI drift、diff-check 均 PASS。沙箱内相关测试与 OpenAPI 初跑只因 Windows ACL 失败，使用获准的沙箱外同命令重跑后全绿。
+- `detector`（gpt-5.6-sol/medium，只读）round 1：`PASS`；T36.2-001..008 全部通过，R01/R02 应用、R03 历史 superseded、R04 应用；`must_fix: []`、`optional_hardening: []`、`new_design: []`、`scope_delta: none`。当前重新进入 36.1 + 36.2 联合用户验收。
+- 官方 Images API 进一步确认：`response_format` 不支持 GPT Image 模型且其默认返回 `b64_json`；本 Task 同步省略 generation/edit 的该固定字段，保留 URL 响应解析作为中转站兼容。
+- 用户明确 Task 36.1 与 36.2 联合验收；36.1 验证完成并关闭为 deferred joint acceptance，未提交改动保持原样；36.2 Session 当前承载联合验收状态。
+- 详细计划与 Context Packet 已冻结为 `READY_FOR_IMPLEMENTATION`；尚未调用真实 API、未使用真实 Key、未产生费用。
+- worker RED/GREEN 与主 Agent 验收均完成：provider `46 passed`、相关 `80 passed`、全后端 `781 passed/2 skipped`，Ruff/mypy/OpenAPI drift/diff-check 全绿。
+- detector round 0 **PASS**：T36.2-001..008、R01..R03 全部通过，无 must-fix、可选硬化、新设计或 scope delta。当前与已 PASS 的 36.1 联合等待用户验收。
+- 用户于 2026-08-27 明确联合验收通过并授权两个任务 push；Task 36.2 的定义同时覆盖官方 OpenAI 端点与既有非官方 OpenAI-compatible 端点适配，范围不扩张为 SDK、Provider 自动识别或模型 fallback。
+- focused product commits 已创建：Task 36.1 `a2d3756 fix: generate fresh icons from the source photo`；Task 36.2 `bf3d1ed fix: adapt official and compatible OpenAI endpoints`。当前等待验收控制面提交后统一 push。
+
 ## 已验收、待实施授权的 Milestone 10 规划
 
 - Milestone 10 定义为“EXE 无感使用统计”，技术设计 `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1，详细计划 `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1。
 - 方案：PostHog Cloud 只写采集端点 + 后端人工类型化事件 + 随机安装 ID；配置完整的 Windows Release 自动启用，不新增首次说明、确认步骤、设置开关、前端页面、公开 API 或用户文档入口，M10 完成前后用户体验不变。
 - 禁止发送图片、菜品文本、用户输入、Key、中转站、模型 ID、业务 ID、异常正文、路径、设备指纹、IP/Geo、DOM/点击或 session replay；不记录应用版本，不统计新版本采用比例；项目使用 personless 事件并在 PostHog 关闭 IP 保存。
 - 后端只做有界内存队列和异步短超时发送，collector 故障不影响业务；GitHub Release 下载量只作旁证。M10 减负为 Task 37 统计核心、38 业务事件、39 Release 配置/看板/E2E。
-- M10 与 M9 无硬代码依赖，默认排在 M9 后；如排期要求先获得 EXE 量化能力，需用户明确重排。当前未创建 PostHog 项目、Repository Variables、Task 37 Packet 或源码修改。
+- M10 与 M9 无硬代码依赖，当前排在 Task 36.2 后；如排期要求先获得 EXE 量化能力，需用户明确重排。当前未创建 PostHog 项目、Repository Variables、Task 37 Packet 或源码修改。
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 
