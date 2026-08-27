@@ -5,6 +5,8 @@ from __future__ import annotations
 from pelican_town_specials.domain.common import GenerationStage
 from pelican_town_specials.domain.dish import GenerationSource
 from pelican_town_specials.domain.draft import DraftStatus
+from pelican_town_specials.images import downscale_for_vision
+from pelican_town_specials.images.vision_input import EDIT_MIN_PIXELS
 from pelican_town_specials.providers.contracts import ImageOperation
 
 from .conftest import (
@@ -77,7 +79,18 @@ async def test_successful_full_regeneration_replaces_all_fields(
     assert restored.active_attempt_id is None
     assert restored.last_attempt_id is not None
     assert harness.gateway.calls == ["analyze", "design", "image", "image"]
-    assert [request.operation for request in harness.gateway.image_requests] == [
-        ImageOperation.GENERATION,
-        ImageOperation.EDIT,
-    ]
+    icon_request, preview_request = harness.gateway.image_requests
+    assert icon_request.operation is ImageOperation.EDIT
+    assert len(icon_request.source_images) == 1
+    original_ref = harness.asset_store.stat(
+        reviewable_draft.source.original_image_asset_id
+    )
+    with harness.asset_store.open(original_ref) as handle:
+        original_data = handle.read()
+    downscaled, media_type = downscale_for_vision(
+        original_data, min_pixels=EDIT_MIN_PIXELS
+    )
+    assert icon_request.source_images[0].data == downscaled
+    assert icon_request.source_images[0].media_type is media_type
+    assert preview_request.operation is ImageOperation.EDIT
+    assert len(preview_request.source_images) == 2

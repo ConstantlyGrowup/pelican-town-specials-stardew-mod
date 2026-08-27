@@ -239,8 +239,8 @@ async def test_ask_gus_stage_order(
     assert harness.gateway.calls == ["analyze", "design", "image", "image"]
     assert len(harness.gateway.image_requests) == 2
     icon_request, preview_request = harness.gateway.image_requests
-    assert icon_request.operation is ImageOperation.GENERATION
-    assert icon_request.source_images == []
+    assert icon_request.operation is ImageOperation.EDIT
+    assert len(icon_request.source_images) == 1
     assert preview_request.operation is ImageOperation.EDIT
     assert preview_request.quality == "high"
     assert len(preview_request.source_images) == 2
@@ -280,6 +280,16 @@ async def test_ask_gus_stage_order(
     downscaled, media_type = downscale_for_vision(
         original_data, min_pixels=EDIT_MIN_PIXELS
     )
+    assert icon_request.source_images[0].data == downscaled
+    assert icon_request.source_images[0].media_type is media_type
+    assert icon_request.size == "1024x1024"
+    for required_text in (
+        "参考输入图中的菜品主体",
+        "可辨识的轮廓、主要配色、摆盘形态和关键食材特征",
+        "不要把桌面或照片背景作为主体",
+        "单个星露谷风格的像素物品图标",
+    ):
+        assert required_text in icon_request.prompt
     assert preview_request.source_images[0].data == downscaled
     assert preview_request.source_images[0].media_type is media_type
     assert preview_request.source_images[1].data == icon_source_data
@@ -291,6 +301,17 @@ async def test_ask_gus_stage_order(
     preview = Image.open(
         io.BytesIO(_read_asset(harness.asset_store, preview_ref))
     ).convert("RGBA")
+    icon_source = Image.open(io.BytesIO(icon_source_data)).convert("RGBA")
+    icon_16 = Image.open(
+        io.BytesIO(
+            _read_asset(
+                harness.asset_store,
+                harness.asset_store.stat(saved.visuals.icon_16_asset_id),
+            )
+        )
+    ).convert("RGBA")
+    assert icon_source.size == (128, 128)
+    assert icon_16.size == (16, 16)
     assert preview.size == (96, 64)
     assert preview.size != original.size
 
@@ -515,7 +536,7 @@ async def test_full_regenerate_and_blueprint_never_touch_canonical_registry(
     assert blueprint_events[-1].type == "attempt.succeeded"
 
 
-async def test_preview_stops_without_two_image_edit_capability(
+async def test_fresh_icon_stops_without_image_edit_capability(
     harness: GenerationHarness, ready_draft
 ) -> None:
     harness.gateway.image_edits_supported = False
@@ -526,9 +547,14 @@ async def test_preview_stops_without_two_image_edit_capability(
     assert events[-1].type == "attempt.failed"
     assert events[-1].error is not None
     assert events[-1].error.code == "PTS_PROVIDER_IMAGE_EDIT_UNSUPPORTED"
-    assert harness.gateway.calls == ["analyze", "design", "image"]
-    assert len(harness.gateway.image_requests) == 1
-    assert harness.gateway.image_requests[0].operation is ImageOperation.GENERATION
+    assert harness.gateway.calls == ["analyze", "design"]
+    assert harness.gateway.image_requests == []
+    restored = harness.orchestrator.drafts.get(ready_draft.draft_id)
+    assert restored.status is DraftStatus.FAILED
+    assert restored.active_attempt_id is None
+    assert restored.last_error is not None
+    assert restored.last_error.code == "PTS_PROVIDER_IMAGE_EDIT_UNSUPPORTED"
+    assert harness.orchestrator._registry.active_count() == 0
 
 
 def test_preview_prompt_stays_within_provider_limit() -> None:
@@ -694,6 +720,15 @@ async def test_en_draft_uses_english_visual_and_icon_prompts(
     # Icon prompt is English and carries no Chinese icon phrasing.
     assert "Stardew Valley-style 16×16 game icon" in icon_request.prompt
     assert "星露谷风格的 16×16 游戏图标" not in icon_request.prompt
+    assert icon_request.operation is ImageOperation.EDIT
+    assert len(icon_request.source_images) == 1
+    for required_text in (
+        "Use the source photo as the visual reference",
+        "recognizable silhouette, main colors, plating, and key ingredient features",
+        "Do not make the table or photo background the subject",
+        "one Stardew Valley-style pixel item icon",
+    ):
+        assert required_text in icon_request.prompt
 
     # Preview tooltip prompt uses English field labels and layout guidance.
     for required_text in (

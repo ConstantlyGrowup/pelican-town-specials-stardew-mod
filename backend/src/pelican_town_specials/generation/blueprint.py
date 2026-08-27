@@ -118,12 +118,18 @@ def blueprint_icon_prompt(
     if language is Language.EN_US:
         return (
             f"Stardew Valley-style 16×16 game icon: {presentation.display_name}"
-            ". Single item centered, solid magenta background (#FF00FF), no shadows, "
+            ". Use the source photo as the visual reference for the dish. Preserve the "
+            "recognizable silhouette, main colors, plating, and key ingredient features; "
+            "Do not make the table or photo background the subject. Convert only the "
+            "dish into one Stardew Valley-style pixel item icon. Single item centered, "
+            "use a removable solid magenta background (#FF00FF), no shadows, "
             "no reflections, no text, no borders"
         )
     return (
         f"星露谷风格的 16×16 游戏图标：{presentation.display_name}"
-        "。单个物品居中，纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
+        "。参考输入图中的菜品主体，保留可辨识的轮廓、主要配色、摆盘形态和关键食材特征；"
+        "不要把桌面或照片背景作为主体。将菜品转为单个星露谷风格的像素物品图标。"
+        "单个物品居中，使用便于抠图的纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
     )
 
 

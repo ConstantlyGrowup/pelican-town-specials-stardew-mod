@@ -189,19 +189,24 @@ class FakeGateway:
         self.image_requests.append(request)
         if self.delay:
             await asyncio.sleep(self.delay)
+        source_count = len(request.source_images)
         if (
             self.fail_stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION
-            and request.operation is ImageOperation.GENERATION
+            and request.operation is ImageOperation.EDIT
+            and source_count == 1
         ):
             raise RuntimeError("fake icon generation failure")
         if (
             self.fail_stage
             is GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION
             and request.operation is ImageOperation.EDIT
+            and source_count == 2
         ):
             raise RuntimeError("fake preview generation failure")
         output_size = (
-            128 if request.operation is ImageOperation.GENERATION else (96, 64)
+            128
+            if request.operation is ImageOperation.GENERATION or source_count == 1
+            else (96, 64)
         )
         return GeneratedImage(
             data=_png_bytes(size=output_size), media_type=ImageMediaType.PNG

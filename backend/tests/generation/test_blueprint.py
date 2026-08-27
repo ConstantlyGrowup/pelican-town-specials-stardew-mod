@@ -71,9 +71,10 @@ async def test_blueprint_stage_order_and_image_only_calls(
     assert harness.gateway.calls == ["image", "image"]
     assert len(harness.gateway.image_requests) == 2
     icon_request, preview_request = harness.gateway.image_requests
-    assert icon_request.operation is ImageOperation.GENERATION
+    assert icon_request.operation is ImageOperation.EDIT
     assert preview_request.operation is ImageOperation.EDIT
     assert preview_request.quality == "high"
+    assert len(icon_request.source_images) == 1
     assert len(preview_request.source_images) == 2
     original_ref = harness.asset_store.stat(
         blueprint_stale.source.original_image_asset_id
@@ -83,6 +84,16 @@ async def test_blueprint_stage_order_and_image_only_calls(
     downscaled, media_type = downscale_for_vision(
         original_data, min_pixels=EDIT_MIN_PIXELS
     )
+    assert icon_request.source_images[0].data == downscaled
+    assert icon_request.source_images[0].media_type is media_type
+    assert icon_request.size == "1024x1024"
+    for required_text in (
+        "参考输入图中的菜品主体",
+        "可辨识的轮廓、主要配色、摆盘形态和关键食材特征",
+        "不要把桌面或照片背景作为主体",
+        "单个星露谷风格的像素物品图标",
+    ):
+        assert required_text in icon_request.prompt
     assert preview_request.source_images[0].data == downscaled
     assert preview_request.source_images[0].media_type is media_type
     for required_text in (
@@ -565,6 +576,13 @@ def test_blueprint_icon_prompt_en() -> None:
     )
     assert "magenta background" in prompt
     assert "no shadows, no reflections, no text, no borders" in prompt
+    for required_text in (
+        "Use the source photo as the visual reference",
+        "recognizable silhouette, main colors, plating, and key ingredient features",
+        "Do not make the table or photo background the subject",
+        "one Stardew Valley-style pixel item icon",
+    ):
+        assert required_text in prompt
     assert "星露谷" not in prompt
 
 
@@ -578,6 +596,15 @@ async def test_blueprint_en_draft_uses_english_prompts(
     icon_request, preview_request = harness.gateway.image_requests
     assert "Stardew Valley-style 16×16 game icon" in icon_request.prompt
     assert "星露谷风格的 16×16 游戏图标" not in icon_request.prompt
+    assert icon_request.operation is ImageOperation.EDIT
+    assert len(icon_request.source_images) == 1
+    for required_text in (
+        "Use the source photo as the visual reference",
+        "recognizable silhouette, main colors, plating, and key ingredient features",
+        "Do not make the table or photo background the subject",
+        "one Stardew Valley-style pixel item icon",
+    ):
+        assert required_text in icon_request.prompt
     for required_text in (
         "item hover tooltip",
         "not a poster",
