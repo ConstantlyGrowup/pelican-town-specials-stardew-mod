@@ -6,16 +6,16 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | task_36_1_36_2_accepted_and_pushed |
-| project_phase | Milestone 8、Task 30、Milestone 9、Task 36.1 与 Task 36.2 均已完成；36.1 与重新定义为“官方/非官方 OpenAI-compatible 端点适配补丁”的 36.2 已于 2026-08-27 获用户联合验收并同步当前分支。正式 Release 仍为 v1.3.0，M10 仅规划验收、尚未授权实施 |
+| overall_state | milestone_10_task_37_auto_accepted |
+| project_phase | Milestone 8、Task 30、Milestone 9、Task 36.1 与 Task 36.2 均已完成并同步；用户于 2026-08-27 授权开始 Milestone 10“EXE 无感使用统计”，当前严格串行实施 Task 37。正式 Release 仍为 v1.3.0 |
 | product_implementation_started | true |
-| active_session_id | 无（Task 36.1 与 36.2 均已 accepted / committed / pushed） |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | 无；等待用户明确授权下一项工作 |
+| active_session_id | `2026-08-27-milestone-10-task-37-telemetry-core` |
+| active_session_state | auto_accepted |
+| active_session_type | task-implementation |
+| current_task | M10 Task 37：匿名统计核心、状态与 PostHog sink |
 | blocker | 无 |
-| next_action | 等待用户明确授权下一项工作；不提升版本、不 tag、不发布 GitHub Release，也不开始 M10 |
-| collaboration_model | M9 临时由 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
+| next_action | Task 37 detector round 3 PASS；创建仅含 Task 37 的本地 focused commit，核验后关闭 Session 并冻结 Task 38。不得 push、版本提升、tag 或 Release |
+| collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
 
@@ -95,13 +95,14 @@
 - focused product commits 已创建：Task 36.1 `a2d3756 fix: generate fresh icons from the source photo`；Task 36.2 `bf3d1ed fix: adapt official and compatible OpenAI endpoints`。当前等待验收控制面提交后统一 push。
 - 上述产品提交与验收控制面 `93b408d` 已同步 `origin/feat/mvp-implementation`；本收尾记录随后同步，Task 36.1/36.2 关闭。
 
-## 已验收、待实施授权的 Milestone 10 规划
+## 已授权实施的 Milestone 10
 
 - Milestone 10 定义为“EXE 无感使用统计”，技术设计 `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1，详细计划 `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1。
 - 方案：PostHog Cloud 只写采集端点 + 后端人工类型化事件 + 随机安装 ID；配置完整的 Windows Release 自动启用，不新增首次说明、确认步骤、设置开关、前端页面、公开 API 或用户文档入口，M10 完成前后用户体验不变。
 - 禁止发送图片、菜品文本、用户输入、Key、中转站、模型 ID、业务 ID、异常正文、路径、设备指纹、IP/Geo、DOM/点击或 session replay；不记录应用版本，不统计新版本采用比例；项目使用 personless 事件并在 PostHog 关闭 IP 保存。
 - 后端只做有界内存队列和异步短超时发送，collector 故障不影响业务；GitHub Release 下载量只作旁证。M10 减负为 Task 37 统计核心、38 业务事件、39 Release 配置/看板/E2E。
-- M10 与 M9 无硬代码依赖，当前排在 Task 36.2 后；如排期要求先获得 EXE 量化能力，需用户明确重排。当前未创建 PostHog 项目、Repository Variables、Task 37 Packet 或源码修改。
+- M10 与 M9 无硬代码依赖，严格按 Task 37 → 38 → 39 串行。用户于 2026-08-27 明确授权开始开发；Task 37 Packet `mvp-m10-task-37-telemetry-core-v1` 已冻结并进入实施。
+- 当前未创建 PostHog 项目、Repository Variables，也未授权 push、版本提升、tag 或 GitHub Release；这些不得因开发授权自动发生。
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 

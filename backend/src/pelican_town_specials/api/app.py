@@ -54,6 +54,10 @@ from pelican_town_specials.application.settings import (
     ProviderSettingsService,
     SecretStore,
 )
+from pelican_town_specials.application.telemetry import (
+    TelemetryRecorder,
+    TelemetryService,
+)
 from pelican_town_specials.application.trial import (
     FileTrialKeyProvider,
     TrialAccessService,
@@ -69,6 +73,9 @@ from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.mod_compiler.compiler import ContentPatcherCompiler
 from pelican_town_specials.observability.diagnostics import DiagnosticsBuilder
 from pelican_town_specials.observability.logging import configure_logging, log_event
+from pelican_town_specials.observability.posthog_telemetry import (
+    build_telemetry_recorder,
+)
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.persistence.canonical_registry import (
     CanonicalRegistryUnavailableError,
@@ -81,6 +88,7 @@ from pelican_town_specials.persistence.repositories import (
     GenerationAttemptRepository,
 )
 from pelican_town_specials.persistence.secret_store import WindowsEnvironmentSecretStore
+from pelican_town_specials.persistence.telemetry_state import TelemetryStateStore
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import ModelGateway
 from pelican_town_specials.providers.openai_compatible import OpenAICompatibleGateway
@@ -90,6 +98,9 @@ _CATALOG_RELATIVE_PATH = (
     / "catalogs"
     / "stardew-1.6.15"
     / "vanilla-ingredients.json"
+)
+_TELEMETRY_CONFIG_RELATIVE_PATH = (
+    Path("resources") / "telemetry" / "telemetry.json"
 )
 
 
@@ -117,11 +128,40 @@ def create_app(
     generation_service: GenerationService | None = None,
     export_service: ExportService | None = None,
     trial_access_service: TrialAccessService | None = None,
+    telemetry_recorder: TelemetryRecorder | None = None,
+    telemetry_state_store: TelemetryStateStore | None = None,
+    telemetry_service: TelemetryService | None = None,
+    telemetry_clock: Callable[[], object] | None = None,
 ) -> FastAPI:
     app_config = config if config is not None else AppConfig()
     resolved_workspace = workspace_paths or WorkspacePaths.create(
         app_config.workspace_path
     )
+    resolved_telemetry_state_store = telemetry_state_store or TelemetryStateStore(
+        resolved_workspace.telemetry_state_path
+    )
+    resolved_telemetry_service = telemetry_service
+    if resolved_telemetry_service is None:
+        telemetry_state = resolved_telemetry_state_store.ensure_state()
+        resolved_telemetry_recorder = telemetry_recorder
+        if resolved_telemetry_recorder is None:
+            resolved_telemetry_recorder = build_telemetry_recorder(
+                config_path=_resolve_telemetry_config_path(),
+                installation_id=(
+                    telemetry_state.installation_id if telemetry_state else None
+                ),
+            )
+        resolved_telemetry_service = TelemetryService(
+            resolved_telemetry_recorder,
+            resolved_telemetry_state_store,
+            clock=(
+                telemetry_clock  # type: ignore[arg-type]
+                if telemetry_clock is not None
+                else None
+            ),
+        )
+    else:
+        resolved_telemetry_state_store = resolved_telemetry_service.state_store
     resolved_secret_store = secret_store or WindowsEnvironmentSecretStore()
     logs_dir = resolved_workspace.app_state_dir / "logs"
     configure_logging(logs_dir)
@@ -262,6 +302,17 @@ def create_app(
                         "reason": "UNEXPECTED_FAILURE",
                     },
                 )
+        try:
+            await resolved_telemetry_service.startup()
+        except Exception:  # noqa: BLE001 - telemetry must never block startup
+            log_event(
+                logging.WARNING,
+                error_code="PTS_TELEMETRY_STARTUP_FAILED",
+                usage={
+                    "operation": "telemetry_startup",
+                    "reason": "UNEXPECTED_FAILURE",
+                },
+            )
         monitor_task: asyncio.Task[None] | None = None
         if resolved_activity_tracker.has_shutdown_callback:
             monitor_task = asyncio.create_task(
@@ -276,6 +327,17 @@ def create_app(
                     await monitor_task
                 except asyncio.CancelledError:
                     pass
+            try:
+                await resolved_telemetry_service.shutdown(timeout_seconds=1.0)
+            except Exception:  # noqa: BLE001 - telemetry must never block shutdown
+                log_event(
+                    logging.WARNING,
+                    error_code="PTS_TELEMETRY_SHUTDOWN_FAILED",
+                    usage={
+                        "operation": "telemetry_shutdown",
+                        "reason": "UNEXPECTED_FAILURE",
+                    },
+                )
 
     app = FastAPI(
         title="PelicanTownSpecials API",
@@ -287,6 +349,10 @@ def create_app(
     )
     app.state.config = app_config
     app.state.workspace_paths = resolved_workspace
+    app.state.telemetry_state_store = resolved_telemetry_state_store
+    app.state.telemetry_service = resolved_telemetry_service
+    app.state.telemetry_recorder = resolved_telemetry_service.recorder
+    app.state.telemetry = resolved_telemetry_service
     app.state.secret_store = resolved_secret_store
     app.state.security = security_state or SecurityState()
     app.state.static_dir = static_dir
@@ -421,6 +487,10 @@ _TRIAL_KEY_RELATIVE_PATH = Path("resources") / "trial" / "trial_api_key.txt"
 
 def _resolve_trial_key_path() -> Path:
     return _resolve_repo_root() / _TRIAL_KEY_RELATIVE_PATH
+
+
+def _resolve_telemetry_config_path() -> Path:
+    return _resolve_repo_root() / _TELEMETRY_CONFIG_RELATIVE_PATH
 
 
 def _load_default_catalog() -> VanillaCatalog:

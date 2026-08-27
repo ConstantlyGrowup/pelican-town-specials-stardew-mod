@@ -66,6 +66,7 @@ class WorkspacePaths:
     canonical_dir: Path
     canonical_assets_dir: Path
     canonical_registry_path: Path
+    telemetry_state_path: Path
     exports_dir: Path
     staging_dir: Path
     trash_dir: Path
@@ -83,6 +84,7 @@ class WorkspacePaths:
         canonical_dir = resolved_root / "canonical"
         canonical_assets_dir = canonical_dir / "assets"
         canonical_registry_path = canonical_dir / "registry.sqlite3"
+        telemetry_state_path = app_state_dir / "telemetry-state.json"
         exports_dir = resolved_root / "exports"
         staging_dir = resolved_root / "staging"
         trash_dir = resolved_root / "trash"
@@ -126,6 +128,7 @@ class WorkspacePaths:
             canonical_dir=canonical_dir,
             canonical_assets_dir=canonical_assets_dir,
             canonical_registry_path=canonical_registry_path,
+            telemetry_state_path=telemetry_state_path,
             exports_dir=exports_dir,
             staging_dir=staging_dir,
             trash_dir=trash_dir,

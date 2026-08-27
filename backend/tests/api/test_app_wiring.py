@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 
 from pelican_town_specials.api.app import create_app
 from pelican_town_specials.api.security import SecurityConfig, SecurityState
+from pelican_town_specials.application.telemetry import NoopTelemetryRecorder
+from pelican_town_specials.domain.telemetry import TelemetryEvent
 from pelican_town_specials.persistence.secret_store import (
     API_KEY_ENVIRONMENT_VARIABLE,
     WindowsEnvironmentSecretStore,
@@ -275,3 +279,114 @@ def test_startup_sweep_recovers_orphaned_generating_draft(
     assert restored.last_attempt_id == attempt_id
     persisted = attempt_repository.get(attempt_id)
     assert persisted.status is AttemptStatus.INTERRUPTED
+
+
+@dataclass
+class RecordingTelemetryRecorder:
+    enabled: bool = True
+    events: list[TelemetryEvent] = field(default_factory=list)
+    starts: int = 0
+    shutdowns: int = 0
+
+    async def start(self) -> None:
+        self.starts += 1
+
+    def record(self, event: TelemetryEvent) -> None:
+        self.events.append(event)
+
+    async def shutdown(self, *, timeout_seconds: float = 1.0) -> None:
+        self.shutdowns += 1
+
+
+def _test_security() -> SecurityState:
+    return SecurityState(
+        config=SecurityConfig(
+            allowed_hosts=frozenset({"testserver"}),
+            expected_port=None,
+            allowed_origins=frozenset({"http://testserver"}),
+        )
+    )
+
+
+def test_lifespan_records_one_daily_open_and_closes_the_recorder(
+    tmp_path: Path,
+) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace")
+    recorder = RecordingTelemetryRecorder()
+    app = create_app(
+        workspace_paths=workspace,
+        security_state=_test_security(),
+        telemetry_recorder=recorder,
+        telemetry_clock=lambda: date(2026, 8, 27),
+        enable_docs=False,
+    )
+
+    with TestClient(app) as client:
+        assert client.get("/api/v1/health").status_code == 200
+
+    assert recorder.starts == 1
+    assert recorder.shutdowns == 1
+    assert [event.event.value for event in recorder.events] == ["app opened"]
+    state = app.state.telemetry_state_store.read()
+    assert state is not None
+    assert state.last_daily_open_date == date(2026, 8, 27)
+
+    second_recorder = RecordingTelemetryRecorder()
+    with TestClient(
+        create_app(
+            workspace_paths=workspace,
+            security_state=_test_security(),
+            telemetry_recorder=second_recorder,
+            telemetry_clock=lambda: date(2026, 8, 27),
+            enable_docs=False,
+        )
+    ) as client:
+        assert client.get("/api/v1/health").status_code == 200
+    assert second_recorder.events == []
+
+
+def test_noop_lifespan_does_not_claim_daily_open(tmp_path: Path) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace")
+    app = create_app(
+        workspace_paths=workspace,
+        security_state=_test_security(),
+        enable_docs=False,
+    )
+
+    with TestClient(app) as client:
+        assert client.get("/api/v1/health").status_code == 200
+
+    assert isinstance(app.state.telemetry_recorder, NoopTelemetryRecorder)
+    state = app.state.telemetry_state_store.read()
+    assert state is not None
+    assert state.last_daily_open_date is None
+
+
+@dataclass
+class FailingTelemetryRecorder:
+    enabled: bool = True
+
+    async def start(self) -> None:
+        return None
+
+    def record(self, _event: TelemetryEvent) -> None:
+        raise RuntimeError("collector failure must stay private")
+
+    async def shutdown(self, **_kwargs: Any) -> None:
+        raise RuntimeError("collector shutdown failure")
+
+
+def test_telemetry_failures_do_not_change_application_health_or_shutdown(
+    tmp_path: Path,
+) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace")
+    app = create_app(
+        workspace_paths=workspace,
+        security_state=_test_security(),
+        telemetry_recorder=FailingTelemetryRecorder(),
+        telemetry_clock=lambda: date(2026, 8, 27),
+        enable_docs=False,
+    )
+
+    with TestClient(app) as client:
+        assert client.get("/api/v1/health").status_code == 200
