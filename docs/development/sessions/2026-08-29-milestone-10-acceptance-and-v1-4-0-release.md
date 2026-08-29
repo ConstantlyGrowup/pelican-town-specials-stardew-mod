@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-29-milestone-10-acceptance-and-v1-4-0-release` |
-| status | `release_in_progress` |
+| status | `closed` |
 | date | `2026-08-29` |
 | scope | M10 用户联合验收、v1.4.0 版本提升、本地干净构建验证、branch/tag push 与 GitHub Release 核验 |
 | base_commit | `c4c1bcf test: verify release telemetry end to end` |
@@ -32,8 +32,13 @@
 - installer：Inno Setup 6.7.3 编译 PASS；本地 setup SHA-256 `B117235D63737163BE9992AE803D571CF02DCCE712733FBCF9E61A770B58FF7A`；隔离 install → health → reinstall → uninstall PASS，未创建快捷方式且 workspace marker 保留。
 - 完整套件发现旧 `test_installer.py` 仍要求脚本访问真实默认 workspace；仅更新该静态契约以验证临时 `/DIR`、`/NOICONS` 和隔离 workspace。`luna_worker` focused tests `9 passed`、Ruff PASS；detector `release-gate-r0` 最终 `PASS`，无 must-fix/optional/scope delta。
 
-## 待执行
+## 发布结果
 
-- 提交发布门禁修订与本验收记录。
-- push `feat/mvp-implementation`，创建并 push `v1.4.0` tag。
-- 等待 `release.yml`，核验 setup.exe、portable ZIP、SHA256SUMS.txt 和 Release 状态后关闭 Session。
+- 发布门禁修订与候选验收记录提交：`0673221 test: align isolated installer release gate`；`feat/mvp-implementation` 已从 `8d30aae` 推送至 `0673221`。
+- annotated tag `v1.4.0` 精确指向 `0673221ab05a2ba392fc8d53133d2c9bf29e2075` 并已推送。
+- GitHub Actions run `33228870083`：`resolve-version`、`verify-and-build / verify-and-build`、`create-release` 全部 `success`；发布流程在 2026-08-29 02:39:05 UTC 完成。
+- GitHub Release `Pelican Town Specials v1.4.0` 已发布，`isDraft=false`、`isPrerelease=false`。
+- `PelicanTownSpecials-Setup-v1.4.0.exe`：43,497,036 B；SHA-256 `9e64b59b8b5ef25452d1533d242aea3c610d569b70ec7dcd9fc8b07cb39e3d15`。
+- `PelicanTownSpecials-windows-x64-v1.4.0.zip`：48,525,527 B；SHA-256 `423aadc618ae51f8f31dc12cebc66f7a07d5cd78a12f9c41f0efdbf381ef07c6`。
+- `SHA256SUMS.txt`：212 B；下载 setup/ZIP 后重新计算的 SHA-256 与该文件和 GitHub asset digest 均逐一一致。
+- Session 关闭。发布后可选人工检查：安装 v1.4.0，确认 PostHog 首批 personless 事件、IP discard 和内部看板；这不是本次 Release 的阻塞项。

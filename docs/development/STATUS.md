@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_4_0_release_in_progress |
-| project_phase | M9/M10 已验收；v1.4.0 版本链与 Canonical 0.80 校准补丁均已提交。隔离发布候选的全量构建、便携版、installer、E2E 与完整测试已通过；尚未 push/tag/Release |
+| overall_state | v1_4_0_released |
+| project_phase | M9/M10、Canonical 0.80 校准与 v1.4.0 发布均已完成；GitHub Actions、Release 三项资产及 SHA-256 已核验 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-29-milestone-10-acceptance-and-v1-4-0-release` |
-| active_session_state | release_in_progress |
-| active_session_type | milestone-acceptance-and-release |
-| current_task | 记录 v1.4.0 发布候选验收证据并提交发布门禁修订，然后 push branch、创建 `v1.4.0` tag 并核验 Release |
+| active_session_id | none |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | none；v1.4.0 发布 Session 已关闭 |
 | blocker | none；用户已明确接受 0.80 的召回率/误命中权衡并授权发布 |
-| next_action | 创建发布候选验收记录提交；push `feat/mvp-implementation` 与 `v1.4.0` tag；等待并核验 GitHub Release 三项产物与 SHA256SUMS |
+| next_action | 可选：安装 v1.4.0 后在 PostHog 核验首批 personless 事件、IP discard 与内部看板；开始新功能前创建新的唯一 Session |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | M10 Task 37 `d198a3e`、Task 38 `3600d09`、Task 39 `c4c1bcf`、v1.4.0 版本链 `11cb287`、Canonical 0.80 `23d16c3` 均已创建本地 focused commits；发布门禁修订与验收记录待本轮提交。`origin/feat/mvp-implementation` 暂停在 `8d30aae`，tag 仍为 `v1.3.0` |
+| 最新提交 | 发布 tag `v1.4.0` 指向 `0673221`；M10、版本链、Canonical 0.80 与发布门禁均已同步 `origin/feat/mvp-implementation`。本发布后收尾记录待创建并 push |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | 仅 `tests/repo/test_installer.py` 的隔离 installer smoke 契约修订与本次发布控制面属于当前提交；release worktree、prototype、samples、Claude worktree 与历史 review/pytest 临时目录不纳入。 |
+| 当前工作树范围 | 仅 v1.4.0 发布后控制面收尾属于当前提交；release 临时目录将在收尾后移除。prototype、samples、Claude worktree 与历史 review/pytest 临时目录仍不纳入。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -107,6 +107,8 @@
 - 完整套件曾暴露 1 条旧 repo 断言仍要求 installer smoke 解析真实默认 workspace；`luna_worker` 将其更新为显式临时 `/DIR`、`/NOICONS`、隔离 workspace 契约，detector `release-gate-r0` **PASS**，最终 904 项全绿。
 - 用户已配置 GitHub Repository Variables，并于 2026-08-29 接受 personless 测试事件直接参与聚合，不要求 Cohort/test-channel 修订；同时明确授权 push、版本提升、`v1.4.0` tag 和 GitHub Release。
 - Personal API Key 不属于 runtime/Release 配置。PostHog 实际事件、IP discard 和内部看板在 v1.4.0 安装运行后核验，不阻塞发布。
+- `v1.4.0` tag 指向 `0673221` 并已推送；GitHub Actions run **33228870083 success**（resolve-version、verify-and-build、create-release 全绿）。正式 Release 已发布，非 draft/pre-release。
+- Release 资产核验：setup.exe 43,497,036 B，SHA-256 `9e64b59b8b5ef25452d1533d242aea3c610d569b70ec7dcd9fc8b07cb39e3d15`；portable ZIP 48,525,527 B，SHA-256 `423aadc618ae51f8f31dc12cebc66f7a07d5cd78a12f9c41f0efdbf381ef07c6`；两者与 `SHA256SUMS.txt` 逐一一致。
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 
