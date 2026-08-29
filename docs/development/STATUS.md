@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | v1_4_0_release_in_progress |
-| project_phase | M9/M10 已验收；v1.4.0 版本链已提交。发布前 Canonical 0.80 校准补丁已通过 worker/main/detector 验收，待创建 focused commit 后恢复干净发布构建；尚未 push/tag/Release |
+| project_phase | M9/M10 已验收；v1.4.0 版本链与 Canonical 0.80 校准补丁均已提交。隔离发布候选的全量构建、便携版、installer、E2E 与完整测试已通过；尚未 push/tag/Release |
 | product_implementation_started | true |
 | active_session_id | `2026-08-29-milestone-10-acceptance-and-v1-4-0-release` |
 | active_session_state | release_in_progress |
 | active_session_type | milestone-acceptance-and-release |
-| current_task | 创建已 PASS 的 Canonical 0.80 focused commit，然后从干净 HEAD 完成 v1.4.0 全量构建、push/tag/Release |
+| current_task | 记录 v1.4.0 发布候选验收证据并提交发布门禁修订，然后 push branch、创建 `v1.4.0` tag 并核验 Release |
 | blocker | none；用户已明确接受 0.80 的召回率/误命中权衡并授权发布 |
-| next_action | 提交 `m9-canonical-threshold-080-release-v1`；建立干净 release worktree 复跑完整门禁；push branch 与 `v1.4.0` tag，核验 GitHub Release 产物 |
+| next_action | 创建发布候选验收记录提交；push `feat/mvp-implementation` 与 `v1.4.0` tag；等待并核验 GitHub Release 三项产物与 SHA256SUMS |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | M10 Task 37 `d198a3e`、Task 38 `3600d09`、Task 39 `c4c1bcf` 已创建本地 focused commits；`origin/feat/mvp-implementation` 暂停在 `8d30aae`。tag `v1.3.0` 仍位于 `4de82ad`，v1.4.0 版本提升进行中 |
+| 最新提交 | M10 Task 37 `d198a3e`、Task 38 `3600d09`、Task 39 `c4c1bcf`、v1.4.0 版本链 `11cb287`、Canonical 0.80 `23d16c3` 均已创建本地 focused commits；发布门禁修订与验收记录待本轮提交。`origin/feat/mvp-implementation` 暂停在 `8d30aae`，tag 仍为 `v1.3.0` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | `canonical.py` 的 0.80 现由用户明确纳入 v1.4.0；相关测试/正式文档/控制面属于当前补丁。prototype、samples、Claude worktree 与历史 review/pytest 临时目录仍不纳入。 |
+| 当前工作树范围 | 仅 `tests/repo/test_installer.py` 的隔离 installer smoke 契约修订与本次发布控制面属于当前提交；release worktree、prototype、samples、Claude worktree 与历史 review/pytest 临时目录不纳入。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -102,7 +102,9 @@
 - 禁止发送图片、菜品文本、用户输入、Key、中转站、模型 ID、业务 ID、异常正文、路径、设备指纹、IP/Geo、DOM/点击或 session replay；不记录应用版本，不统计新版本采用比例；项目使用 personless 事件并在 PostHog 关闭 IP 保存。
 - 后端只做有界内存队列和异步短超时发送，collector 故障不影响业务；GitHub Release 下载量只作旁证。M10 减负为 Task 37 统计核心、38 业务事件、39 Release 配置/看板/E2E。
 - M10 与 M9 无硬代码依赖，已严格按 Task 37 → 38 → 39 串行完成；focused commits 为 `d198a3e`、`3600d09`、`c4c1bcf`，detector 最终均 PASS。
-- 本地最终门禁：backend/repo/integration `899 passed / 2 skipped / 2 deselected`（仅隔离用户未提交的 Canonical 0.80 阈值对应两条旧断言）；frontend `149 passed`，Ruff/mypy/lint/build/OpenAPI、onedir/installer 与 SQLite/telemetry smoke 全绿。
+- v1.4.0 隔离发布候选最终门禁：backend/repo/integration **904 passed / 2 skipped**；frontend Vitest **149 passed**；Playwright **34 passed**；Ruff、mypy（96 source files）、ESLint、locale、OpenAPI/版本/ignore/telemetry dashboard gate 全绿。
+- Windows onedir 构建、EXE 图标/1.4.0 版本身份、SQLite bundle 两次干净启动均通过；installer 6.7.3 编译及隔离 install → health → reinstall → uninstall 全流程通过，工作区 marker 保留。本地 fake telemetry config 只用于包内容验证，不发送真实事件。
+- 完整套件曾暴露 1 条旧 repo 断言仍要求 installer smoke 解析真实默认 workspace；`luna_worker` 将其更新为显式临时 `/DIR`、`/NOICONS`、隔离 workspace 契约，detector `release-gate-r0` **PASS**，最终 904 项全绿。
 - 用户已配置 GitHub Repository Variables，并于 2026-08-29 接受 personless 测试事件直接参与聚合，不要求 Cohort/test-channel 修订；同时明确授权 push、版本提升、`v1.4.0` tag 和 GitHub Release。
 - Personal API Key 不属于 runtime/Release 配置。PostHog 实际事件、IP discard 和内部看板在 v1.4.0 安装运行后核验，不阻塞发布。
 

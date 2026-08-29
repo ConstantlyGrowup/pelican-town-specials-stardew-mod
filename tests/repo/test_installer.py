@@ -116,15 +116,31 @@ def test_installer_tooling_pinned() -> None:
 
 def test_smoke_covers_uninstall_and_workspace() -> None:
     smoke = _text(SMOKE)
-    assert "unins000.exe" in smoke, "smoke must exercise the real uninstaller"
-    assert "VERYSILENT" in smoke
-    assert "workspace" in smoke and "marker" in smoke, (
+    assert "$uninstaller = Join-Path $appDir 'unins000.exe'" in smoke, (
+        "smoke must exercise the real uninstaller"
+    )
+    assert "Invoke-Silent $uninstaller" in smoke, (
+        "smoke must invoke the real uninstaller"
+    )
+    assert "/VERYSILENT" in smoke
+    assert re.search(r'"/DIR=.*\$appDir', smoke), (
+        "smoke must install into the generated isolated app directory"
+    )
+    assert "/NOICONS" in smoke, (
+        "smoke must avoid creating or removing default shortcut/group artifacts"
+    )
+    assert "Join-Path $runRoot 'health-workspace'" in smoke
+    assert "Join-Path $runRoot 'preserved-workspace'" in smoke
+    assert "'--workspace', $healthWorkspace" in smoke, (
+        "health smoke must use the isolated health workspace"
+    )
+    assert "$marker = Join-Path $workspaceDir" in smoke
+    assert "Test-Path -LiteralPath $marker" in smoke, (
         "smoke must assert the workspace survives install/reinstall/uninstall"
     )
-    # The marker must target the app's real default workspace, resolved from its
-    # own config (platformdirs app-data layout), not a hardcoded single path.
-    assert "_default_workspace_path" in smoke, (
-        "smoke must resolve the real workspace from the app config"
+    # The smoke must never resolve or touch the app's real default workspace.
+    assert "_default_workspace_path" not in smoke, (
+        "smoke must use only explicitly isolated temporary workspaces"
     )
 
 
