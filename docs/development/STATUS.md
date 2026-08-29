@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | v1_4_0_release_in_progress |
-| project_phase | Milestone 9、Task 36.1/36.2 与 Milestone 10 Task 37–39 均已完成审阅和用户验收；用户于 2026-08-29 授权统一 push、版本提升和 GitHub Release。正式 Release 当前仍为 v1.3.0，v1.4.0 发布中 |
+| project_phase | M9/M10 已验收；v1.4.0 版本链已提交。发布前 Canonical 0.80 校准补丁已通过 worker/main/detector 验收，待创建 focused commit 后恢复干净发布构建；尚未 push/tag/Release |
 | product_implementation_started | true |
 | active_session_id | `2026-08-29-milestone-10-acceptance-and-v1-4-0-release` |
 | active_session_state | release_in_progress |
 | active_session_type | milestone-acceptance-and-release |
-| current_task | v1.4.0 版本提升、发布前干净构建、branch/tag push 与 GitHub Release 核验 |
-| blocker | none；PostHog 真实事件/IP discard/看板属于 Release 安装后的外部观察，不阻塞已授权发布 |
-| next_action | 完成 v1.4.0 全链路版本同步和干净 worktree 发布门禁；创建 focused release commit，push branch，创建并 push `v1.4.0` tag，等待并核验 Release 产物 |
+| current_task | 创建已 PASS 的 Canonical 0.80 focused commit，然后从干净 HEAD 完成 v1.4.0 全量构建、push/tag/Release |
+| blocker | none；用户已明确接受 0.80 的召回率/误命中权衡并授权发布 |
+| next_action | 提交 `m9-canonical-threshold-080-release-v1`；建立干净 release worktree 复跑完整门禁；push branch 与 `v1.4.0` tag，核验 GitHub Release 产物 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -27,7 +27,7 @@
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | M10 Task 37 `d198a3e`、Task 38 `3600d09`、Task 39 `c4c1bcf` 已创建本地 focused commits；`origin/feat/mvp-implementation` 暂停在 `8d30aae`。tag `v1.3.0` 仍位于 `4de82ad`，v1.4.0 版本提升进行中 |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | v1.4.0 版本链与本次验收/发布控制面正在修改；用户已有 `canonical.py` 阈值 `0.90 → 0.80`、prototype、samples、Claude worktree 与历史 review/pytest 临时目录均保持原样且不会纳入。 |
+| 当前工作树范围 | `canonical.py` 的 0.80 现由用户明确纳入 v1.4.0；相关测试/正式文档/控制面属于当前补丁。prototype、samples、Claude worktree 与历史 review/pytest 临时目录仍不纳入。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -47,7 +47,7 @@
 ## 已关闭第三期规划 Session
 
 - `2026-08-16-phase-3-global-memory-planning`：第三期只规划全局生成记忆与 Canonical 召回，先在本地版验证。
-- 已确认：全局 Registry 至少有 `N=2` 道有效菜品才召回；仅正式存档的 Ask Gus 成品写入；先按现实原料等字段筛少量同语言候选，再由模型选择最高置信度项，只有 `>=90%` 才命中；命中复用完整结构化词条与像素图标，最终预览仍用本次原图重新生成。
+- 已确认：全局 Registry 至少有 `N=2` 道有效菜品才召回；仅正式存档的 Ask Gus 成品写入；先按现实原料等字段筛少量同语言候选，再由模型选择最高置信度项，只有 `>=0.80`（包含边界 `0.80` 命中、`0.799` miss）才命中；命中复用完整结构化词条与像素图标，最终预览仍用本次原图重新生成。此前 `>=90%` 的当前口径已由 2026-08-29 校准取代。
 - 补充要求参与匹配且冲突即 miss；完整重新生成不直接复用；料理蓝图不进入记忆；异常统一降级为 miss。效果指标只保留单次生成耗时和单次任务成本，不使用调用数/步骤数作为成功指标。
 - Milestone 9 已定义为“Gus 的全局生成记忆与 Canonical 召回”，严格串行 Task 31–36：SQLite Registry；正式存档登记/启动修复；候选与 matcher；Orchestrator 命中复用；耗时/Gus 叙事；全链路与打包验收。
 - 技术设计：`docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0；详细计划：`docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0；MVP 技术设计/实施计划当前索引为 v2.6/v1.9（同时登记 Task 36.1、Task 36.2 与 M10）。
