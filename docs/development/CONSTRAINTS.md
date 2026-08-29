@@ -8,10 +8,10 @@
 |---|---|
 | `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.6 | v1.3.0 已发布本地版协议，并链接 Milestone 9、Task 36.1、Task 36.2 与 M10 编码扩展 |
 | `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
-| `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；用户已验收规划，尚未授权实施 |
+| `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；已实施、独立审阅并获用户联合验收，v1.4.0 发布中 |
 | `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v1.9 | 已完成 Task 1–36，并登记 Task 36.1、Task 36.2 补丁与 Milestone 10 Task 37–39 顺序和边界 |
 | `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
-| `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已验收，等待实施授权 |
+| `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已实施、验收，v1.4.0 发布中 |
 | `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已实施并通过独立审阅，与 36.2 联合验收 |
 | `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并推送 |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |

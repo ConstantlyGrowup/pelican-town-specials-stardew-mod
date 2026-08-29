@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-08-27-milestone-10-task-39-release-telemetry-e2e` |
-| status | `auto_accepted` |
+| status | `committed / milestone accepted` |
 | session_type | `task-implementation` |
 | owner | Codex 主 Agent（M10 全量接管） |
 | started_at | `2026-08-27` |
@@ -38,3 +38,10 @@
 - round 4 focused `18 passed`；主 Agent live installer smoke PASS：exact AppId Registry32/64 preflight 无既有注册后才启动，隔离安装注册存在，卸载后两视图零残留；其余临时安装/重装/SQLite/workspace/telemetry/清理门禁继续通过。等待 fresh detector round 4。
 - detector round 4 `PASS`：M10-T39-001..009 与 T39-R01..R10 全部通过，must-fix/optional hardening/new design/scope delta 均为空；独立 focused `18 passed`，并确认 AppId 两视图最终均无注册残留。
 - Task 39 已进入 `auto_accepted`；创建本地 focused commit 后，M10 进入 `awaiting_milestone_acceptance`。外部 PostHog project/IP discard/dashboard、Repository Variables 和标记测试事件仍为联合人工验收项。
+
+## Milestone 验收（2026-08-29）
+
+- 用户已完成三个 GitHub Repository Variables 配置，并明确接受 personless 验收事件直接进入聚合统计；初期测试安装和少量测试操作可能短暂影响 DAU/成功率，但无需 Cohort 或额外 `test_channel` 协议。
+- 用户明确授权 M10 统一 push、版本提升和发布新的 GitHub Release；该授权同时覆盖 branch push、`v1.4.0` tag 与由 tag 触发的 Release workflow。
+- Task 39 focused commit 已存在：`c4c1bcf test: verify release telemetry end to end`。M10 Task 37–39 至此全部通过独立审阅并获用户联合验收。
+- PostHog 管理 Personal API Key 不属于运行或发布依赖，不进入 Repository Variables、workflow 或 EXE。实际事件、IP discard 和看板显示在 v1.4.0 安装运行后核验。

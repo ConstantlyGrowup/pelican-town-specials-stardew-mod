@@ -15,9 +15,9 @@ on:
   workflow_call:
     inputs:
       version:
-        description: Release version without a leading v (e.g. 1.3.0)
+        description: Release version without a leading v (e.g. 1.4.0)
         required: false
-        default: '1.3.0'
+        default: '1.4.0'
         type: string
       telemetry_host:
         description: HTTPS origin for the public Release telemetry capture endpoint; empty keeps telemetry disabled.

@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_10_awaiting_user_acceptance |
-| project_phase | Milestone 8、Task 30、Milestone 9、Task 36.1 与 Task 36.2 均已完成并同步；用户于 2026-08-27 授权开始 Milestone 10“EXE 无感使用统计”。Task 37、38 已完成并分别创建本地 focused commit，当前严格串行实施 Task 39。正式 Release 仍为 v1.3.0 |
+| overall_state | v1_4_0_release_in_progress |
+| project_phase | Milestone 9、Task 36.1/36.2 与 Milestone 10 Task 37–39 均已完成审阅和用户验收；用户于 2026-08-29 授权统一 push、版本提升和 GitHub Release。正式 Release 当前仍为 v1.3.0，v1.4.0 发布中 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-27-milestone-10-task-39-release-telemetry-e2e` |
-| active_session_state | auto_accepted |
-| active_session_type | task-implementation |
-| current_task | M10 Task 39：Release 注入、看板、全链路与打包验收 |
-| blocker | 外部 PostHog production project/IP discard/dashboard、GitHub Repository Variables 与标记测试事件尚未配置/核验；属于 M10 联合人工验收，不影响本地实现 PASS |
-| next_action | Task 39 detector round 4 `PASS`，T39-001..009/R01..R10 全过；创建本地 focused commit 后进入 M10 联合用户验收。用户验收并另行授权后才可 push；版本提升、tag 和 GitHub Release 仍需单独授权 |
+| active_session_id | `2026-08-29-milestone-10-acceptance-and-v1-4-0-release` |
+| active_session_state | release_in_progress |
+| active_session_type | milestone-acceptance-and-release |
+| current_task | v1.4.0 版本提升、发布前干净构建、branch/tag push 与 GitHub Release 核验 |
+| blocker | none；PostHog 真实事件/IP discard/看板属于 Release 安装后的外部观察，不阻塞已授权发布 |
+| next_action | 完成 v1.4.0 全链路版本同步和干净 worktree 发布门禁；创建 focused release commit，push branch，创建并 push `v1.4.0` tag，等待并核验 Release 产物 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,9 +25,9 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed`、联合验收控制面 `93b408d` 已创建并推送；本收尾状态记录随后同步当前分支。tag `v1.3.0` 仍位于 `4de82ad`，未创建新 tag |
+| 最新提交 | M10 Task 37 `d198a3e`、Task 38 `3600d09`、Task 39 `c4c1bcf` 已创建本地 focused commits；`origin/feat/mvp-implementation` 暂停在 `8d30aae`。tag `v1.3.0` 仍位于 `4de82ad`，v1.4.0 版本提升进行中 |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | Task 36.1、36.2 产品与验收控制面均已提交并推送。用户已有 `canonical.py` 阈值 `0.90 → 0.80`、prototype、samples、Claude worktree 与历史 review/pytest 临时目录均保持原样且未纳入。 |
+| 当前工作树范围 | v1.4.0 版本链与本次验收/发布控制面正在修改；用户已有 `canonical.py` 阈值 `0.90 → 0.80`、prototype、samples、Claude worktree 与历史 review/pytest 临时目录均保持原样且不会纳入。 |
 
 ## 已 deferred 的 Task 30 规划 Session
 
@@ -95,15 +95,16 @@
 - focused product commits 已创建：Task 36.1 `a2d3756 fix: generate fresh icons from the source photo`；Task 36.2 `bf3d1ed fix: adapt official and compatible OpenAI endpoints`。当前等待验收控制面提交后统一 push。
 - 上述产品提交与验收控制面 `93b408d` 已同步 `origin/feat/mvp-implementation`；本收尾记录随后同步，Task 36.1/36.2 关闭。
 
-## 已授权实施的 Milestone 10
+## Milestone 10 实施完成（accepted / release in progress）
 
 - Milestone 10 定义为“EXE 无感使用统计”，技术设计 `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.1，详细计划 `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.1。
 - 方案：PostHog Cloud 只写采集端点 + 后端人工类型化事件 + 随机安装 ID；配置完整的 Windows Release 自动启用，不新增首次说明、确认步骤、设置开关、前端页面、公开 API 或用户文档入口，M10 完成前后用户体验不变。
 - 禁止发送图片、菜品文本、用户输入、Key、中转站、模型 ID、业务 ID、异常正文、路径、设备指纹、IP/Geo、DOM/点击或 session replay；不记录应用版本，不统计新版本采用比例；项目使用 personless 事件并在 PostHog 关闭 IP 保存。
 - 后端只做有界内存队列和异步短超时发送，collector 故障不影响业务；GitHub Release 下载量只作旁证。M10 减负为 Task 37 统计核心、38 业务事件、39 Release 配置/看板/E2E。
-- M10 与 M9 无硬代码依赖，严格按 Task 37 → 38 → 39 串行。用户于 2026-08-27 明确授权开始开发；Task 37 已完成并创建本地 focused commit。
-- Task 37 已经 worker/main/detector round 3 PASS，本地 focused commit `d198a3e`；Task 38 Packet `mvp-m10-task-38-core-business-telemetry-v1` 已冻结并进入实施。
-- 当前未创建 PostHog 项目、Repository Variables，也未授权 push、版本提升、tag 或 GitHub Release；这些不得因开发授权自动发生。
+- M10 与 M9 无硬代码依赖，已严格按 Task 37 → 38 → 39 串行完成；focused commits 为 `d198a3e`、`3600d09`、`c4c1bcf`，detector 最终均 PASS。
+- 本地最终门禁：backend/repo/integration `899 passed / 2 skipped / 2 deselected`（仅隔离用户未提交的 Canonical 0.80 阈值对应两条旧断言）；frontend `149 passed`，Ruff/mypy/lint/build/OpenAPI、onedir/installer 与 SQLite/telemetry smoke 全绿。
+- 用户已配置 GitHub Repository Variables，并于 2026-08-29 接受 personless 测试事件直接参与聚合，不要求 Cohort/test-channel 修订；同时明确授权 push、版本提升、`v1.4.0` tag 和 GitHub Release。
+- Personal API Key 不属于 runtime/Release 配置。PostHog 实际事件、IP discard 和内部看板在 v1.4.0 安装运行后核验，不阻塞发布。
 
 ## 已关闭 Milestone 8 规划 Session（planned → 已授权）
 

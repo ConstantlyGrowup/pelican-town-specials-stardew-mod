@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-Milestone 6–8 与 Task 30 均已完成并发布，当前正式版本为 v1.3.0。Milestone 9“全局生成记忆与 Canonical 召回”Task 31–36 已于 2026-08-25 在 Codex 临时全量接管范式下全部实现并通过独立审阅/全量验收；用户于 2026-08-26 明确验收通过并授权统一 push，M9 实施提交与验收记录已同步至 `origin/feat/mvp-implementation`。用户提供的两组真实对照均显示命中后成本与耗时下降，但样本量仅 `n=2`，只作为正向实测信号，不承诺稳定节省。Task 36.1“原图参考像素图标生成补丁”与 Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”均已完成实施、主 Agent 全量验证和 detector 独立审阅；36.2 在真实官方端点验收暴露多图 edit 必须使用 `image[]` 后，已完成 revise round 1：单图保留 `image`，多图使用有序重复 `image[]`，同时保持非官方兼容端点的可配置路由与双响应解析。用户于 2026-08-27 明确联合验收通过并授权两个任务提交、push；产品 focused commits `a2d3756`（36.1）、`bf3d1ed`（36.2）与验收控制面 `93b408d` 已同步至 `origin/feat/mvp-implementation`。该授权不包含版本提升、tag 或 GitHub Release，正式发布版本仍为 v1.3.0。Milestone 10“EXE 无感使用统计”Task 37–39 仅规划验收，尚未授权实施；排在 Task 36.2 之后。M10 在 Release 后端静默记录最小人工业务事件，不新增首次说明、设置开关、前端页面、公开 API 或用户文档入口；不采集用户创作内容、Provider 配置、设备指纹、IP/Geo 或页面行为，采集故障不得影响业务。Task 30（新手试用入口）已验收、提交、推送并随 v1.3.0 发布，仍不属于第三期。后续完整队列、Redis、夜间批处理和多用户在线架构不属于第三期。
+Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记忆与 Canonical 召回”Task 31–36、Task 36.1“原图参考像素图标生成补丁”和 Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”均已实现、独立审阅、用户验收并同步远端；用户提供的 M9 对照样本仅 `n=2`，只作为正向实测信号，不承诺稳定节省。Milestone 10“EXE 无感使用统计”Task 37–39 已在 Codex 全量接管范式下实现并通过 detector/主 Agent 全量验收，focused commits 为 `d198a3e`、`3600d09`、`c4c1bcf`。M10 在配置完整的 Release 后端静默记录最小 personless 人工事件，不改变 UI/API，不采集创作内容、Provider、设备指纹、IP/Geo 或页面行为，采集故障不得影响业务。用户于 2026-08-29 已配置 Repository Variables，接受首次验收数据直接参与匿名聚合，并明确授权统一 push、版本提升和发布 v1.4.0；当前正式版本在发布完成前仍为 v1.3.0。后续完整队列、Redis、夜间批处理和多用户在线架构不属于第三期。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
 
