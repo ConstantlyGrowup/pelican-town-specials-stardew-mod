@@ -265,7 +265,9 @@ def create_app(
             min_confidence=app_config.ask_gus_min_confidence,
             trial_access=resolved_trial_service,
             trial_gateway_factory=_trial_gateway_factory(resolved_trial_service),
-            personal_configured=_personal_key_configured(resolved_secret_store),
+            personal_configured=_personal_provider_configured(
+                resolved_provider_settings_service
+            ),
             canonical_repository=resolved_canonical_registry,
             telemetry=business_telemetry,
         ),
@@ -514,16 +516,22 @@ def _default_open_folder() -> Callable[[Path], None] | None:
     return None
 
 
-def _personal_key_configured(secret_store: SecretStore) -> Callable[[], bool]:
-    """True when the user has saved a personal provider API key (R-09).
+def _personal_provider_configured(
+    settings_service: ProviderSettingsService,
+) -> Callable[[], bool]:
+    """True when the latest safe provider settings view has a configured key.
 
     The callback is evaluated lazily at the first provider call of each
     attempt so a freshly saved or deleted key is honored without any reload.
+    Settings read failures and malformed local state fail closed to ``False``
+    because this predicate is also used to shape the redacted trial error.
     """
 
     def is_configured() -> bool:
-        api_key = secret_store.get_api_key()
-        return api_key is not None and bool(api_key.get_secret_value().strip())
+        try:
+            return bool(settings_service.get().api_key_configured)
+        except Exception:  # noqa: BLE001 - configuration state must not leak through trial errors
+            return False
 
     return is_configured
 

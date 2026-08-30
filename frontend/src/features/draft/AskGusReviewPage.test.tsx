@@ -122,6 +122,7 @@ function renderPage(
         <Routes>
           <Route path="/drafts/:draftId" element={<AskGusReviewPage />} />
           <Route path="/cookbook/:dishId" element={<div>cookbook page</div>} />
+          <Route path="/settings" element={<div>settings page</div>} />
           <Route path="/" element={<div>home page</div>} />
         </Routes>
       </MemoryRouter>
@@ -589,6 +590,157 @@ describe("ask gus review", () => {
 
     expect(await screen.findByText("生成结果未通过校验。")).toBeVisible();
     expect(screen.getByRole("button", { name: copy.retryGeneration })).toBeVisible();
+  });
+
+  it("persists personal takeover before starting the replacement generation", async () => {
+    const requestOrder: string[] = [];
+    let generateCalls = 0;
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
+        ),
+      ),
+      http.put("/api/v1/settings/provider/trial/preference", async ({ request }) => {
+        const body = (await request.json()) as { mode?: string };
+        requestOrder.push(`preference:${body.mode ?? ""}`);
+        return HttpResponse.json({
+          available: true,
+          enabled: false,
+          claimedAttempts: 0,
+          limit: 2,
+          remaining: 2,
+          providerPreference: "PERSONAL",
+        });
+      }),
+      http.post("/api/v1/drafts/:draft_id/generate", () => {
+        generateCalls += 1;
+        requestOrder.push("generate");
+        const body =
+          generateCalls === 1
+            ? JSON.stringify({
+                type: "attempt.failed",
+                attemptId: "a-1",
+                error: {
+                  code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                  message: "试用服务失败：provider=https://hidden.example key=sk-secret",
+                  retryable: true,
+                  requestId: "req-1",
+                  recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+                  details: { personalProviderConfigured: true },
+                },
+              }) + "\n"
+            : '{"type":"attempt.started","attemptId":"a-2"}\n{"type":"attempt.succeeded","attemptId":"a-2","draftRevision":2,"draft":{}}\n';
+        return new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "application/x-ndjson" },
+        });
+      }),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
+    expect(await screen.findByRole("button", { name: copy.usePersonalProvider })).toBeVisible();
+    expect(generateCalls).toBe(1);
+
+    fireEvent.click(screen.getByRole("button", { name: copy.usePersonalProvider }));
+
+    await waitFor(() => expect(generateCalls).toBe(2));
+    expect(requestOrder).toEqual([
+      "generate",
+      "preference:PERSONAL",
+      "generate",
+    ]);
+  });
+
+  it("does not start generation when personal takeover preference PUT fails", async () => {
+    let generateCalls = 0;
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
+        ),
+      ),
+      http.put(
+        "/api/v1/settings/provider/trial/preference",
+        () => HttpResponse.json({ error: { code: "PTS_SETTINGS_FAILED" } }, { status: 503 }),
+      ),
+      http.post("/api/v1/drafts/:draft_id/generate", () => {
+        generateCalls += 1;
+        return new Response(
+          JSON.stringify({
+            type: "attempt.failed",
+            attemptId: "a-1",
+            error: {
+              code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+              message: "公共试用失败",
+              retryable: true,
+              requestId: "req-1",
+              recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              details: { personalProviderConfigured: true },
+            },
+          }) + "\n",
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        );
+      }),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
+    fireEvent.click(await screen.findByRole("button", { name: copy.usePersonalProvider }));
+
+    expect(await screen.findByText(copy.providerPreferenceFailed)).toBeVisible();
+    expect(generateCalls).toBe(1);
+  });
+
+  it("persists personal preference before navigating to settings when configuration is needed", async () => {
+    const requestOrder: string[] = [];
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
+        ),
+      ),
+      http.put("/api/v1/settings/provider/trial/preference", async ({ request }) => {
+        const body = (await request.json()) as { mode?: string };
+        requestOrder.push(`preference:${body.mode ?? ""}`);
+        return HttpResponse.json({
+          available: true,
+          enabled: false,
+          claimedAttempts: 0,
+          limit: 2,
+          remaining: 2,
+          providerPreference: "PERSONAL",
+        });
+      }),
+      http.post("/api/v1/drafts/:draft_id/generate", () => {
+        requestOrder.push("generate");
+        return new Response(
+          JSON.stringify({
+            type: "attempt.failed",
+            attemptId: "a-1",
+            error: {
+              code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+              message: "公共试用失败",
+              retryable: true,
+              requestId: "req-1",
+              recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              details: { personalProviderConfigured: false },
+            },
+          }) + "\n",
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        );
+      }),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.configurePersonalProvider }),
+    );
+
+    expect(await screen.findByText("settings page")).toBeVisible();
+    expect(requestOrder).toEqual(["generate", "preference:PERSONAL"]);
   });
 
   it("does not show the no-gameplay-yet hint on an empty ask-gus draft", async () => {

@@ -152,6 +152,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/provider/trial/preference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Trial Preference */
+        put: operations["put_trial_preference_api_v1_settings_provider_trial_preference_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/images": {
         parameters: {
             query?: never;
@@ -1409,6 +1426,16 @@ export interface components {
          * @enum {string}
          */
         StageStatus: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "SKIPPED";
+        /** TrialPreferenceUpdate */
+        TrialPreferenceUpdate: {
+            mode: components["schemas"]["TrialProviderPreference"];
+        };
+        /**
+         * TrialProviderPreference
+         * @description Internal routing preference reserved for Task 40/Task 41.
+         * @enum {string}
+         */
+        TrialProviderPreference: "TRIAL_FIRST" | "PERSONAL";
         /**
          * TrialStatus
          * @description Safe public trial status exposed to the Settings UI.
@@ -1424,6 +1451,8 @@ export interface components {
             limit: number;
             /** Remaining */
             remaining: number;
+            /** @default TRIAL_FIRST */
+            providerPreference: components["schemas"]["TrialProviderPreference"];
         };
         /** ValidationError */
         ValidationError: {
@@ -1768,6 +1797,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TrialStatus"];
+                };
+            };
+        };
+    };
+    put_trial_preference_api_v1_settings_provider_trial_preference_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrialPreferenceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

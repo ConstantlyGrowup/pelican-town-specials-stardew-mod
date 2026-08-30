@@ -22,6 +22,7 @@ type TrialStatus = {
   claimedAttempts: number;
   limit: number;
   remaining: number;
+  providerPreference: "TRIAL_FIRST" | "PERSONAL";
 };
 
 function trialStatus(overrides: Partial<TrialStatus> = {}): TrialStatus {
@@ -31,6 +32,7 @@ function trialStatus(overrides: Partial<TrialStatus> = {}): TrialStatus {
     claimedAttempts: 0,
     limit: 2,
     remaining: 2,
+    providerPreference: "TRIAL_FIRST",
     ...overrides,
   };
 }
@@ -91,6 +93,17 @@ async function installSettingsRoutes(
       state.trial = trialStatus({ ...state.trial, enabled: false });
     }
     void route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(state.trial),
+    });
+  });
+  await page.route("/api/v1/settings/provider/trial/preference", async (route: Route) => {
+    const body = route.request().postDataJSON() as { mode?: TrialStatus["providerPreference"] };
+    if (body.mode === "TRIAL_FIRST" || body.mode === "PERSONAL") {
+      state.trial = trialStatus({ ...state.trial, providerPreference: body.mode });
+    }
+    await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(state.trial),
@@ -157,5 +170,38 @@ test.describe("settings trial entry", () => {
     await expect(
       page.getByRole("button", { name: "不想配置，先试试效果" }),
     ).toHaveCount(0);
+  });
+
+  test("shows and switches the persisted generation preference both ways", async ({ page }) => {
+    const state = { trial: trialStatus({ available: false }) };
+    await installSettingsRoutes(page, state);
+
+    await page.goto("/settings", { waitUntil: "networkidle" });
+    const group = page.getByRole("radiogroup", { name: "生成服务偏好" });
+    await expect(group).toBeVisible();
+    await expect(
+      group.getByRole("radio", { name: "优先使用公共试用" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      page.getByText("试用功能暂时不可用，请配置自己的服务"),
+    ).toBeVisible();
+
+    await group.getByRole("radio", { name: "使用我的服务" }).click();
+    await expect(
+      group.getByRole("radio", { name: "使用我的服务" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByText("已选择个人服务，请完成上方配置")).toBeVisible();
+    await expect(
+      page.getByText("试用功能暂时不可用，请配置自己的服务"),
+    ).toHaveCount(0);
+
+    await group.getByRole("radio", { name: "优先使用公共试用" }).click();
+    await expect(
+      group.getByRole("radio", { name: "优先使用公共试用" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      page.getByText("试用功能暂时不可用，请配置自己的服务"),
+    ).toBeVisible();
+    expect(state.trial.providerPreference).toBe("TRIAL_FIRST");
   });
 });

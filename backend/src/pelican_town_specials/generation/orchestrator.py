@@ -19,6 +19,7 @@ from pelican_town_specials.application.telemetry import (
     NoopTelemetryRecorder,
     TelemetryRecorder,
 )
+from pelican_town_specials.application.trial import TrialProviderPreference
 from pelican_town_specials.catalog.gameplay_rules import validate_gameplay
 from pelican_town_specials.catalog.mapping import ensure_main_protein, map_ingredient
 from pelican_town_specials.catalog.models import CatalogCandidate
@@ -672,6 +673,8 @@ class TrialAccess(Protocol):
 
     def is_active(self) -> bool: ...
 
+    def preference(self) -> TrialProviderPreference: ...
+
     def trial_opportunity(self) -> bool: ...
 
     def reserve_attempt(self, attempt_id: UUID) -> bool: ...
@@ -1095,16 +1098,23 @@ class GenerationOrchestrator:
         """Build the per-attempt gateway lazily at the first provider call.
 
         Idempotent: the first call caches the gateway on the run state so a
-        single attempt claims at most one trial generation. R-09: a user who
-        already configured their own provider prefers the free trial allowance
-        and silently falls back to the personal provider once it is exhausted
-        (or lost in a concurrent claim). Users without a personal provider keep
-        the opt-in trial flow, where an exhausted trial raises
-        ``PTS_TRIAL_LIMIT_REACHED`` before any provider call.
+        single attempt claims at most one trial generation. The persisted
+        preference is read only at this boundary; once a gateway is selected,
+        later preference changes cannot hot-switch the running attempt.
+
+        ``PERSONAL`` bypasses trial reservation entirely. ``TRIAL_FIRST``
+        preserves the existing Task 40 behavior: configured users consume an
+        available trial first and fall back to their personal provider when it
+        is exhausted, while users without a personal provider keep the opt-in
+        trial flow.
         """
         if state.gateway is not None:
             return state.gateway
         if self._trial_access is not None and self._trial_gateway_factory is not None:
+            if self._trial_preference() is TrialProviderPreference.PERSONAL:
+                state.gateway = self._gateway_factory()
+                self._record_generation_started(state)
+                return state.gateway
             if self._personal_configured():
                 if (
                     self._trial_access.trial_opportunity()
@@ -1126,6 +1136,27 @@ class GenerationOrchestrator:
         state.gateway = self._gateway_factory()
         self._record_generation_started(state)
         return state.gateway
+
+    def _trial_preference(self) -> TrialProviderPreference:
+        """Read the trial preference with compatibility-safe fail-open behavior."""
+        if self._trial_access is None:
+            return TrialProviderPreference.TRIAL_FIRST
+        getter = getattr(self._trial_access, "preference", None)
+        if getter is None:
+            # Task 40 test doubles and older integrations did not expose the
+            # optional preference hook; their historical behavior is trial-first.
+            return TrialProviderPreference.TRIAL_FIRST
+        try:
+            value = getter()
+            return (
+                value
+                if isinstance(value, TrialProviderPreference)
+                else TrialProviderPreference(value)
+            )
+        except (TypeError, ValueError):
+            # A malformed preference must never trigger a hot switch or expose
+            # storage details. Keep the conservative historical route.
+            return TrialProviderPreference.TRIAL_FIRST
 
     def _commit_trial_after_provider_success(self, state: _RunState) -> None:
         """Commit a trial only after an awaited provider response succeeds."""
@@ -1183,8 +1214,17 @@ class GenerationOrchestrator:
             and not state.trial_response_received
         ):
             self._release_trial_reservation(state)
-            return trial_service_unavailable_error()
+            return trial_service_unavailable_error(
+                personal_provider_configured=self._safe_personal_configured()
+            )
         return error
+
+    def _safe_personal_configured(self) -> bool:
+        """Evaluate the local provider predicate without leaking read failures."""
+        try:
+            return bool(self._personal_configured())
+        except Exception:  # noqa: BLE001 - a settings read must not mask trial error mapping
+            return False
 
     def _import_canonical_icons(
         self,

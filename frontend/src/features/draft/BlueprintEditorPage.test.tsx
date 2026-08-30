@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GenerationErrorEnvelope, GenerationStage } from "../../api/ndjson";
 import { catalogs } from "../../i18n/copy";
+import { resetGenerationStore } from "../generation/generationStore";
 import type { GenerationPhase } from "../generation/useGeneration";
 import { BlueprintEditorPage } from "./BlueprintEditorPage";
 
@@ -64,6 +65,7 @@ const successfulProgress = {
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeEach(() => {
+  resetGenerationStore();
   server.use(
     http.get("/api/v1/drafts/:draft_id/generation", () =>
       HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
@@ -146,6 +148,7 @@ function renderPage() {
         <Routes>
           <Route path="/drafts/:draftId" element={<BlueprintEditorPage />} />
           <Route path="/cookbook/:dishId" element={<div>cookbook page</div>} />
+          <Route path="/settings" element={<div>settings page</div>} />
           <Route path="/" element={<div>home page</div>} />
         </Routes>
       </MemoryRouter>
@@ -488,6 +491,64 @@ describe("blueprint editor", () => {
     expect(await screen.findByText("生成结果未通过校验。")).toBeVisible();
     expect(screen.getByRole("button", { name: copy.updatePreview })).toBeVisible();
     expect(screen.queryByRole("button", { name: copy.archiveDish })).toBeNull();
+  });
+
+  it("persists personal takeover before starting a replacement preview", async () => {
+    const requestOrder: string[] = [];
+    let generateCalls = 0;
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "STALE_PREVIEW", revision: 2 })),
+      ),
+      http.put("/api/v1/settings/provider/trial/preference", async ({ request }) => {
+        const body = (await request.json()) as { mode?: string };
+        requestOrder.push(`preference:${body.mode ?? ""}`);
+        return HttpResponse.json({
+          available: true,
+          enabled: false,
+          claimedAttempts: 0,
+          limit: 2,
+          remaining: 2,
+          providerPreference: "PERSONAL",
+        });
+      }),
+      http.post("/api/v1/drafts/:draft_id/generate", () => {
+        generateCalls += 1;
+        requestOrder.push("generate");
+        const body =
+          generateCalls === 1
+            ? JSON.stringify({
+                type: "attempt.failed",
+                attemptId: "a-1",
+                error: {
+                  code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                  message: "公共试用失败",
+                  retryable: true,
+                  requestId: "req-1",
+                  recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+                  details: { personalProviderConfigured: true },
+                },
+              }) + "\n"
+            : '{"type":"attempt.started","attemptId":"a-2"}\n';
+        return new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "application/x-ndjson" },
+        });
+      }),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.updatePreview }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.usePersonalProvider }),
+    );
+
+    await waitFor(() => expect(generateCalls).toBe(2));
+    expect(requestOrder).toEqual([
+      "generate",
+      "preference:PERSONAL",
+      "generate",
+    ]);
   });
 
   it("cancels an update preview and stays recoverable", async () => {

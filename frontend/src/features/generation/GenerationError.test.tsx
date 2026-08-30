@@ -20,13 +20,18 @@ const BACKEND_TRIAL_LIMIT_MESSAGE = "你已经达到试用额度，请配置自�
 const BACKEND_TRIAL_SERVICE_MESSAGE =
   "试用服务失败：provider=https://hidden.example key=sk-secret；本次未消耗试用次数。";
 
-function envelope(code: string, message: string): GenerationErrorEnvelope {
+function envelope(
+  code: string,
+  message: string,
+  details?: GenerationErrorEnvelope["details"],
+): GenerationErrorEnvelope {
   return {
     code,
     message,
     retryable: false,
     requestId: "req-1",
     recommendedAction: "",
+    ...(details ? { details } : {}),
   };
 }
 
@@ -145,5 +150,68 @@ describe("GenerationError", () => {
     expect(
       screen.queryByRole("button", { name: catalogs["zh-CN"].retryGeneration }),
     ).toBeNull();
+  });
+
+  it("offers personal takeover and a later retry when personal service is configured", () => {
+    const onTakeover = vi.fn();
+    const onRetry = vi.fn();
+    render(
+      <GenerationError
+        error={envelope(
+          "PTS_TRIAL_SERVICE_UNAVAILABLE",
+          BACKEND_TRIAL_SERVICE_MESSAGE,
+          { personalProviderConfigured: true },
+        )}
+        onTakeover={onTakeover}
+        onRetry={onRetry}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: catalogs["zh-CN"].usePersonalProvider }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: catalogs["zh-CN"].retryLater }),
+    );
+    expect(onTakeover).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers configuration when the personal service is not configured or the trial is exhausted", () => {
+    const onConfigure = vi.fn();
+    const { rerender } = render(
+      <GenerationError
+        error={envelope(
+          "PTS_TRIAL_SERVICE_UNAVAILABLE",
+          BACKEND_TRIAL_SERVICE_MESSAGE,
+          { personalProviderConfigured: false },
+        )}
+        onConfigure={onConfigure}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: catalogs["zh-CN"].configurePersonalProvider,
+      }),
+    ).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: catalogs["zh-CN"].configurePersonalProvider,
+      }),
+    );
+    expect(onConfigure).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <GenerationError
+        error={envelope("PTS_TRIAL_LIMIT_REACHED", BACKEND_TRIAL_LIMIT_MESSAGE)}
+        onConfigure={onConfigure}
+      />,
+    );
+    expect(
+      screen.getByRole("button", {
+        name: catalogs["zh-CN"].configurePersonalProvider,
+      }),
+    ).toBeVisible();
   });
 });

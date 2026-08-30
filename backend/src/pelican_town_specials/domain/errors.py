@@ -157,7 +157,9 @@ def trial_unavailable_error() -> AppError:
     )
 
 
-def trial_service_unavailable_error() -> AppError:
+def trial_service_unavailable_error(
+    *, personal_provider_configured: bool = False
+) -> AppError:
     """Return the redacted, retryable error for a failed trial provider call."""
 
     return AppError(
@@ -167,6 +169,6 @@ def trial_service_unavailable_error() -> AppError:
             "请稍后重试，或在设置中配置自己的服务。"
         ),
         http_status=503,
-        details={},
+        details={"personalProviderConfigured": personal_provider_configured},
         retryable=True,
     )

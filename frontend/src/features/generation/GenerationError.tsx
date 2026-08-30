@@ -3,12 +3,15 @@ import type { GenerationErrorEnvelope } from "../../api/ndjson";
 
 type GenerationErrorProps = {
   error: GenerationErrorEnvelope;
-  onRetry?: () => void;
+  onRetry?: () => void | Promise<void>;
+  onTakeover?: () => void | Promise<void>;
+  onConfigure?: () => void | Promise<void>;
+  actionPending?: boolean;
 };
 
 /** Backend code rejecting a generate request when all 3 slots are busy
  * (M8 Task 28/29). The backend message stays frozen; the UI replaces it with
- * the localized limit hint below. `error.details` is never parsed. */
+ * the localized limit hint below. */
 const GENERATION_BUSY_CODE = "PTS_GEN_BUSY";
 
 /** Backend code rejecting a generate request when the trial quota is used up
@@ -30,8 +33,18 @@ const TRIAL_SERVICE_UNAVAILABLE_CODE = "PTS_TRIAL_SERVICE_UNAVAILABLE";
  * backend message, and an exhausted trial quota (Task 30) shows the
  * bilingual trial-limit hint; every other error keeps the backend message.
  */
-export function GenerationError({ error, onRetry }: GenerationErrorProps) {
+export function GenerationError({
+  error,
+  onRetry,
+  onTakeover,
+  onConfigure,
+  actionPending = false,
+}: GenerationErrorProps) {
   const copy = useCopy();
+  const trialServiceUnavailable = error.code === TRIAL_SERVICE_UNAVAILABLE_CODE;
+  const trialLimitReached = error.code === TRIAL_LIMIT_CODE;
+  const personalProviderConfigured =
+    error.details?.personalProviderConfigured === true;
   const message =
     error.code === GENERATION_BUSY_CODE
       ? copy.generationBusyLimit
@@ -43,9 +56,36 @@ export function GenerationError({ error, onRetry }: GenerationErrorProps) {
   return (
     <div className="status-banner status-error" role="alert">
       <p>{message}</p>
+      {trialServiceUnavailable && personalProviderConfigured && onTakeover && (
+        <button
+          className="btn"
+          type="button"
+          onClick={() => void onTakeover()}
+          disabled={actionPending}
+        >
+          {copy.usePersonalProvider}
+        </button>
+      )}
+      {((trialServiceUnavailable && !personalProviderConfigured) ||
+        trialLimitReached) &&
+        onConfigure && (
+          <button
+            className="btn"
+            type="button"
+            onClick={() => void onConfigure()}
+            disabled={actionPending}
+          >
+            {copy.configurePersonalProvider}
+          </button>
+        )}
       {onRetry && (
-        <button className="btn" type="button" onClick={onRetry}>
-          {copy.retryGeneration}
+        <button
+          className="btn"
+          type="button"
+          onClick={() => void onRetry()}
+          disabled={actionPending}
+        >
+          {trialServiceUnavailable ? copy.retryLater : copy.retryGeneration}
         </button>
       )}
     </div>

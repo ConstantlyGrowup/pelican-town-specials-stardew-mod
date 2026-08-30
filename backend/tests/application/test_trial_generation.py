@@ -20,6 +20,7 @@ from backend.tests.generation.conftest import (
 
 from pelican_town_specials.application.trial import (
     TrialAccessService,
+    TrialProviderPreference,
     TrialSafeGateway,
 )
 from pelican_town_specials.catalog.repository import VanillaCatalog
@@ -61,16 +62,19 @@ class FakeTrialAccess:
         reserve_result: bool = True,
         opportunity: bool = True,
         commit_remaining: int | None = 1,
+        preference: TrialProviderPreference = TrialProviderPreference.TRIAL_FIRST,
     ) -> None:
         self.active = active
         self.reserve_result = reserve_result
         self.opportunity = opportunity
         self.commit_remaining = commit_remaining
+        self.provider_preference = preference
         self.is_active_calls = 0
         self.reserve_calls = 0
         self.commit_calls = 0
         self.release_calls = 0
         self.opportunity_calls = 0
+        self.preference_calls = 0
         self.reserved_attempts: set[UUID] = set()
 
     def is_active(self) -> bool:
@@ -99,6 +103,10 @@ class FakeTrialAccess:
     def trial_opportunity(self) -> bool:
         self.opportunity_calls += 1
         return self.opportunity
+
+    def preference(self) -> TrialProviderPreference:
+        self.preference_calls += 1
+        return self.provider_preference
 
 
 class _QuotaTrialAccess(FakeTrialAccess):
@@ -226,6 +234,61 @@ async def test_personal_mode_does_not_claim(tmp_path: Path) -> None:
     assert trial.calls == []
 
 
+async def test_personal_preference_bypasses_trial_and_uses_personal_gateway(
+    tmp_path: Path,
+) -> None:
+    trial_access = FakeTrialAccess(
+        active=True,
+        opportunity=True,
+        preference=TrialProviderPreference.PERSONAL,
+    )
+    orchestrator, personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+        personal_configured=True,
+    )
+    draft = _saved_ready_draft(orchestrator)
+
+    events = [event async for event in orchestrator.run(initial_command(draft))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert personal.calls == ["analyze", "design", "image", "image"]
+    assert trial.calls == []
+    assert trial_access.preference_calls == 1
+    assert trial_access.opportunity_calls == 0
+    assert trial_access.is_active_calls == 0
+    assert trial_access.reserve_calls == 0
+    assert trial_access.commit_calls == 0
+
+
+async def test_attempt_gateway_is_fixed_after_preference_is_read(
+    tmp_path: Path,
+) -> None:
+    class FlippingPreferenceAccess(FakeTrialAccess):
+        def preference(self) -> TrialProviderPreference:
+            value = super().preference()
+            if self.preference_calls == 1:
+                self.provider_preference = TrialProviderPreference.PERSONAL
+            return value
+
+    trial_access = FlippingPreferenceAccess(
+        active=True,
+        preference=TrialProviderPreference.TRIAL_FIRST,
+    )
+    orchestrator, personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+    )
+    draft = _saved_ready_draft(orchestrator)
+
+    events = [event async for event in orchestrator.run(initial_command(draft))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert trial.calls == ["analyze", "design", "image", "image"]
+    assert personal.calls == []
+    assert trial_access.preference_calls == 1
+
+
 async def test_no_trial_access_uses_personal_gateway(tmp_path: Path) -> None:
     orchestrator, personal, trial = _orchestrator(tmp_path, trial_access=None)
     draft = _saved_ready_draft(orchestrator)
@@ -317,7 +380,7 @@ async def test_trial_provider_error_details_do_not_leak(tmp_path: Path) -> None:
     assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
     assert events[-1].error.retryable is True
     details = events[-1].error.details
-    assert details == {}
+    assert details == {"personalProviderConfigured": False}
     assert "yibuapi" not in str(details)
     assert "gpt-5.6-luna" not in str(details)
     assert "sk-test-trial" not in str(details)
@@ -482,7 +545,7 @@ async def test_trial_failure_before_first_success_releases_and_does_not_fallback
     assert events[-1].type == "attempt.failed"
     assert events[-1].error is not None
     assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
-    assert events[-1].error.details == {}
+    assert events[-1].error.details == {"personalProviderConfigured": True}
     assert "hidden" not in events[-1].error.message
     assert trial_access.commit_calls == 0
     assert trial_access.release_calls == 1
@@ -560,7 +623,7 @@ async def test_unexpected_trial_failure_before_first_success_is_safe_and_release
     assert events[-1].error is not None
     assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
     assert events[-1].error.retryable is True
-    assert events[-1].error.details == {}
+    assert events[-1].error.details == {"personalProviderConfigured": False}
     assert trial_access.commit_calls == 0
     assert trial_access.release_calls == 1
     assert personal.calls == []

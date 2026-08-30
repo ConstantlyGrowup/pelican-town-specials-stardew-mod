@@ -70,6 +70,7 @@ def test_initial_status_is_available_disabled_with_full_quota(tmp_path: Path) ->
     assert status.claimed_attempts == 0
     assert status.limit == TRIAL_GENERATION_LIMIT
     assert status.remaining == TRIAL_GENERATION_LIMIT
+    assert status.provider_preference is TrialProviderPreference.TRIAL_FIRST
 
 
 def test_status_surfaces_camel_case_fields(tmp_path: Path) -> None:
@@ -87,6 +88,7 @@ def test_status_surfaces_camel_case_fields(tmp_path: Path) -> None:
         "claimedAttempts": 1,
         "limit": TRIAL_GENERATION_LIMIT,
         "remaining": TRIAL_GENERATION_LIMIT - 1,
+        "providerPreference": "TRIAL_FIRST",
     }
 
 
@@ -208,7 +210,7 @@ def test_v1_claimed_attempts_migrate_without_resetting_quota(tmp_path: Path) -> 
     }
 
 
-def test_trial_state_personal_preference_round_trips_without_public_exposure(
+def test_trial_state_personal_preference_round_trips_through_public_status(
     tmp_path: Path,
 ) -> None:
     service, workspace = _service(tmp_path)
@@ -221,7 +223,47 @@ def test_trial_state_personal_preference_round_trips_without_public_exposure(
 
     assert parsed.provider_preference is TrialProviderPreference.PERSONAL
     assert reloaded._state.provider_preference is TrialProviderPreference.PERSONAL
-    assert "providerPreference" not in reloaded.status().model_dump(by_alias=True)
+    assert (
+        reloaded.status().provider_preference
+        is TrialProviderPreference.PERSONAL
+    )
+    assert reloaded.status().model_dump(by_alias=True)["providerPreference"] == "PERSONAL"
+
+
+def test_set_preference_persists_without_changing_quota(tmp_path: Path) -> None:
+    service, workspace = _service(tmp_path)
+    service.enable()
+    assert service.claim_attempt() is True
+    before = service.status()
+
+    personal = service.set_preference(TrialProviderPreference.PERSONAL)
+
+    assert personal.provider_preference is TrialProviderPreference.PERSONAL
+    assert personal.claimed_attempts == before.claimed_attempts
+    assert personal.remaining == before.remaining
+    reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+    assert reloaded.preference() is TrialProviderPreference.PERSONAL
+    assert reloaded.status().claimed_attempts == before.claimed_attempts
+    assert reloaded.status().remaining == before.remaining
+
+    switched_back = reloaded.set_preference(TrialProviderPreference.TRIAL_FIRST)
+    assert switched_back.provider_preference is TrialProviderPreference.TRIAL_FIRST
+    assert switched_back.claimed_attempts == before.claimed_attempts
+    assert switched_back.remaining == before.remaining
+
+
+def test_enable_explicit_trial_resets_preference_without_changing_quota(
+    tmp_path: Path,
+) -> None:
+    service, _ = _service(tmp_path)
+    service.set_preference(TrialProviderPreference.PERSONAL)
+    assert service.claim_attempt() is True
+
+    status = service.enable()
+
+    assert status.provider_preference is TrialProviderPreference.TRIAL_FIRST
+    assert status.claimed_attempts == 1
+    assert status.remaining == TRIAL_GENERATION_LIMIT - 1
 
 
 def test_reloading_clears_unconfirmed_reservations(tmp_path: Path) -> None:

@@ -256,6 +256,44 @@
         }
       }
     },
+    "/api/v1/settings/provider/trial/preference": {
+      "put": {
+        "summary": "Put Trial Preference",
+        "operationId": "put_trial_preference_api_v1_settings_provider_trial_preference_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrialPreferenceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/images": {
       "post": {
         "summary": "Upload Image",
@@ -3518,6 +3556,28 @@
         ],
         "title": "StageStatus"
       },
+      "TrialPreferenceUpdate": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/TrialProviderPreference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "TrialPreferenceUpdate"
+      },
+      "TrialProviderPreference": {
+        "type": "string",
+        "enum": [
+          "TRIAL_FIRST",
+          "PERSONAL"
+        ],
+        "title": "TrialProviderPreference",
+        "description": "Internal routing preference reserved for Task 40/Task 41."
+      },
       "TrialStatus": {
         "properties": {
           "available": {
@@ -3539,6 +3599,10 @@
           "remaining": {
             "type": "integer",
             "title": "Remaining"
+          },
+          "providerPreference": {
+            "$ref": "#/components/schemas/TrialProviderPreference",
+            "default": "TRIAL_FIRST"
           }
         },
         "additionalProperties": false,

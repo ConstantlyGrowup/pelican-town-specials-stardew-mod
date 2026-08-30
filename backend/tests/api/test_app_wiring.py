@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from pelican_town_specials.api.app import create_app
+from pelican_town_specials.api.app import _personal_provider_configured, create_app
 from pelican_town_specials.api.security import SecurityConfig, SecurityState
 from pelican_town_specials.application.telemetry import NoopTelemetryRecorder
 from pelican_town_specials.domain.telemetry import TelemetryEvent
@@ -164,6 +164,40 @@ def test_create_app_wires_task9_services_and_routes(tmp_path: Path) -> None:
         "/api/v1/cookbook/{dish_id}",
     ):
         assert path in paths
+    assert "/api/v1/settings/provider/trial/preference" in paths
+
+
+def test_personal_provider_configured_requires_safe_settings_read_and_key(
+    tmp_path: Path,
+) -> None:
+    from pelican_town_specials.application.settings import ProviderSettingsView
+    from pelican_town_specials.persistence.secret_store import ApiKeySource
+
+    view = ProviderSettingsView(
+        providerKind="OPENAI_COMPATIBLE",
+        baseUrl="https://example.test/v1",
+        visionModel="vision-model",
+        textModel="text-model",
+        imageModel="image-model",
+        chatTimeoutSeconds=120,
+        imageTimeoutSeconds=300,
+        maxAutomaticRetries=2,
+        apiKeyConfigured=True,
+        apiKeySource=ApiKeySource.ENVIRONMENT,
+    )
+
+    class Settings:
+        def __init__(self, value: object) -> None:
+            self.value = value
+
+        def get(self) -> object:
+            if isinstance(self.value, BaseException):
+                raise self.value
+            return self.value
+
+    assert _personal_provider_configured(Settings(view))() is True
+    assert _personal_provider_configured(Settings(view.model_copy(update={"api_key_configured": False})))() is False
+    assert _personal_provider_configured(Settings(RuntimeError("corrupt settings")))() is False
 
 
 def test_startup_sweep_recovers_orphaned_generating_draft(

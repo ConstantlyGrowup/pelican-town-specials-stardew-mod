@@ -40,9 +40,14 @@ export function BlueprintEditorPage() {
   // The transient action error stores a catalog key so a live message
   // re-localizes when the user switches the UI language (M7-T25-I18N-001).
   const [actionError, setActionError] = useState<
-    "saveFailed" | "archiveFailed" | "discardDraftFailed" | null
+    | "saveFailed"
+    | "archiveFailed"
+    | "discardDraftFailed"
+    | "providerPreferenceFailed"
+    | null
   >(null);
   const [busy, setBusy] = useState(false);
+  const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   const query = useQuery({
@@ -69,6 +74,33 @@ export function BlueprintEditorPage() {
       await queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
     },
   });
+
+  async function setPersonalPreference(): Promise<boolean> {
+    setPreferenceBusy(true);
+    setActionError(null);
+    const { data, error } = await apiClient.PUT(
+      "/api/v1/settings/provider/trial/preference",
+      { body: { mode: "PERSONAL" } },
+    );
+    setPreferenceBusy(false);
+    if (error || !data) {
+      setActionError("providerPreferenceFailed");
+      return false;
+    }
+    return true;
+  }
+
+  async function onTakeoverPersonal() {
+    if (await setPersonalPreference()) {
+      generation.begin();
+    }
+  }
+
+  async function onConfigurePersonal() {
+    if (await setPersonalPreference()) {
+      navigate("/settings");
+    }
+  }
 
   const form = useForm<BlueprintFormValues>({
     defaultValues: {
@@ -415,6 +447,9 @@ export function BlueprintEditorPage() {
         <GenerationError
           error={generation.error}
           onRetry={canRetry ? generation.begin : undefined}
+          onTakeover={canRetry ? onTakeoverPersonal : undefined}
+          onConfigure={canRetry ? onConfigurePersonal : undefined}
+          actionPending={preferenceBusy}
         />
       )}
       {generation.phase === "cancelled" && (

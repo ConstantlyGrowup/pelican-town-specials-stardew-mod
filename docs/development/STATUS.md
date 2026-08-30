@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_11_task_40_auto_accepted_task_41_packet_next |
-| project_phase | v1.4.0 已发布；M11 开发中，Task 40 已实现并通过独立验收，Task 41 待实施 |
+| overall_state | milestone_11_task_41_auto_accepted |
+| project_phase | v1.4.0 已发布；M11 开发中，Task 40–41 已完成，准备进入 Task 42 |
 | product_implementation_started | true |
-| active_session_id | none；Task 40 Session 已关闭 |
-| active_session_state | none |
+| active_session_id | none |
+| active_session_state | none（Task 41 auto_accepted；Task 42 尚未创建） |
 | active_session_type | none |
-| current_task | Task 41 公共试用失败后的显式个人额度接管 Context Packet 闭包准备 |
+| current_task | Task 42 试用消耗结果提示（下一步） |
 | blocker | none；用户已验收 M11 规划并明确授权按规划开发 |
-| next_action | 创建 Task 41 独立 Session 与 READY_FOR_IMPLEMENTATION Context Packet，随后派发新的 luna_worker |
+| next_action | 创建 Task 42 Context Packet 与 Session，随后由新 luna_worker 实施 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -44,6 +44,13 @@
 - 不增加 `/models`、最短 Chat、图片或其他探测；Task 40 不自动使用个人付费服务。v1 `claimedAttempts` 无损迁移为 `consumedAttempts`，启动清理未确认 reservation；N=2 与 R-09 试用优先保持不变。
 - detector round 1 唯一 REVISE 为 M9 Canonical HIT 测试 fake 的旧 claim 协议；round 2 最小修复后 detector `PASS`，M11-T40-001..008 全部通过，无 must-fix、无范围漂移。
 - 主 Agent 最终证据：九文件 focused backend `155 passed`，GenerationError `8 passed`，Ruff、mypy 96 files、frontend lint、TypeScript、OpenAPI 生成与 diff-check 全部 PASS。focused commit：`feat: protect trial quota until first provider success`；仅本地，不 push。
+
+## 已关闭 M11 Task 41 Session（auto_accepted / committed）
+
+- Session：`2026-08-30-milestone-11-task-41-personal-provider-takeover`；实现公共试用失败后的显式“改用我的服务 / 配置我的服务”、本机 `TRIAL_FIRST|PERSONAL` 偏好、个人路径零试用 reservation，以及安全的 `personalProviderConfigured:boolean` 错误提示。
+- 未经用户点击不调用个人 Provider；接管严格先保存 PERSONAL 偏好再开始新 attempt 或进入 Settings。偏好重启后保持、切换不清零试用次数；每个 attempt 首次选择 gateway 后固定，不热切换、不自动 fallback、不新增 Provider 探针。
+- Round 1 修复 Settings PERSONAL 状态文案优先级后，detector `PASS`，M11-T41-001..007 全部通过，`must_fix=[]`、无新设计、无 scope delta。
+- 主 Agent 最终证据：focused backend `86 passed`，frontend 五文件 `75 passed`，Settings + Generation Playwright `17 passed`，OpenAPI、Ruff、mypy 96 files、ESLint、TypeScript 与 diff-check 全部 PASS。focused commit：`feat: add explicit personal provider takeover`；仅本地，不 push。
 
 ## 已 deferred 的 Task 30 规划 Session
 

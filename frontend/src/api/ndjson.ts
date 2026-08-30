@@ -17,6 +17,8 @@ export type GenerationErrorEnvelope = {
   retryable: boolean;
   requestId: string;
   recommendedAction: string;
+  /** The trial contract permits only this redacted boolean detail. */
+  details?: { personalProviderConfigured?: boolean };
   [key: string]: unknown;
 };
 
@@ -42,6 +44,47 @@ export class GenerationCancelError extends Error {
   }
 }
 
+function safeErrorDetails(
+  value: unknown,
+): GenerationErrorEnvelope["details"] | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const personalProviderConfigured =
+    (value as Record<string, unknown>).personalProviderConfigured;
+  return typeof personalProviderConfigured === "boolean"
+    ? { personalProviderConfigured }
+    : undefined;
+}
+
+function sanitizeErrorEnvelope(value: unknown): GenerationErrorEnvelope {
+  if (!value || typeof value !== "object") {
+    return {
+      code: "PTS_UNKNOWN",
+      message: "Generation request failed.",
+      retryable: false,
+      requestId: "",
+      recommendedAction: "",
+    };
+  }
+  const record = value as Record<string, unknown>;
+  const details = safeErrorDetails(record.details);
+  return {
+    code: typeof record.code === "string" ? record.code : "PTS_UNKNOWN",
+    message:
+      typeof record.message === "string"
+        ? record.message
+        : "Generation request failed.",
+    retryable: typeof record.retryable === "boolean" ? record.retryable : false,
+    requestId: typeof record.requestId === "string" ? record.requestId : "",
+    recommendedAction:
+      typeof record.recommendedAction === "string"
+        ? record.recommendedAction
+        : "",
+    ...(details ? { details } : {}),
+  };
+}
+
 async function parseErrorEnvelope(
   response: Response,
 ): Promise<GenerationErrorEnvelope> {
@@ -60,16 +103,7 @@ async function parseErrorEnvelope(
   if (candidate && typeof candidate === "object") {
     const record = candidate as Record<string, unknown>;
     if (typeof record.code === "string" && typeof record.message === "string") {
-      return {
-        code: record.code,
-        message: record.message,
-        retryable: typeof record.retryable === "boolean" ? record.retryable : false,
-        requestId: typeof record.requestId === "string" ? record.requestId : "",
-        recommendedAction:
-          typeof record.recommendedAction === "string"
-            ? record.recommendedAction
-            : "",
-      };
+      return sanitizeErrorEnvelope(record);
     }
   }
   return {
@@ -127,7 +161,15 @@ export async function parseChunks(chunks: string[]): Promise<GenerationEvent[]> 
     if (!trimmed) {
       continue;
     }
-    events.push(JSON.parse(trimmed) as GenerationEvent);
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    events.push(
+      parsed.type === "attempt.failed"
+        ? ({
+            ...parsed,
+            error: sanitizeErrorEnvelope(parsed.error),
+          } as GenerationEvent)
+        : (parsed as GenerationEvent),
+    );
   }
   return events;
 }
@@ -179,7 +221,15 @@ export async function streamGeneration(
         const line = buffer.slice(0, newline);
         buffer = buffer.slice(newline + 1);
         if (line.trim()) {
-          onEvent(JSON.parse(line) as GenerationEvent);
+          const parsed = JSON.parse(line) as Record<string, unknown>;
+          onEvent(
+            parsed.type === "attempt.failed"
+              ? ({
+                  ...parsed,
+                  error: sanitizeErrorEnvelope(parsed.error),
+                } as GenerationEvent)
+              : (parsed as GenerationEvent),
+          );
         }
         newline = buffer.indexOf("\n");
       }

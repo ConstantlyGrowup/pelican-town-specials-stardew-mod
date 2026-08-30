@@ -12,6 +12,7 @@ from pelican_town_specials.application.settings import (
 )
 from pelican_town_specials.application.trial import (
     TRIAL_GENERATION_LIMIT,
+    TrialProviderPreference,
     TrialStatus,
 )
 
@@ -25,7 +26,9 @@ class FakeTrialService:
             claimed_attempts=0,
             limit=TRIAL_GENERATION_LIMIT,
             remaining=TRIAL_GENERATION_LIMIT,
+            provider_preference=TrialProviderPreference.TRIAL_FIRST,
         )
+        self.preference_calls: list[TrialProviderPreference] = []
 
     def status(self) -> TrialStatus:
         return self.status_value
@@ -35,6 +38,16 @@ class FakeTrialService:
 
     def disable(self) -> TrialStatus:
         self.disable_calls += 1
+        return self.status_value
+
+    def preference(self) -> TrialProviderPreference:
+        return self.status_value.provider_preference
+
+    def set_preference(self, mode: TrialProviderPreference) -> TrialStatus:
+        self.preference_calls.append(mode)
+        self.status_value = self.status_value.model_copy(
+            update={"provider_preference": mode}
+        )
         return self.status_value
 
 
@@ -159,6 +172,24 @@ def test_provider_settings_rejects_extra_fields() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_put_trial_preference_persists_mode_and_returns_safe_status() -> None:
+    app, _, _ = _app()
+
+    response = TestClient(app).put(
+        "/api/v1/settings/provider/trial/preference",
+        json={"mode": "PERSONAL"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["providerPreference"] == "PERSONAL"
+    assert app.state.trial_service.preference_calls == [
+        TrialProviderPreference.PERSONAL
+    ]
+    assert response.json()["claimedAttempts"] == 0
+    assert "baseUrl" not in response.text
+    assert "apiKey" not in response.text
 
 
 def test_put_provider_key_uses_secretstr_and_never_returns_key() -> None:

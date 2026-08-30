@@ -23,7 +23,8 @@ type SettingsMessageKey =
   | "saveFailed"
   | "deleteFailed"
   | "trialEnableFailed"
-  | "trialExitFailed";
+  | "trialExitFailed"
+  | "trialPreferenceFailed";
 
 export function SettingsPage() {
   const copy = useCopy();
@@ -47,6 +48,7 @@ export function SettingsPage() {
   // Settings page or masks the personal provider form.
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [trialMessage, setTrialMessage] = useState<SettingsMessageKey | null>(null);
+  const [preferenceBusy, setPreferenceBusy] = useState(false);
 
   const form = useForm<ProviderSettingsValues>({
     defaultValues: {
@@ -107,6 +109,21 @@ export function SettingsPage() {
     const { data, error } = await apiClient.DELETE("/api/v1/settings/provider/trial");
     if (error || !data) {
       setTrialMessage("trialExitFailed");
+      return;
+    }
+    setTrialStatus(data);
+    setTrialMessage(null);
+  }
+
+  async function onSetPreference(mode: TrialStatus["providerPreference"]) {
+    setPreferenceBusy(true);
+    const { data, error } = await apiClient.PUT(
+      "/api/v1/settings/provider/trial/preference",
+      { body: { mode } },
+    );
+    setPreferenceBusy(false);
+    if (error || !data) {
+      setTrialMessage("trialPreferenceFailed");
       return;
     }
     setTrialStatus(data);
@@ -381,8 +398,52 @@ export function SettingsPage() {
         </div>
         <p className="settings-trial-description">{copy.trialSectionDescription}</p>
         {trialStatus && (
-          <div className="settings-trial-controls">
-            {!trialStatus.available ? (
+          <>
+            <div className="settings-provider-preference">
+              <div>
+                <h3>{copy.trialPreferenceTitle}</h3>
+                <p>{copy.trialPreferenceDescription}</p>
+              </div>
+              <div
+                className="language-toggle provider-preference-toggle"
+                role="radiogroup"
+                aria-label={copy.trialPreferenceTitle}
+              >
+                {([
+                  ["TRIAL_FIRST", copy.trialFirstPreference],
+                  ["PERSONAL", copy.personalPreference],
+                ] as const).map(([mode, label]) => {
+                  const selected =
+                    (trialStatus.providerPreference ?? "TRIAL_FIRST") === mode;
+                  return (
+                    <button
+                      key={mode}
+                      className={`btn ${selected ? "btn-primary" : "btn-ghost"}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => void onSetPreference(mode)}
+                      disabled={preferenceBusy || selected}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="settings-trial-controls">
+              {(trialStatus.providerPreference ?? "TRIAL_FIRST") === "PERSONAL" ? (
+                <p
+                  className={`status-banner ${
+                    keyStatus?.apiKeyConfigured ? "status-info" : "status-warning"
+                  }`}
+                  role="status"
+                >
+                  {keyStatus?.apiKeyConfigured
+                    ? copy.personalPreferenceConfiguredStatus
+                    : copy.personalPreferenceNeedsConfigurationStatus}
+                </p>
+              ) : !trialStatus.available ? (
               <p className="status-banner status-warning" role="status">
                 {copy.trialUnavailable}
               </p>
@@ -414,7 +475,8 @@ export function SettingsPage() {
                 {copy.trialEnableButton}
               </button>
             )}
-          </div>
+            </div>
+          </>
         )}
         {trialMessage && <p role="status">{copy[trialMessage]}</p>}
       </section>

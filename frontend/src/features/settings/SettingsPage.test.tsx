@@ -34,6 +34,7 @@ const trialStatusAvailable = {
   claimedAttempts: 0,
   limit: 2,
   remaining: 2,
+  providerPreference: "TRIAL_FIRST",
 };
 
 const server = setupServer();
@@ -370,5 +371,93 @@ describe("settings trial panel (configured user, R-09)", () => {
 
     expect(screen.getByText(copy.trialConfiguredExhausted)).toBeVisible();
     expect(screen.queryByRole("button", { name: copy.trialEnableButton })).toBeNull();
+  });
+
+  it("shows the personal-service status before enabled trial state", async () => {
+    server.use(
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          ...trialStatusAvailable,
+          enabled: true,
+          remaining: 1,
+          providerPreference: "PERSONAL",
+        }),
+      ),
+    );
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    expect(
+      screen.getByText(copy.personalPreferenceConfiguredStatus),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(copy.trialEnabledStatus.replace("{remaining}", "1")),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        copy.trialConfiguredPriorityStatus.replace("{remaining}", "1"),
+      ),
+    ).toBeNull();
+  });
+
+  it("shows the current preference and switches both ways through the PUT API", async () => {
+    const preferencePut = vi.fn(async ({ request }: { request: Request }) => {
+      const body = (await request.json()) as { mode: string };
+      return HttpResponse.json({
+        ...trialStatusAvailable,
+        providerPreference: body.mode,
+      });
+    });
+    server.use(http.put("/api/v1/settings/provider/trial/preference", preferencePut));
+    renderPage();
+
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+    const group = screen.getByRole("radiogroup", { name: copy.trialPreferenceTitle });
+    const trialFirst = screen.getByRole("radio", { name: copy.trialFirstPreference });
+    const personal = screen.getByRole("radio", { name: copy.personalPreference });
+    expect(group).toBeVisible();
+    expect(trialFirst).toHaveAttribute("aria-checked", "true");
+    expect(personal).toHaveAttribute("aria-checked", "false");
+
+    fireEvent.click(personal);
+    await waitFor(() => expect(preferencePut).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("radio", { name: copy.personalPreference })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(preferencePut.mock.calls[0][0].request).toBeInstanceOf(Request);
+
+    fireEvent.click(screen.getByRole("radio", { name: copy.trialFirstPreference }));
+    await waitFor(() => expect(preferencePut).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("radio", { name: copy.trialFirstPreference })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+});
+
+describe("settings trial panel (personal preference without a key)", () => {
+  beforeEach(() => {
+    server.use(
+      http.get("/api/v1/settings/provider", () => HttpResponse.json(settingsView)),
+      http.get("/api/v1/settings/provider/trial", () =>
+        HttpResponse.json({
+          ...trialStatusAvailable,
+          available: false,
+          providerPreference: "PERSONAL",
+        }),
+      ),
+    );
+  });
+
+  it("asks for personal configuration before unavailable-trial messaging", async () => {
+    renderPage();
+    await screen.findByDisplayValue("https://yibuapi.com/v1");
+
+    expect(
+      screen.getByText(copy.personalPreferenceNeedsConfigurationStatus),
+    ).toBeVisible();
+    expect(screen.queryByText(copy.trialUnavailable)).toBeNull();
+    expect(screen.queryByText(copy.trialLimitReached)).toBeNull();
   });
 });

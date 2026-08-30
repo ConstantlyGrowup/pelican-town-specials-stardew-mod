@@ -21,6 +21,8 @@ type RouteState = {
    * is consumed so a later retry streams normally. Enables the busy-hint-then-
    * retry flow without a backend. */
   generateBusyOnceFor?: Record<string, unknown>;
+  preferenceRequests?: string[];
+  preferencePutFails?: boolean;
 };
 
 const source = { originalImageAssetId: "asset-1", contextText: null, language: "zh-CN" };
@@ -174,6 +176,39 @@ async function installApiRoutes(page: Page, state: RouteState): Promise<void> {
       }),
     });
   });
+  await page.route(
+    "/api/v1/settings/provider/trial/preference",
+    async (route: Route) => {
+      const body = route.request().postDataJSON() as { mode?: string };
+      state.preferenceRequests ??= [];
+      state.preferenceRequests.push(body.mode ?? "");
+      if (state.preferencePutFails) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: {
+              code: "PTS_SETTINGS_FAILED",
+              message: "preference unavailable",
+            },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          available: true,
+          enabled: false,
+          claimedAttempts: 0,
+          limit: 2,
+          remaining: 2,
+          providerPreference: body.mode === "PERSONAL" ? "PERSONAL" : "TRIAL_FIRST",
+        }),
+      });
+    },
+  );
 
   await page.route("/api/v1/drafts/**", (route: Route) => {
     const url = new URL(route.request().url());
@@ -514,6 +549,100 @@ test.describe("generation experience", () => {
     await expect(page.getByText("Up to 3 generations can run at the same time. Please wait for one to finish before retrying.")).toBeVisible();
     expect(state.drafts["ask-gus"]).toBe(enDraftBeforeRejection);
     expect(state.drafts["ask-gus"].status).toBe("REVIEWABLE");
+  });
+
+  test("trial failure offers takeover only after preference PUT", async ({ page }) => {
+    let generateCalls = 0;
+    const state: RouteState = {
+      drafts: {
+        "ask-gus": askGusDraft({
+          status: "DRAFT",
+          revision: 1,
+          presentation: null,
+          gameplay: null,
+        }),
+      },
+      generateBody: "",
+      preferenceRequests: [],
+    };
+    await installApiRoutes(page, state);
+    await page.route("/api/v1/drafts/ask-gus/generate", async (route: Route) => {
+      generateCalls += 1;
+      const body =
+        generateCalls === 1
+          ? JSON.stringify({
+              type: "attempt.failed",
+              attemptId: "a-1",
+              error: {
+                code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                message: "provider=https://hidden.example key=sk-secret",
+                retryable: true,
+                requestId: "req-1",
+                recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+                details: { personalProviderConfigured: true },
+              },
+            }) + "\n"
+          : '{"type":"attempt.started","attemptId":"a-2"}\n';
+      await route.fulfill({
+        status: 200,
+        contentType: "application/x-ndjson",
+        body,
+      });
+    });
+
+    await page.goto("/drafts/ask-gus");
+    await page.getByRole("button", { name: "开始生成" }).click();
+    await expect(page.getByRole("button", { name: "改用我的服务继续" })).toBeVisible();
+    expect(generateCalls).toBe(1);
+
+    await page.getByRole("button", { name: "改用我的服务继续" }).click();
+    await expect.poll(() => generateCalls).toBe(2);
+    expect(state.preferenceRequests).toEqual(["PERSONAL"]);
+  });
+
+  test("a failed preference PUT does not start a replacement generation", async ({ page }) => {
+    let generateCalls = 0;
+    const state: RouteState = {
+      drafts: {
+        "ask-gus": askGusDraft({
+          status: "DRAFT",
+          revision: 1,
+          presentation: null,
+          gameplay: null,
+        }),
+      },
+      generateBody: "",
+      preferenceRequests: [],
+      preferencePutFails: true,
+    };
+    await installApiRoutes(page, state);
+    await page.route("/api/v1/drafts/ask-gus/generate", async (route: Route) => {
+      generateCalls += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/x-ndjson",
+        body:
+          JSON.stringify({
+            type: "attempt.failed",
+            attemptId: "a-1",
+            error: {
+              code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+              message: "公共试用失败",
+              retryable: true,
+              requestId: "req-1",
+              recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              details: { personalProviderConfigured: true },
+            },
+          }) + "\n",
+      });
+    });
+
+    await page.goto("/drafts/ask-gus");
+    await page.getByRole("button", { name: "开始生成" }).click();
+    await expect(page.getByRole("button", { name: "改用我的服务继续" })).toBeVisible();
+    await page.getByRole("button", { name: "改用我的服务继续" }).click();
+    await expect(page.getByText("无法切换到个人服务，请稍后重试。")).toBeVisible();
+    expect(generateCalls).toBe(1);
   });
 
   test("three drafts generate in parallel without cross-page state bleed", async ({ context }) => {

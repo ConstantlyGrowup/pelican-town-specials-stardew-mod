@@ -3,14 +3,18 @@ from __future__ import annotations
 from typing import Protocol, cast
 
 from fastapi import APIRouter, Request
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 
 from pelican_town_specials.application.settings import (
     ProviderSettingsService,
     ProviderSettingsUpdate,
     ProviderSettingsView,
 )
-from pelican_town_specials.application.trial import TrialAccessService, TrialStatus
+from pelican_town_specials.application.trial import (
+    TrialAccessService,
+    TrialProviderPreference,
+    TrialStatus,
+)
 from pelican_town_specials.domain.common import StrictModel
 from pelican_town_specials.persistence.secret_store import (
     ApiKeySource,
@@ -37,6 +41,20 @@ class ProviderKeyUpdate(StrictModel):
 class ProviderKeyStatus(StrictModel):
     api_key_configured: bool
     api_key_source: ApiKeySource
+
+
+class TrialPreferenceUpdate(StrictModel):
+    mode: TrialProviderPreference
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def _validate_mode(cls, value: object) -> TrialProviderPreference:
+        if isinstance(value, TrialProviderPreference):
+            return value
+        try:
+            return TrialProviderPreference(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("mode must be TRIAL_FIRST or PERSONAL") from exc
 
 
 def _settings_service(request: Request) -> ProviderSettingsService:
@@ -119,6 +137,18 @@ def delete_provider_key(request: Request) -> ProviderKeyStatus:
 )
 def get_trial_status(request: Request) -> TrialStatus:
     return _trial_service(request).status()
+
+
+@router.put(
+    "/settings/provider/trial/preference",
+    response_model=TrialStatus,
+    response_model_by_alias=True,
+)
+def put_trial_preference(
+    update: TrialPreferenceUpdate,
+    request: Request,
+) -> TrialStatus:
+    return _trial_service(request).set_preference(update.mode)
 
 
 @router.post(

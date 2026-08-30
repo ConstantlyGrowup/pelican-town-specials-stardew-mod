@@ -108,6 +108,7 @@ class TrialStatus(StrictModel):
     claimed_attempts: int
     limit: int
     remaining: int
+    provider_preference: TrialProviderPreference = TrialProviderPreference.TRIAL_FIRST
 
 
 class FileTrialKeyProvider:
@@ -355,7 +356,12 @@ class TrialAccessService:
         if not self.available:
             raise trial_unavailable_error()
         with self._lock:
-            enabled_state = self._state.model_copy(update={"enabled": True})
+            enabled_state = self._state.model_copy(
+                update={
+                    "enabled": True,
+                    "provider_preference": TrialProviderPreference.TRIAL_FIRST,
+                }
+            )
             self._save(enabled_state)
             self._state = enabled_state
             return self._to_status(enabled_state)
@@ -372,6 +378,30 @@ class TrialAccessService:
     def status(self) -> TrialStatus:
         with self._lock:
             return self._to_status(self._state)
+
+    def preference(self) -> TrialProviderPreference:
+        """Return the persisted gateway preference without touching quota."""
+        with self._lock:
+            return self._state.provider_preference
+
+    def set_preference(
+        self, mode: TrialProviderPreference | str
+    ) -> TrialStatus:
+        """Persist an explicit gateway preference without changing trial state."""
+        preference = (
+            mode
+            if isinstance(mode, TrialProviderPreference)
+            else TrialProviderPreference(mode)
+        )
+        with self._lock:
+            if self._state.provider_preference is preference:
+                return self._to_status(self._state)
+            updated = self._state.model_copy(
+                update={"provider_preference": preference}
+            )
+            self._save(updated)
+            self._state = updated
+            return self._to_status(updated)
 
     def trial_provider_settings(self) -> ProviderSettings:
         return ProviderSettings(
@@ -397,6 +427,7 @@ class TrialAccessService:
             claimed_attempts=state.claimed_attempts,
             limit=self._limit,
             remaining=max(self._limit - state.claimed_attempts, 0),
+            provider_preference=state.provider_preference,
         )
 
     def _capacity_available(self, state: TrialState) -> bool:

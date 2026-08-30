@@ -23,7 +23,10 @@ type DraftView = components["schemas"]["DraftView"];
  */
 // The transient action error stores a catalog key so a live message
 // re-localizes when the user switches the UI language (M7-T25-I18N-001).
-type ReviewMessageKey = "archiveFailed" | "discardFailed";
+type ReviewMessageKey =
+  | "archiveFailed"
+  | "discardFailed"
+  | "providerPreferenceFailed";
 
 export function AskGusReviewPage() {
   const { draftId } = useParams<{ draftId: string }>();
@@ -31,6 +34,7 @@ export function AskGusReviewPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [actionError, setActionError] = useState<ReviewMessageKey | null>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
@@ -57,6 +61,33 @@ export function AskGusReviewPage() {
       await queryClient.invalidateQueries({ queryKey: ["draft", draftId] });
     },
   });
+
+  async function setPersonalPreference(): Promise<boolean> {
+    setPreferenceBusy(true);
+    setActionError(null);
+    const { data, error } = await apiClient.PUT(
+      "/api/v1/settings/provider/trial/preference",
+      { body: { mode: "PERSONAL" } },
+    );
+    setPreferenceBusy(false);
+    if (error || !data) {
+      setActionError("providerPreferenceFailed");
+      return false;
+    }
+    return true;
+  }
+
+  async function onTakeoverPersonal() {
+    if (await setPersonalPreference()) {
+      generation.begin();
+    }
+  }
+
+  async function onConfigurePersonal() {
+    if (await setPersonalPreference()) {
+      navigate("/settings");
+    }
+  }
 
   async function onArchive() {
     setBusy(true);
@@ -177,6 +208,9 @@ export function AskGusReviewPage() {
         <GenerationError
           error={generation.error}
           onRetry={canRetry ? generation.begin : undefined}
+          onTakeover={canRetry ? onTakeoverPersonal : undefined}
+          onConfigure={canRetry ? onConfigurePersonal : undefined}
+          actionPending={preferenceBusy}
         />
       )}
       {generation.phase === "cancelled" && (
