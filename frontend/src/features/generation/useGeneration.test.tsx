@@ -7,6 +7,7 @@ import type { PropsWithChildren } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   applyTerminalSnapshot,
+  clearGenerationTiming,
   getGenerationState,
   hydrateGeneration,
   resetGenerationStore,
@@ -81,6 +82,8 @@ describe("useGeneration", () => {
             startedAt: "2026-08-25T00:00:00.000Z",
             finishedAt: "2026-08-25T00:00:09.500Z",
             error: null,
+            trialUsed: true,
+            trialRemaining: 1,
           },
         }),
       );
@@ -107,7 +110,112 @@ describe("useGeneration", () => {
         finishedAt: "2026-08-25T00:00:09.500Z",
       }),
     );
+    await waitFor(() => expect(result.current.trialUsage).toEqual({ remaining: 1 }));
     expect(progressHandler).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the NDJSON terminal state empty until a persisted success snapshot supplies the trial fact", async () => {
+    const progressHandler = vi
+      .fn()
+      .mockReturnValueOnce(
+        HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
+      )
+      .mockReturnValue(
+        HttpResponse.json({
+          draftId: "draft-1",
+          active: false,
+          attempt: {
+            attemptId: "a-1",
+            draftId: "draft-1",
+            kind: "INITIAL",
+            sourceRevision: 1,
+            status: "SUCCEEDED",
+            currentStage: null,
+            stages: [],
+            totalStages: 9,
+            startedAt: "2026-08-25T00:00:00.000Z",
+            finishedAt: "2026-08-25T00:00:09.500Z",
+            error: null,
+            trialUsed: true,
+            trialRemaining: 1,
+          },
+        }),
+      );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id/generation", progressHandler),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        ndjson(
+          '{"type":"attempt.started","attemptId":"a-1"}\n' +
+            '{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":3,"draft":{}}\n',
+        ),
+      ),
+    );
+    const { result } = renderHook(() => useGeneration({ draftId: "draft-1" }), {
+      wrapper,
+    });
+
+    act(() => result.current.begin());
+    await waitFor(() => expect(result.current.phase).toBe("success"));
+    await waitFor(() => expect(result.current.trialUsage).toEqual({ remaining: 1 }));
+    expect(progressHandler).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears a previous trial fact for active, failed, personal, and invalid terminal snapshots", () => {
+    const baseAttempt = {
+      attemptId: "a-1",
+      draftId: "draft-1",
+      kind: "INITIAL" as const,
+      sourceRevision: 1,
+      status: "SUCCEEDED" as const,
+      currentStage: null,
+      stages: [],
+      totalStages: 9,
+      startedAt: "2026-08-25T00:00:00.000Z",
+      finishedAt: "2026-08-25T00:00:09.500Z",
+      error: null,
+      trialUsed: true,
+      trialRemaining: 1,
+    };
+
+    act(() => applyTerminalSnapshot("draft-1", baseAttempt));
+    expect(getGenerationState("draft-1").trialUsage).toEqual({ remaining: 1 });
+
+    act(() => clearGenerationTiming("draft-1"));
+    expect(getGenerationState("draft-1").trialUsage).toBeNull();
+
+    act(() =>
+      hydrateGeneration("draft-1", {
+        draftId: "draft-1",
+        active: true,
+        attempt: {
+          ...baseAttempt,
+          attemptId: "active-new",
+          status: "RUNNING",
+          currentStage: "DISH_ANALYSIS",
+          finishedAt: null,
+          trialUsed: true,
+          trialRemaining: 1,
+        },
+      }),
+    );
+    expect(getGenerationState("draft-1").trialUsage).toBeNull();
+
+    for (const overrides of [
+      { status: "FAILED", trialUsed: true, trialRemaining: 1 },
+      { status: "SUCCEEDED", trialUsed: false, trialRemaining: 1 },
+      { status: "SUCCEEDED", trialUsed: true, trialRemaining: null },
+      { status: "SUCCEEDED", trialUsed: true, trialRemaining: -1 },
+      { status: "SUCCEEDED", trialUsed: true, trialRemaining: 1.5 },
+    ]) {
+      act(() =>
+        applyTerminalSnapshot("draft-1", {
+          ...baseAttempt,
+          attemptId: `terminal-${String(overrides.status)}`,
+          ...overrides,
+        } as never),
+      );
+      expect(getGenerationState("draft-1").trialUsage).toBeNull();
+    }
   });
 
   it.each([

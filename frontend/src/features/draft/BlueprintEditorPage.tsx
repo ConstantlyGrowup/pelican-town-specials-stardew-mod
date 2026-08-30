@@ -21,6 +21,7 @@ import {
 import { GenerationError } from "../generation/GenerationError";
 import { GenerationProgress } from "../generation/GenerationProgress";
 import { GenerationTimingBadge } from "../generation/GenerationTimingBadge";
+import { TrialUsageBadge } from "../generation/TrialUsageBadge";
 import { useGeneration } from "../generation/useGeneration";
 
 type DraftView = components["schemas"]["DraftView"];
@@ -432,6 +433,7 @@ export function BlueprintEditorPage() {
             <span>{copy.saveThenUpdateHint}</span>
           </div>
           <GenerationTimingBadge timing={generation.timing} />
+          <TrialUsageBadge fact={generation.trialUsage} />
         </aside>
         <section className="blueprint-canvas">
       {generation.phase === "streaming" && (

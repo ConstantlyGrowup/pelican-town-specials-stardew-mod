@@ -17,6 +17,7 @@ type UseGenerationOverride = {
   succeededStages: GenerationStage[];
   totalStages: number | null;
   timing: { startedAt: string; finishedAt: string } | null;
+  trialUsage: { remaining: number } | null;
   error: GenerationErrorEnvelope | null;
   begin: () => void;
   cancel: () => void;
@@ -181,6 +182,57 @@ describe("blueprint editor", () => {
       "src",
       "/api/v1/assets/icon-1",
     );
+  });
+
+  it("shows the persisted trial usage fact for a successful blueprint preview", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "REVIEWABLE" })),
+      ),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json({
+          ...successfulProgress,
+          attempt: { ...successfulProgress.attempt, trialUsed: true, trialRemaining: 1 },
+        }),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("status", {
+        name: "本次使用了试用额度 · 还剩 1 次",
+      }),
+    ).toBeVisible();
+  });
+
+  it("clears the old trial fact when a blueprint preview update starts", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "STALE_PREVIEW" })),
+      ),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json({
+          ...successfulProgress,
+          attempt: { ...successfulProgress.attempt, trialUsed: true, trialRemaining: 1 },
+        }),
+      ),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          '{"type":"attempt.started","attemptId":"new-preview"}\n' +
+            '{"type":"stage.started","stage":"INPUT_VALIDATION","ordinal":1,"total":6}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByRole("status", {
+      name: "本次使用了试用额度 · 还剩 1 次",
+    });
+    fireEvent.click(screen.getByRole("button", { name: copy.updatePreview }));
+
+    await screen.findByRole("button", { name: copy.updatingPreview });
+    expect(screen.queryByText(/本次使用了试用额度/)).toBeNull();
   });
 
   it("shows only neutral persisted timing and never a Gus memory story", async () => {
@@ -662,6 +714,7 @@ describe("blueprint editor", () => {
       succeededStages: [],
       totalStages: null,
       timing: null,
+      trialUsage: null,
       error: {
         code: "PTS_GEN_VALIDATION_FAILED",
         message: "生成结果未通过校验。",

@@ -10,6 +10,7 @@ import { useCopy } from "../../i18n/locale";
 import { GenerationError } from "../generation/GenerationError";
 import { GenerationProgress } from "../generation/GenerationProgress";
 import { GenerationTimingBadge } from "../generation/GenerationTimingBadge";
+import { TrialUsageBadge } from "../generation/TrialUsageBadge";
 import { useGeneration } from "../generation/useGeneration";
 
 type DraftView = components["schemas"]["DraftView"];
@@ -284,6 +285,7 @@ export function AskGusReviewPage() {
               : "neutral"
           }
         />
+        <TrialUsageBadge fact={generation.trialUsage} />
         {waitingForResult && (
           <div className="gus-waiting-note" role="status" aria-live="polite">
             <img src="/assets/ui/gus-portrait-1.png" alt={copy.gusName} />

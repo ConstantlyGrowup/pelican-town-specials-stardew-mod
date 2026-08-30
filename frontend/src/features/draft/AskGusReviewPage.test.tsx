@@ -156,6 +156,65 @@ describe("ask gus review", () => {
     );
   });
 
+  it("shows the latest persisted trial usage fact on a successful result", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(successfulProgress({ trialUsed: true, trialRemaining: 1 })),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("status", {
+        name: "本次使用了试用额度 · 还剩 1 次",
+      }),
+    ).toBeVisible();
+  });
+
+  it.each([
+    { trialUsed: false, trialRemaining: 1 },
+    { trialUsed: true, trialRemaining: null },
+    { trialUsed: true, trialRemaining: -1 },
+    { trialUsed: true, trialRemaining: 1.5 },
+  ])("does not show an incomplete or non-trial result fact: %o", async (snapshot) => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(successfulProgress(snapshot)),
+      ),
+    );
+    renderPage();
+
+    await screen.findByRole("button", { name: copy.fullRegenerate });
+    expect(screen.queryByText(/本次使用了试用额度/)).toBeNull();
+  });
+
+  it("clears the old trial fact as soon as a replacement attempt starts", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(successfulProgress({ trialUsed: true, trialRemaining: 1 })),
+      ),
+      http.post("/api/v1/drafts/:draft_id/generate", () =>
+        new Response(
+          '{"type":"attempt.started","attemptId":"new-attempt"}\n' +
+            '{"type":"stage.started","stage":"DISH_ANALYSIS","ordinal":2,"total":9}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        ),
+      ),
+    );
+    renderPage();
+
+    await screen.findByRole("status", {
+      name: "本次使用了试用额度 · 还剩 1 次",
+    });
+    fireEvent.click(screen.getByRole("button", { name: copy.fullRegenerate }));
+
+    await screen.findByText(copy.preparingNewResult);
+    expect(screen.queryByText(/本次使用了试用额度/)).toBeNull();
+  });
+
   it("restores neutral timing on a REVIEWABLE mount without starting generation", async () => {
     const generateSpy = vi.fn();
     server.use(

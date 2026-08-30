@@ -157,8 +157,8 @@ def test_trial_service_unavailable_has_stable_redacted_retryable_envelope() -> N
     error = response.json()["error"]
     assert error["code"] == "PTS_TRIAL_SERVICE_UNAVAILABLE"
     assert error["retryable"] is True
-    assert error["details"] == {}
+    assert error["details"] == {"personalProviderConfigured": False}
     assert error["recommendedAction"] == "CHECK_LOCAL_CONFIGURATION"
     assert "本次未消耗试用次数" in error["message"]
-    assert "provider" not in response.text.lower()
+    assert "baseUrl" not in response.text
     assert "api_key" not in response.text.lower()

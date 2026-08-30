@@ -17,6 +17,7 @@ import {
 export type {
   GenerationPhase,
   GenerationState,
+  TrialUsageFact,
 } from "./generationStore";
 
 export type { GenerationErrorEnvelope, GenerationStage } from "../../api/ndjson";
@@ -251,6 +252,7 @@ export function useGeneration({
     succeededStages: state.succeededStages,
     totalStages: state.totalStages,
     timing: state.timing,
+    trialUsage: state.trialUsage,
     error: state.error,
     begin,
     cancel,

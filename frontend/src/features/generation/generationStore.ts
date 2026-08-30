@@ -22,6 +22,14 @@ export type GenerationTiming = {
   finishedAt: string;
 };
 
+/**
+ * The only trial value the result UI may expose. It is created exclusively
+ * from a persisted successful attempt snapshot; it is never a live counter.
+ */
+export type TrialUsageFact = {
+  remaining: number;
+};
+
 export type GenerationState = {
   phase: GenerationPhase;
   /** Persisted attempt identity used to reject stale progress snapshots. */
@@ -32,6 +40,8 @@ export type GenerationState = {
   error: GenerationErrorEnvelope | null;
   /** Timing from the latest terminal SUCCEEDED attempt, never browser time. */
   timing: GenerationTiming | null;
+  /** Confirmed trial usage from the latest persisted successful attempt. */
+  trialUsage: TrialUsageFact | null;
 };
 
 type InternalState = GenerationState & {
@@ -74,6 +84,7 @@ function getState(draftId: string): InternalState {
       totalStages: null,
       error: null,
       timing: null,
+      trialUsage: null,
     };
     state = { ...idle, controller: null, _snapshot: idle };
     states.set(draftId, state);
@@ -94,6 +105,8 @@ function setState(draftId: string, patch: Partial<GenerationState>) {
       patch.totalStages !== undefined ? patch.totalStages : state.totalStages,
     error: patch.error !== undefined ? patch.error : state.error,
     timing: patch.timing !== undefined ? patch.timing : state.timing,
+    trialUsage:
+      patch.trialUsage !== undefined ? patch.trialUsage : state.trialUsage,
   };
   states.set(draftId, { ...next, controller: state.controller, _snapshot: next });
   emit();
@@ -103,10 +116,11 @@ export function getGenerationState(draftId: string): GenerationState {
   return getState(draftId)._snapshot;
 }
 
-/** Hide any previous successful duration while a newer result is reconciled. */
+/** Hide any previous successful result facts while a newer result is reconciled. */
 export function clearGenerationTiming(draftId: string): void {
-  if (getState(draftId).timing !== null) {
-    setState(draftId, { timing: null });
+  const current = getState(draftId);
+  if (current.timing !== null || current.trialUsage !== null) {
+    setState(draftId, { timing: null, trialUsage: null });
   }
 }
 
@@ -124,6 +138,28 @@ function timingFromAttempt(attempt: GenerationAttemptPublic): GenerationTiming |
     startedAt: attempt.startedAt,
     finishedAt: attempt.finishedAt,
   };
+}
+
+/**
+ * Read the immutable trial result fact from a persisted public attempt.
+ * Missing, non-success, non-trial, and malformed values are deliberately
+ * indistinguishable to the result UI.
+ */
+function trialUsageFromAttempt(
+  attempt: GenerationAttemptPublic,
+): TrialUsageFact | null {
+  const remaining = attempt.trialRemaining;
+  if (
+    attempt.status !== "SUCCEEDED" ||
+    attempt.trialUsed !== true ||
+    typeof remaining !== "number" ||
+    !Number.isFinite(remaining) ||
+    !Number.isInteger(remaining) ||
+    remaining < 0
+  ) {
+    return null;
+  }
+  return { remaining };
 }
 
 /**
@@ -170,6 +206,8 @@ export function hydrateGeneration(
       error: null,
       // A new active attempt must never inherit the last successful duration.
       timing: null,
+      // Active progress never carries a confirmed result fact.
+      trialUsage: null,
     };
     states.set(draftId, { ...streaming, controller: null, _snapshot: streaming });
     emit();
@@ -190,7 +228,8 @@ export function hydrateGeneration(
   if (
     current.phase !== "idle" ||
     current.attemptId !== null ||
-    current.timing !== null
+    current.timing !== null ||
+    current.trialUsage !== null
   ) {
     setState(draftId, {
       phase: "idle",
@@ -200,6 +239,7 @@ export function hydrateGeneration(
       totalStages: null,
       error: null,
       timing: null,
+      trialUsage: null,
     });
   }
 }
@@ -248,6 +288,7 @@ export function applyTerminalSnapshot(
     totalStages: current.totalStages,
     error,
     timing: timingFromAttempt(attempt),
+    trialUsage: trialUsageFromAttempt(attempt),
   };
   states.set(draftId, { ...terminal, controller: null, _snapshot: terminal });
   emit();
@@ -286,6 +327,7 @@ export function beginGeneration(
     totalStages: null,
     error: null,
     timing: null,
+    trialUsage: null,
   };
   states.set(draftId, {
     ...streaming,
@@ -308,7 +350,11 @@ export function beginGeneration(
         // A user cancel may already have reported a failure envelope; do not
         // overwrite it with a generic cancelled state.
         if (current.phase !== "error") {
-          setState(draftId, { phase: "cancelled", timing: null });
+          setState(draftId, {
+            phase: "cancelled",
+            timing: null,
+            trialUsage: null,
+          });
         }
         return;
       }
@@ -317,12 +363,14 @@ export function beginGeneration(
           phase: "error",
           error: cause.envelope,
           timing: null,
+          trialUsage: null,
         });
         return;
       }
       setState(draftId, {
         phase: "error",
         timing: null,
+        trialUsage: null,
         error: {
           code: "PTS_GEN_STREAM_ERROR",
           message: cause instanceof Error
@@ -349,13 +397,18 @@ function handleEvent(
   }
   switch (event.type) {
     case "attempt.started":
-      setState(draftId, { attemptId: event.attemptId, timing: null });
+      setState(draftId, {
+        attemptId: event.attemptId,
+        timing: null,
+        trialUsage: null,
+      });
       break;
     case "stage.started":
       setState(draftId, {
         attemptId: event.attemptId,
         currentStage: event.stage,
         totalStages: event.total,
+        trialUsage: null,
       });
       break;
     case "stage.succeeded":
@@ -366,6 +419,7 @@ function handleEvent(
           : [...current.succeededStages, event.stage],
         currentStage:
           current.currentStage === event.stage ? null : current.currentStage,
+        trialUsage: null,
       });
       break;
     case "attempt.succeeded":
@@ -375,6 +429,7 @@ function handleEvent(
         // The NDJSON event has no persisted timestamps. The caller refreshes
         // GET generation progress to obtain the authoritative timing.
         timing: null,
+        trialUsage: null,
       });
       void onSuccess?.(event.attemptId);
       break;
@@ -384,6 +439,7 @@ function handleEvent(
         attemptId: event.attemptId,
         error: event.error,
         timing: null,
+        trialUsage: null,
       });
       break;
   }
@@ -429,9 +485,19 @@ export async function cancelStream(
       if (current.controller === captured) {
         captured?.abort();
         if (envelope) {
-          setState(draftId, { phase: "error", error: envelope, timing: null });
+          setState(draftId, {
+            phase: "error",
+            error: envelope,
+            timing: null,
+            trialUsage: null,
+          });
         } else {
-          setState(draftId, { phase: "cancelled", error: null, timing: null });
+          setState(draftId, {
+            phase: "cancelled",
+            error: null,
+            timing: null,
+            trialUsage: null,
+          });
         }
       }
     }

@@ -83,4 +83,11 @@ describe("LocaleProvider", () => {
     fireEvent.click(screen.getByText("switch-zh"));
     expect(document.documentElement.lang).toBe("zh-CN");
   });
+
+  it("keeps the trial usage result copy symmetric and interpolatable", () => {
+    for (const locale of ["zh-CN", "en-US"] as const) {
+      expect(catalogs[locale].trialUsageBadge).toContain("{remaining}");
+      expect(catalogs[locale].trialUsageAriaLabel).toContain("{remaining}");
+    }
+  });
 });

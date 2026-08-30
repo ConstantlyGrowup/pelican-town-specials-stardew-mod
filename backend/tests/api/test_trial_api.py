@@ -77,6 +77,7 @@ def test_get_trial_status_exposes_only_safe_fields() -> None:
         "claimedAttempts": 0,
         "limit": TRIAL_GENERATION_LIMIT,
         "remaining": TRIAL_GENERATION_LIMIT,
+        "providerPreference": "TRIAL_FIRST",
     }
     # No base URL, model ids, or key may leak through the trial response.
     assert "baseUrl" not in response.text
@@ -172,6 +173,7 @@ def test_get_trial_status_initial_via_real_app(
         "claimedAttempts": 0,
         "limit": TRIAL_GENERATION_LIMIT,
         "remaining": TRIAL_GENERATION_LIMIT,
+        "providerPreference": "TRIAL_FIRST",
     }
     assert _SENTINEL_KEY not in response.text
 

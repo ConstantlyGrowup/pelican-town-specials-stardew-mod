@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_11_task_41_auto_accepted |
-| project_phase | v1.4.0 已发布；M11 开发中，Task 40–41 已完成，准备进入 Task 42 |
+| overall_state | awaiting_milestone_11_acceptance |
+| project_phase | v1.4.0 已发布；M11 Task 40–42 全部实现、detector PASS 并本地提交，等待统一用户验收 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | none（Task 41 auto_accepted；Task 42 尚未创建） |
+| active_session_state | none（M11 awaiting_milestone_acceptance） |
 | active_session_type | none |
-| current_task | Task 42 试用消耗结果提示（下一步） |
+| current_task | Milestone 11 统一验收 |
 | blocker | none；用户已验收 M11 规划并明确授权按规划开发 |
-| next_action | 创建 Task 42 Context Packet 与 Session，随后由新 luna_worker 实施 |
+| next_action | 向用户提交 M11 Task 40–42 的统一验收说明；用户验收后再请求独立 push/版本/tag/Release 授权 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -51,6 +51,13 @@
 - 未经用户点击不调用个人 Provider；接管严格先保存 PERSONAL 偏好再开始新 attempt 或进入 Settings。偏好重启后保持、切换不清零试用次数；每个 attempt 首次选择 gateway 后固定，不热切换、不自动 fallback、不新增 Provider 探针。
 - Round 1 修复 Settings PERSONAL 状态文案优先级后，detector `PASS`，M11-T41-001..007 全部通过，`must_fix=[]`、无新设计、无 scope delta。
 - 主 Agent 最终证据：focused backend `86 passed`，frontend 五文件 `75 passed`，Settings + Generation Playwright `17 passed`，OpenAPI、Ruff、mypy 96 files、ESLint、TypeScript 与 diff-check 全部 PASS。focused commit：`feat: add explicit personal provider takeover`；仅本地，不 push。
+
+## 已关闭 M11 Task 42 Session（auto_accepted / committed）
+
+- Session：`2026-08-30-milestone-11-task-42-trial-result-fact`；Ask Gus 与 Blueprint 共用紧凑试用事实卡，只从持久化成功 attempt 的 `trialUsed=true` + 有限非负整数 `trialRemaining` 恢复，刷新/跨页/重启保持固定快照。
+- 新 attempt、NDJSON success 未持久化阶段、active、失败、取消、个人/旧/缺失/非法快照全部 fail closed 隐藏；不读取 Settings、不推算余额、不覆盖 Blueprint 图片、不回显 Provider 配置。中英文、role=status、aria-label 与窄屏换行已覆盖。
+- Round 1 只同步 Task 41 遗漏的三条旧后端响应断言；产品源码未改变。detector `PASS`，M11-T42-001..007 全部通过，`must_fix=[]`、无可选加固/新设计/scope delta。
+- M11 最终主门禁：backend/integration `876 passed / 2 skipped`；frontend `180 passed`；Playwright `19 passed`；Ruff、mypy 96 files、ESLint、TypeScript、OpenAPI/diff-check 全绿；Windows onedir build、EXE 图标/1.4.0 身份、内容门及 bundle Phase A/B（health/static/SQLite/两次启动）全部 PASS。focused commit：`feat: show confirmed trial usage on results`；仅本地，不 push。
 
 ## 已 deferred 的 Task 30 规划 Session
 

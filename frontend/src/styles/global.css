@@ -1217,6 +1217,37 @@ input[type="checkbox"] {
   font-size: 12px;
 }
 
+.trial-usage-badge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 10px 0 16px;
+  padding: 9px 11px;
+  color: var(--pts-wood-deep);
+  background: var(--pts-highlight);
+  border: 3px solid var(--pts-wood-mid);
+  box-shadow: var(--pts-shadow-pixel-small);
+  overflow-wrap: anywhere;
+  font-family: var(--pts-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.trial-usage-badge__marker {
+  flex: 0 0 auto;
+  color: var(--pts-gold);
+  font-size: 16px;
+  line-height: 1;
+  text-shadow: 1px 1px 0 var(--pts-ink);
+}
+
+.trial-usage-badge__label {
+  min-width: 0;
+}
+
 .result-title {
   margin: 0 0 14px;
   font-family: var(--pts-font-display);
@@ -1438,6 +1469,19 @@ input[type="checkbox"] {
 
 .blueprint-sidebar .generation-timing__duration {
   color: var(--pts-blue-ink);
+}
+
+.blueprint-sidebar .trial-usage-badge {
+  margin: 0 0 16px;
+  color: var(--pts-blue-ink);
+  background: var(--pts-blue-cyan);
+  border-color: var(--pts-blue);
+  box-shadow: 2px 2px 0 var(--pts-blue-ink);
+}
+
+.blueprint-sidebar .trial-usage-badge__marker {
+  color: var(--pts-blue);
+  text-shadow: 1px 1px 0 var(--pts-blue-ink);
 }
 
 .preview-frame-empty {

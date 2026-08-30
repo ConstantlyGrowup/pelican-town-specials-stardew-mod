@@ -475,6 +475,44 @@ test.describe("generation experience", () => {
     await expect(page.getByRole("button", { name: "取消生成" })).toBeVisible();
   });
 
+  test("refresh rehydrates the confirmed trial usage fact on the Ask Gus result", async ({ page }) => {
+    const state: RouteState = {
+      drafts: { "ask-gus": askGusDraft() },
+      generateBody: "",
+      generationProgress: {
+        "ask-gus": {
+          draftId: "ask-gus",
+          active: false,
+          attempt: {
+            attemptId: "ask-success",
+            draftId: "ask-gus",
+            kind: "INITIAL",
+            sourceRevision: 3,
+            status: "SUCCEEDED",
+            currentStage: null,
+            stages: [],
+            totalStages: 9,
+            startedAt: "2026-08-04T00:00:00Z",
+            finishedAt: "2026-08-04T00:00:09Z",
+            error: null,
+            trialUsed: true,
+            trialRemaining: 1,
+          },
+        },
+      },
+    };
+    await installApiRoutes(page, state);
+
+    await page.goto("/drafts/ask-gus");
+    await expect(
+      page.getByRole("status", { name: "本次使用了试用额度 · 还剩 1 次" }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByRole("status", { name: "本次使用了试用额度 · 还剩 1 次" }),
+    ).toBeVisible();
+  });
+
   test("blueprint update preview returns to REVIEWABLE", async ({ page }) => {
     const drafts: Record<string, Draft> = {
       blueprint: blueprintDraft({ status: "STALE_PREVIEW", revision: 2 }),
@@ -495,6 +533,40 @@ test.describe("generation experience", () => {
     await page.getByRole("button", { name: "更新预览" }).click();
 
     await expect(page.getByRole("button", { name: "接受并加入收集品" })).toBeVisible();
+  });
+
+  test("blueprint result shows the same confirmed trial usage fact", async ({ page }) => {
+    const state: RouteState = {
+      drafts: { blueprint: blueprintDraft({ status: "REVIEWABLE" }) },
+      generateBody: "",
+      generationProgress: {
+        blueprint: {
+          draftId: "blueprint",
+          active: false,
+          attempt: {
+            attemptId: "blueprint-success",
+            draftId: "blueprint",
+            kind: "BLUEPRINT_PREVIEW",
+            sourceRevision: 2,
+            status: "SUCCEEDED",
+            currentStage: null,
+            stages: [],
+            totalStages: 6,
+            startedAt: "2026-08-04T00:00:00Z",
+            finishedAt: "2026-08-04T00:00:09Z",
+            error: null,
+            trialUsed: true,
+            trialRemaining: 1,
+          },
+        },
+      },
+    };
+    await installApiRoutes(page, state);
+
+    await page.goto("/drafts/blueprint");
+    await expect(
+      page.getByRole("status", { name: "本次使用了试用额度 · 还剩 1 次" }),
+    ).toBeVisible();
   });
 
   test("busy rejection shows the bilingual limit hint and a retry succeeds once a slot frees", async ({ page }) => {
