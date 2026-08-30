@@ -82,7 +82,13 @@ class TrialLimitAccess:
     def trial_opportunity(self) -> bool:
         return True
 
-    def claim_attempt(self) -> bool:
+    def reserve_attempt(self, _attempt_id: UUID) -> bool:
+        return False
+
+    def commit_attempt(self, _attempt_id: UUID) -> int | None:
+        return None
+
+    def release_attempt(self, _attempt_id: UUID) -> bool:
         return False
 
 
@@ -94,7 +100,34 @@ class TrialSuccessAccess:
     def trial_opportunity(self) -> bool:
         return True
 
-    def claim_attempt(self) -> bool:
+    def reserve_attempt(self, _attempt_id: UUID) -> bool:
+        return True
+
+    def commit_attempt(self, _attempt_id: UUID) -> int | None:
+        return 1
+
+    def release_attempt(self, _attempt_id: UUID) -> bool:
+        return False
+
+
+@dataclass
+class TrialFailureAccess:
+    release_calls: int = 0
+
+    def is_active(self) -> bool:
+        return True
+
+    def trial_opportunity(self) -> bool:
+        return True
+
+    def reserve_attempt(self, _attempt_id: UUID) -> bool:
+        return True
+
+    def commit_attempt(self, _attempt_id: UUID) -> int | None:
+        return None
+
+    def release_attempt(self, _attempt_id: UUID) -> bool:
+        self.release_calls += 1
         return True
 
 
@@ -278,6 +311,31 @@ async def test_successful_trial_marks_started_and_finished_as_trial_used(
     finished = _event(recorder, TelemetryEventName.GENERATION_FINISHED)
     assert started.properties.trial_used is True
     assert finished.properties.trial_used is True
+
+
+@pytest.mark.asyncio
+async def test_trial_failure_before_first_success_is_not_marked_used_in_telemetry(
+    harness: GenerationHarness,
+    ready_draft,
+) -> None:
+    recorder = RecordingTelemetryRecorder()
+    access = TrialFailureAccess()
+    orchestrator = _orchestrator(
+        harness,
+        recorder,
+        gateway=FakeGateway(fail_stage=GenerationStage.DISH_ANALYSIS),
+        trial_access=access,
+    )
+
+    events = await _consume(orchestrator, initial_command(ready_draft))
+
+    assert events[-1].type == "attempt.failed"
+    started = _event(recorder, TelemetryEventName.GENERATION_STARTED)
+    finished = _event(recorder, TelemetryEventName.GENERATION_FINISHED)
+    assert started.properties.trial_used is False
+    assert finished.properties.trial_used is False
+    assert finished.properties.error_category is ErrorCategory.NETWORK
+    assert access.release_calls == 1
 
 
 @pytest.mark.asyncio
@@ -510,6 +568,18 @@ def test_error_and_rejection_mapping_never_uses_provider_validation_after_await(
     )
     assert _error_category(error) is ErrorCategory.VALIDATION
     assert _rejection_reason(error, provider_started=False) is RejectionReason.VALIDATION
+    assert _rejection_reason(error, provider_started=True) is None
+
+
+def test_trial_service_unavailable_is_network_error_without_rejection() -> None:
+    error = AppError(
+        code="PTS_TRIAL_SERVICE_UNAVAILABLE",
+        message="本次未消耗试用次数。",
+        http_status=503,
+        details={},
+        retryable=True,
+    )
+    assert _error_category(error) is ErrorCategory.NETWORK
     assert _rejection_reason(error, provider_started=True) is None
 
 

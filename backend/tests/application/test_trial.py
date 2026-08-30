@@ -1,4 +1,4 @@
-"""TrialAccessService unit tests: enable/disable/status/claim/limit/unavailable.
+"""TrialAccessService unit tests: enable/disable/status/reserve/limit/unavailable.
 
 Covers T30-TRIAL-001 (trial status exposure), T30-TRIAL-002 (claim limit),
 T30-TRIAL-003 (atomic concurrency), T30-TRIAL-004 (disable preserves claims),
@@ -7,6 +7,7 @@ T30-TRIAL-005 (missing key => unavailable).
 
 from __future__ import annotations
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from uuid import uuid4
@@ -30,7 +31,9 @@ from pelican_town_specials.application.trial import (
     FileTrialKeyProvider,
     StaticSecretStore,
     TrialAccessService,
+    TrialProviderPreference,
     TrialSafeGateway,
+    TrialState,
 )
 from pelican_town_specials.domain.common import Language
 from pelican_town_specials.domain.dish import DishAnalysis
@@ -71,8 +74,10 @@ def test_initial_status_is_available_disabled_with_full_quota(tmp_path: Path) ->
 
 def test_status_surfaces_camel_case_fields(tmp_path: Path) -> None:
     service, _ = _service(tmp_path)
+    attempt_id = uuid4()
     service.enable()
-    service.claim_attempt()
+    assert service.reserve_attempt(attempt_id) is True
+    assert service.commit_attempt(attempt_id) == TRIAL_GENERATION_LIMIT - 1
 
     payload = service.status().model_dump(by_alias=True, mode="json")
 
@@ -99,8 +104,10 @@ def test_enable_returns_enabled_status_and_persists(tmp_path: Path) -> None:
 
 def test_state_persists_claimed_attempts_across_instances(tmp_path: Path) -> None:
     service, workspace = _service(tmp_path)
+    attempt_id = uuid4()
     service.enable()
-    service.claim_attempt()
+    assert service.reserve_attempt(attempt_id) is True
+    assert service.commit_attempt(attempt_id) == TRIAL_GENERATION_LIMIT - 1
 
     reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
 
@@ -125,6 +132,127 @@ def test_claim_attempt_increments_until_limit_then_false(tmp_path: Path) -> None
     # raised by the orchestrator before any provider call.
     assert status.enabled is True
     assert service.is_active() is True
+
+
+def test_reserve_commit_release_are_idempotent_and_commit_is_a_fixed_snapshot(
+    tmp_path: Path,
+) -> None:
+    service, _ = _service(tmp_path)
+    service.enable()
+    attempt_id = uuid4()
+
+    assert service.reserve_attempt(attempt_id) is True
+    assert service.reserve_attempt(attempt_id) is True
+    assert service.status().claimed_attempts == 0
+    assert service.status().remaining == TRIAL_GENERATION_LIMIT
+
+    assert service.commit_attempt(attempt_id) == TRIAL_GENERATION_LIMIT - 1
+    assert service.commit_attempt(attempt_id) == TRIAL_GENERATION_LIMIT - 1
+    assert service.status().claimed_attempts == 1
+    assert service.status().remaining == TRIAL_GENERATION_LIMIT - 1
+
+    # A committed attempt cannot be refunded, even when release is retried.
+    assert service.release_attempt(attempt_id) is False
+    assert service.release_attempt(attempt_id) is False
+    assert service.status().claimed_attempts == 1
+    assert service.status().remaining == TRIAL_GENERATION_LIMIT - 1
+
+
+def test_release_returns_quota_without_affecting_other_attempts(
+    tmp_path: Path,
+) -> None:
+    service, _ = _service(tmp_path)
+    first = uuid4()
+    second = uuid4()
+
+    assert service.reserve_attempt(first) is True
+    assert service.reserve_attempt(second) is True
+    assert service.status().claimed_attempts == 0
+    assert service.status().remaining == TRIAL_GENERATION_LIMIT
+
+    assert service.commit_attempt(second) == TRIAL_GENERATION_LIMIT - 1
+    assert service.status().claimed_attempts == 1
+    assert service.release_attempt(first) is True
+    assert service.release_attempt(first) is False
+    assert service.reserve_attempt(uuid4()) is True
+    assert service.status().claimed_attempts == 1
+
+
+def test_v1_claimed_attempts_migrate_without_resetting_quota(tmp_path: Path) -> None:
+    service, workspace = _service(tmp_path)
+    service.state_path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "enabled": True,
+                "claimedAttempts": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+
+    status = reloaded.status()
+    assert status.enabled is True
+    assert status.claimed_attempts == 1
+    assert status.remaining == TRIAL_GENERATION_LIMIT - 1
+    payload = json.loads(reloaded.state_path.read_text(encoding="utf-8"))
+    assert payload == {
+        "committedAttempts": {},
+        "consumedAttempts": 1,
+        "enabled": True,
+        "providerPreference": "TRIAL_FIRST",
+        "reservations": [],
+        "schemaVersion": 2,
+    }
+
+
+def test_trial_state_personal_preference_round_trips_without_public_exposure(
+    tmp_path: Path,
+) -> None:
+    service, workspace = _service(tmp_path)
+    state = TrialState(provider_preference=TrialProviderPreference.PERSONAL)
+    payload = state.model_dump(by_alias=True, mode="json")
+
+    parsed = TrialState.model_validate(payload)
+    service.state_path.write_text(json.dumps(payload), encoding="utf-8")
+    reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+
+    assert parsed.provider_preference is TrialProviderPreference.PERSONAL
+    assert reloaded._state.provider_preference is TrialProviderPreference.PERSONAL
+    assert "providerPreference" not in reloaded.status().model_dump(by_alias=True)
+
+
+def test_reloading_clears_unconfirmed_reservations(tmp_path: Path) -> None:
+    service, workspace = _service(tmp_path)
+    attempt_id = uuid4()
+    assert service.reserve_attempt(attempt_id) is True
+    assert service.status().claimed_attempts == 0
+
+    reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+
+    assert reloaded.status().claimed_attempts == 0
+    assert reloaded.status().remaining == TRIAL_GENERATION_LIMIT
+    payload = json.loads(reloaded.state_path.read_text(encoding="utf-8"))
+    assert payload["reservations"] == []
+
+
+def test_concurrent_reservations_never_exceed_unconsumed_limit(tmp_path: Path) -> None:
+    service, _ = _service(tmp_path)
+    attempt_ids = [uuid4() for _ in range(20)]
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(service.reserve_attempt, attempt_ids))
+
+    assert results.count(True) == TRIAL_GENERATION_LIMIT
+    assert results.count(False) == len(attempt_ids) - TRIAL_GENERATION_LIMIT
+    assert service.status().claimed_attempts == 0
+    assert service.status().remaining == TRIAL_GENERATION_LIMIT
+
+    for attempt_id, reserved in zip(attempt_ids, results, strict=True):
+        if reserved:
+            assert service.release_attempt(attempt_id) is True
 
 
 def test_is_active_reflects_enabled(tmp_path: Path) -> None:

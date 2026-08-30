@@ -183,6 +183,8 @@ class GenerationAttempt(StrictModel):
     started_at: datetime
     finished_at: datetime | None = None
     error: ErrorSummary | None = None
+    trial_used: bool = Field(default_factory=lambda: False)
+    trial_remaining: int | None = Field(default=None, ge=0)
 
     @field_validator("attempt_id", "draft_id", mode="before")
     @classmethod
@@ -209,6 +211,8 @@ class GenerationAttemptPublic(StrictModel):
     started_at: datetime
     finished_at: datetime | None = None
     error: ErrorSummary | None = None
+    trial_used: bool = Field(default_factory=lambda: False)
+    trial_remaining: int | None = Field(default=None, ge=0)
 
     @field_validator("attempt_id", "draft_id", mode="before")
     @classmethod

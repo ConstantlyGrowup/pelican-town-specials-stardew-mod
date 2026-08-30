@@ -14,10 +14,13 @@ layer.
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from enum import Enum
 from pathlib import Path
+from typing import Literal
+from uuid import UUID, uuid4
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr, field_validator
 
 from pelican_town_specials.application.settings import (
     ProviderSettings,
@@ -56,12 +59,45 @@ TRIAL_IMAGE_TIMEOUT_SECONDS = 300
 TRIAL_MAX_AUTOMATIC_RETRIES = 0
 
 
-class TrialState(StrictModel):
-    """Persisted local trial state (``schemaVersion`` / ``enabled`` / ``claimedAttempts``)."""
+class TrialProviderPreference(str, Enum):
+    """Internal routing preference reserved for Task 40/Task 41."""
 
-    schema_version: int = 1
+    TRIAL_FIRST = "TRIAL_FIRST"
+    PERSONAL = "PERSONAL"
+
+
+class TrialState(StrictModel):
+    """Persisted local trial state for reserve-then-commit accounting.
+
+    Reservations are intentionally ephemeral: the service clears every
+    unconfirmed reservation during startup, while committed attempts retain a
+    fixed ``remainingAfterCommit`` snapshot for idempotent retries.
+    """
+
+    schema_version: Literal[2] = 2
     enabled: bool = False
-    claimed_attempts: int = 0
+    consumed_attempts: int = Field(default=0, ge=0)
+    reservations: list[str] = Field(default_factory=list)
+    committed_attempts: dict[str, int] = Field(default_factory=dict)
+    provider_preference: TrialProviderPreference = TrialProviderPreference.TRIAL_FIRST
+
+    @field_validator("provider_preference", mode="before")
+    @classmethod
+    def _validate_provider_preference(
+        cls, value: TrialProviderPreference | str
+    ) -> TrialProviderPreference:
+        if isinstance(value, TrialProviderPreference):
+            return value
+        try:
+            return TrialProviderPreference(value)
+        except ValueError as exc:
+            raise ValueError("invalid trial provider preference") from exc
+
+    @property
+    def claimed_attempts(self) -> int:
+        """Compatibility view for the unchanged public Settings contract."""
+
+        return self.consumed_attempts
 
 
 class TrialStatus(StrictModel):
@@ -177,11 +213,13 @@ def _trial_safe_error(error: AppError) -> AppError:
 class TrialAccessService:
     """Local trial enrollment and soft-quota accounting.
 
-    ``enable()`` marks the trial profile active; ``claim_attempt()`` atomically
-    reserves one generation before the first possibly-paid provider call and
-    returns ``False`` once the limit is reached. Saving personal provider
-    settings or an API key calls ``disable()``, which preserves the claimed
-    count so re-enabling reuses the remaining quota (R-05, T30-TRIAL-004).
+    ``enable()`` marks the trial profile active; ``reserve_attempt()`` records
+    an in-flight reservation before the first possibly-paid provider call;
+    ``commit_attempt()`` consumes it only after the first real provider
+    response. ``release_attempt()`` returns an unconfirmed reservation. Saving
+    personal provider settings or an API key calls ``disable()``, which
+    preserves the consumed count so re-enabling reuses the remaining quota
+    (R-05, T30-TRIAL-004).
     """
 
     def __init__(
@@ -222,47 +260,114 @@ class TrialAccessService:
         if not self.available:
             return False
         with self._lock:
-            return self._state.claimed_attempts < self._limit
+            return self._capacity_available(self._state)
 
-    def claim_attempt(self) -> bool:
-        """Atomically claim one attempt; returns False when exhausted.
+    def reserve_attempt(self, attempt_id: UUID) -> bool:
+        """Atomically reserve one attempt, without consuming quota.
 
         The opt-in ``enabled`` gate is enforced by the orchestrator's
         non-configured path (``is_active()``) before any claim is attempted.
         R-09: a configured user drains the free allowance automatically without
         clicking the opt-in, so an active quota is claimable regardless of the
-        ``enabled`` flag. An exhausted quota always returns False.
+        ``enabled`` flag. An exhausted quota always returns ``False``.
+
+        Repeating a reservation for the same attempt is a successful no-op;
+        this makes request retries safe before the provider call starts.
         """
         with self._lock:
-            state = self._load()
-            if state.claimed_attempts >= self._limit:
+            key = str(attempt_id)
+            if key in self._state.committed_attempts:
+                return True
+            if key in self._state.reservations:
+                return True
+            if not self._capacity_available(self._state):
                 return False
-            claimed = state.model_copy(
-                update={"claimed_attempts": state.claimed_attempts + 1}
+            reserved = self._state.model_copy(
+                update={"reservations": [*self._state.reservations, key]}
             )
-            self._save(claimed)
-            self._state = claimed
+            self._save(reserved)
+            self._state = reserved
             return True
+
+    def commit_attempt(self, attempt_id: UUID) -> int | None:
+        """Consume a reservation and return its fixed remaining snapshot.
+
+        A repeated commit returns the original snapshot. Unknown attempts are
+        a no-op and return ``None``; callers only commit attempts they
+        successfully reserved.
+        """
+        with self._lock:
+            key = str(attempt_id)
+            committed = self._state.committed_attempts.get(key)
+            if committed is not None:
+                return committed
+            if key not in self._state.reservations:
+                return None
+            consumed = self._state.consumed_attempts + 1
+            remaining = max(self._limit - consumed, 0)
+            committed_state = self._state.model_copy(
+                update={
+                    "consumed_attempts": consumed,
+                    "reservations": [
+                        item for item in self._state.reservations if item != key
+                    ],
+                    "committed_attempts": {
+                        **self._state.committed_attempts,
+                        key: remaining,
+                    },
+                }
+            )
+            self._save(committed_state)
+            self._state = committed_state
+            return remaining
+
+    def release_attempt(self, attempt_id: UUID) -> bool:
+        """Release an unconfirmed reservation; committed attempts are final."""
+        with self._lock:
+            key = str(attempt_id)
+            if key not in self._state.reservations:
+                return False
+            released = self._state.model_copy(
+                update={
+                    "reservations": [
+                        item for item in self._state.reservations if item != key
+                    ]
+                }
+            )
+            self._save(released)
+            self._state = released
+            return True
+
+    def claim_attempt(self) -> bool:
+        """Legacy v1 compatibility shim for non-orchestrator callers.
+
+        Task 40 routing uses the explicit reserve/commit/release API. Existing
+        application-level callers retain the old one-shot behavior through a
+        private synthetic attempt ID, so the public Settings contract remains
+        unchanged while old tests and integrations continue to work.
+        """
+        attempt_id = uuid4()
+        if not self.reserve_attempt(attempt_id):
+            return False
+        return self.commit_attempt(attempt_id) is not None
 
     def enable(self) -> TrialStatus:
         if not self.available:
             raise trial_unavailable_error()
         with self._lock:
-            state = self._load()
-            enabled_state = state.model_copy(update={"enabled": True})
+            enabled_state = self._state.model_copy(update={"enabled": True})
             self._save(enabled_state)
             self._state = enabled_state
             return self._to_status(enabled_state)
 
     def disable(self) -> TrialStatus:
         with self._lock:
-            state = self._load()
-            if state.enabled:
-                disabled_state = state.model_copy(update={"enabled": False})
+            if self._state.enabled:
+                disabled_state = self._state.model_copy(update={"enabled": False})
                 self._save(disabled_state)
                 self._state = disabled_state
                 return self._to_status(disabled_state)
-            return self._to_status(state)
+            return self._to_status(self._state)
 
     def status(self) -> TrialStatus:
         with self._lock:
@@ -294,6 +399,9 @@ class TrialAccessService:
             remaining=max(self._limit - state.claimed_attempts, 0),
         )
 
+    def _capacity_available(self, state: TrialState) -> bool:
+        return state.consumed_attempts + len(state.reservations) < self._limit
+
     def _load(self) -> TrialState:
         try:
             state_path = self.state_path
@@ -301,9 +409,55 @@ class TrialAccessService:
                 backup = state_path.with_suffix(f"{state_path.suffix}.bak")
                 if not backup.exists():
                     return TrialState()
-            return read_json_with_backup(state_path, TrialState.model_validate)
+            state, changed = self._normalize_state_payload(
+                read_json_with_backup(state_path, lambda payload: payload)
+            )
+            if changed:
+                self._save(state)
+            return state
         except Exception:  # noqa: BLE001 - soft local quota: any read failure degrades to a fresh disabled trial state.
             return TrialState()
+
+    def _normalize_state_payload(self, payload: object) -> tuple[TrialState, bool]:
+        if not isinstance(payload, Mapping):
+            raise TypeError("trial state must be an object")
+        schema_version = payload.get("schemaVersion", payload.get("schema_version"))
+        if schema_version == 1:
+            allowed = {
+                "schemaVersion",
+                "schema_version",
+                "enabled",
+                "claimedAttempts",
+                "claimed_attempts",
+            }
+            if set(payload) - allowed:
+                raise ValueError("unknown v1 trial state fields")
+            enabled = payload.get("enabled", False)
+            claimed = payload.get(
+                "claimedAttempts", payload.get("claimed_attempts", 0)
+            )
+            if not isinstance(enabled, bool) or not isinstance(claimed, int):
+                raise TypeError("invalid v1 trial state")
+            if isinstance(claimed, bool) or claimed < 0:
+                raise ValueError("invalid v1 claimed attempts")
+            return (
+                TrialState(enabled=enabled, consumed_attempts=claimed),
+                True,
+            )
+        if schema_version != 2:
+            raise ValueError("unknown trial state schema")
+        normalized = dict(payload)
+        preference = normalized.get(
+            "providerPreference", normalized.get("provider_preference")
+        )
+        if isinstance(preference, str):
+            normalized[
+                "providerPreference"
+            ] = TrialProviderPreference(preference)
+        state = TrialState.model_validate(normalized)
+        if state.reservations:
+            return state.model_copy(update={"reservations": []}), True
+        return state, False
 
     def _save(self, state: TrialState) -> None:
         atomic_write_json(
@@ -324,6 +478,7 @@ __all__ = [
     "FileTrialKeyProvider",
     "StaticSecretStore",
     "TrialAccessService",
+    "TrialProviderPreference",
     "TrialSafeGateway",
     "TrialState",
     "TrialStatus",

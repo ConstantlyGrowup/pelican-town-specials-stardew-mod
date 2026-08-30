@@ -15,6 +15,11 @@ const BACKEND_BUSY_MESSAGE = "当前已有一个生成任务在运行，请稍�
  * echo it. */
 const BACKEND_TRIAL_LIMIT_MESSAGE = "你已经达到试用额度，请配置自己的服务。";
 
+/** The backend PTS_TRIAL_SERVICE_UNAVAILABLE message is intentionally stable
+ * and redacted; the component owns the localized newcomer-facing copy. */
+const BACKEND_TRIAL_SERVICE_MESSAGE =
+  "试用服务失败：provider=https://hidden.example key=sk-secret；本次未消耗试用次数。";
+
 function envelope(code: string, message: string): GenerationErrorEnvelope {
   return {
     code,
@@ -73,6 +78,40 @@ describe("GenerationError", () => {
     );
     expect(screen.getByText(catalogs["en-US"].trialLimitReached)).toBeVisible();
     expect(screen.queryByText(BACKEND_TRIAL_LIMIT_MESSAGE)).toBeNull();
+  });
+
+  it("shows the localized retry-safe trial service hint", () => {
+    render(
+      <GenerationError
+        error={envelope(
+          "PTS_TRIAL_SERVICE_UNAVAILABLE",
+          BACKEND_TRIAL_SERVICE_MESSAGE,
+        )}
+      />,
+    );
+    expect(
+      screen.getByText(catalogs["zh-CN"].trialServiceUnavailable),
+    ).toBeVisible();
+    expect(screen.queryByText(BACKEND_TRIAL_SERVICE_MESSAGE)).toBeNull();
+    expect(screen.queryByText(/hidden\.example/)).toBeNull();
+  });
+
+  it("shows the English retry-safe trial service hint", () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    render(
+      <LocaleProvider>
+        <GenerationError
+          error={envelope(
+            "PTS_TRIAL_SERVICE_UNAVAILABLE",
+            BACKEND_TRIAL_SERVICE_MESSAGE,
+          )}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText(catalogs["en-US"].trialServiceUnavailable),
+    ).toBeVisible();
+    expect(screen.queryByText(BACKEND_TRIAL_SERVICE_MESSAGE)).toBeNull();
   });
 
   it("keeps showing the backend message for non-busy codes", () => {

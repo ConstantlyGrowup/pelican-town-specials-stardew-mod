@@ -160,7 +160,7 @@ def _canonical_orchestrator(harness: GenerationHarness, registry: object):
     )
 
 
-async def test_canonical_hit_uses_one_trial_claim_for_analysis_match_and_preview(
+async def test_canonical_hit_uses_one_trial_reservation_for_analysis_match_and_preview(
     harness: GenerationHarness,
 ) -> None:
     canonical, source_icon, icon_16 = _canonical_dish(uuid4())
@@ -178,7 +178,9 @@ async def test_canonical_hit_uses_one_trial_claim_for_analysis_match_and_preview
 
     class _Trial:
         def __init__(self) -> None:
-            self.claims = 0
+            self.reserved_attempts: list[UUID] = []
+            self.committed_attempts: list[UUID] = []
+            self.released_attempts: list[UUID] = []
 
         def is_active(self) -> bool:
             return True
@@ -186,8 +188,16 @@ async def test_canonical_hit_uses_one_trial_claim_for_analysis_match_and_preview
         def trial_opportunity(self) -> bool:
             return True
 
-        def claim_attempt(self) -> bool:
-            self.claims += 1
+        def reserve_attempt(self, attempt_id: UUID) -> bool:
+            self.reserved_attempts.append(attempt_id)
+            return True
+
+        def commit_attempt(self, attempt_id: UUID) -> int | None:
+            self.committed_attempts.append(attempt_id)
+            return 1
+
+        def release_attempt(self, attempt_id: UUID) -> bool:
+            self.released_attempts.append(attempt_id)
             return True
 
     trial = _Trial()
@@ -219,7 +229,13 @@ async def test_canonical_hit_uses_one_trial_claim_for_analysis_match_and_preview
     events = [event async for event in local.run(initial_command(saved))]
 
     assert events[-1].type == "attempt.succeeded"
-    assert trial.claims == 1
+    started = [event for event in events if event.type == "attempt.started"]
+    assert len(started) == 1
+    attempt_id = started[0].attempt_id
+    assert attempt_id is not None
+    assert trial.reserved_attempts == [attempt_id]
+    assert trial.committed_attempts == [attempt_id]
+    assert trial.released_attempts == []
     assert harness.gateway.calls == ["analyze", "match", "image"]
 
 

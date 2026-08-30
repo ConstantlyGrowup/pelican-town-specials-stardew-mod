@@ -9,7 +9,10 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field, SecretStr
 
 from pelican_town_specials.api.error_handlers import register_error_handlers
-from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.domain.errors import (
+    AppError,
+    trial_service_unavailable_error,
+)
 
 
 def _client(app: FastAPI) -> TestClient:
@@ -139,3 +142,23 @@ def test_app_error_system_code_maps_to_retry_or_support_action() -> None:
     assert response.json()["error"]["recommendedAction"] == (
         "RETRY_OR_CONTACT_SUPPORT"
     )
+
+
+def test_trial_service_unavailable_has_stable_redacted_retryable_envelope() -> None:
+    app = FastAPI()
+
+    @app.get("/trial-service-unavailable")
+    def trial_error_route() -> None:
+        raise trial_service_unavailable_error()
+
+    response = _client(app).get("/trial-service-unavailable")
+
+    assert response.status_code == 503
+    error = response.json()["error"]
+    assert error["code"] == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert error["retryable"] is True
+    assert error["details"] == {}
+    assert error["recommendedAction"] == "CHECK_LOCAL_CONFIGURATION"
+    assert "本次未消耗试用次数" in error["message"]
+    assert "provider" not in response.text.lower()
+    assert "api_key" not in response.text.lower()

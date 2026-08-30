@@ -533,7 +533,20 @@ def test_base_template_version_enforces_mode_invariant() -> None:
 def test_generation_attempt_public_dto_hides_staging_path() -> None:
     attempt = initial_attempt_fixture(candidate_record_path="staging/candidate.json")
     public = GenerationAttemptPublic.from_attempt(attempt)
-    assert "candidateRecordPath" not in public.model_dump(by_alias=True)
+    payload = public.model_dump(by_alias=True)
+    assert "candidateRecordPath" not in payload
+    assert payload["trialUsed"] is False
+    assert payload["trialRemaining"] is None
+
+
+def test_generation_attempt_trial_snapshot_round_trips_and_is_public() -> None:
+    attempt = initial_attempt_fixture().model_copy(
+        update={"trial_used": True, "trial_remaining": 1}
+    )
+    public = GenerationAttemptPublic.from_attempt(attempt)
+
+    assert public.trial_used is True
+    assert public.trial_remaining == 1
 
 
 def test_generation_attempt_public_direct_construction_rejects_v1_uuid_and_naive_time() -> None:

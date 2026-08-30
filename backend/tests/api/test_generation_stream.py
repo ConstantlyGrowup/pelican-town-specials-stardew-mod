@@ -182,6 +182,14 @@ def test_generate_streams_ndjson_to_success(
         "image",
     ]
 
+    progress = gen_auth_client.client.get(
+        f"/api/v1/drafts/{draft_id}/generation",
+        headers=gen_auth_client.session_headers,
+    )
+    assert progress.status_code == 200
+    assert progress.json()["attempt"]["trialUsed"] is False
+    assert progress.json()["attempt"]["trialRemaining"] is None
+
     saved = gen_services.draft_repository.get(draft_id)
     assert saved.status.value == "REVIEWABLE"
 

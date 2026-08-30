@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import io
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from contextlib import suppress
 from time import monotonic
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -62,6 +63,7 @@ from pelican_town_specials.domain.errors import (
     ErrorPayload,
     ErrorSummary,
     trial_limit_error,
+    trial_service_unavailable_error,
 )
 from pelican_town_specials.domain.state_machine import DraftAction, transition
 from pelican_town_specials.domain.telemetry import (
@@ -178,6 +180,9 @@ class _RunState:
         "started_monotonic",
         "telemetry_finished",
         "telemetry_started",
+        "trial_remaining",
+        "trial_reserved",
+        "trial_response_received",
         "trial_used",
         "visual_brief",
     )
@@ -206,7 +211,10 @@ class _RunState:
     telemetry_started: bool
     telemetry_finished: bool
     provider_started: bool
+    trial_response_received: bool
+    trial_reserved: bool
     trial_used: bool
+    trial_remaining: int | None
 
     def __init__(
         self,
@@ -249,7 +257,10 @@ class _RunState:
         self.telemetry_started = False
         self.telemetry_finished = False
         self.provider_started = False
+        self.trial_response_received = False
+        self.trial_reserved = False
         self.trial_used = False
+        self.trial_remaining = None
 
 
 def _map_gameplay(
@@ -663,7 +674,11 @@ class TrialAccess(Protocol):
 
     def trial_opportunity(self) -> bool: ...
 
-    def claim_attempt(self) -> bool: ...
+    def reserve_attempt(self, attempt_id: UUID) -> bool: ...
+
+    def commit_attempt(self, attempt_id: UUID) -> int | None: ...
+
+    def release_attempt(self, attempt_id: UUID) -> bool: ...
 
 
 _STREAM_END = object()
@@ -1093,26 +1108,83 @@ class GenerationOrchestrator:
             if self._personal_configured():
                 if (
                     self._trial_access.trial_opportunity()
-                    and self._trial_access.claim_attempt()
+                    and self._trial_access.reserve_attempt(state.attempt_id)
                 ):
-                    state.trial_used = True
+                    state.trial_reserved = True
                     state.gateway = self._trial_gateway_factory()
-                    self._record_generation_started(state)
                     return state.gateway
                 state.gateway = self._gateway_factory()
                 self._record_generation_started(state)
                 return state.gateway
             # Users without a personal provider keep the opt-in trial flow.
             if self._trial_access.is_active():
-                if not self._trial_access.claim_attempt():
+                if not self._trial_access.reserve_attempt(state.attempt_id):
                     raise trial_limit_error()
-                state.trial_used = True
+                state.trial_reserved = True
                 state.gateway = self._trial_gateway_factory()
-                self._record_generation_started(state)
                 return state.gateway
         state.gateway = self._gateway_factory()
         self._record_generation_started(state)
         return state.gateway
+
+    def _commit_trial_after_provider_success(self, state: _RunState) -> None:
+        """Commit a trial only after an awaited provider response succeeds."""
+        if (
+            self._trial_access is None
+            or not state.trial_reserved
+            or state.trial_used
+        ):
+            return
+        state.trial_response_received = True
+        remaining = self._trial_access.commit_attempt(state.attempt_id)
+        if remaining is None:
+            # The real service returns a fixed snapshot for every reservation.
+            # Treat a missing snapshot as an accounting failure rather than
+            # silently claiming a quota unit without persisting its attempt
+            # state. ``trial_response_received`` prevents a later error path
+            # from refunding a provider call that already returned.
+            raise RuntimeError("trial reservation disappeared before commit")
+        state.trial_used = True
+        state.trial_remaining = remaining
+        state.trial_reserved = False
+        state.attempt = state.attempt.model_copy(
+            update={
+                "trial_used": True,
+                "trial_remaining": remaining,
+            }
+        )
+        # Persist the immutable attempt snapshot before lifecycle telemetry.
+        self._attempts.save(state.attempt)
+        self._record_generation_started(state)
+
+    def _release_trial_reservation(self, state: _RunState) -> None:
+        """Release only a pre-response reservation; committed trials are final."""
+        if (
+            self._trial_access is None
+            or not state.trial_reserved
+            or state.trial_used
+            or state.trial_response_received
+        ):
+            return
+        with suppress(Exception):
+            self._trial_access.release_attempt(state.attempt_id)
+        state.trial_reserved = False
+
+    def _trial_failure_error(
+        self,
+        state: _RunState,
+        error: AppError,
+    ) -> AppError:
+        """Map a pre-success trial failure to the stable redacted contract."""
+        if (
+            self._trial_access is not None
+            and state.trial_reserved
+            and not state.trial_used
+            and not state.trial_response_received
+        ):
+            self._release_trial_reservation(state)
+            return trial_service_unavailable_error()
+        return error
 
     def _import_canonical_icons(
         self,
@@ -1198,6 +1270,7 @@ class GenerationOrchestrator:
                 self._catalog.version,
                 state.command.request_id,
             )
+            self._commit_trial_after_provider_success(state)
             state.recall_decision = _memory_outcome_for_recall(result.decision)
             if result.decision is not RecallDecision.MATCH_HIT:
                 return False
@@ -1260,6 +1333,7 @@ class GenerationOrchestrator:
                     request_id=state.command.request_id,
                 )
             )
+            self._commit_trial_after_provider_success(state)
             if state.analysis.confidence < self._min_confidence:
                 raise _low_confidence_error(state.analysis.confidence)
             self._update_candidate(state, analysis=state.analysis)
@@ -1279,6 +1353,7 @@ class GenerationOrchestrator:
                         request_id=state.command.request_id,
                     )
                 )
+                self._commit_trial_after_provider_success(state)
                 state.presentation = state.core.presentation
                 self._update_candidate(state, presentation=state.presentation)
         elif stage is GenerationStage.INGREDIENT_MAPPING:
@@ -1340,6 +1415,7 @@ class GenerationOrchestrator:
                     request_id=state.command.request_id,
                 )
             )
+            self._commit_trial_after_provider_success(state)
             # R12: models often return an opaque solid backdrop despite the
             # transparent-background instruction; key it out deterministically
             # so the stored icon source and the 16x16 icon are truly
@@ -1440,6 +1516,7 @@ class GenerationOrchestrator:
                     request_id=state.command.request_id,
                 )
             )
+            self._commit_trial_after_provider_success(state)
             preview_w, preview_h = _image_dimensions(generated_preview.data)
             state.preview = self._assets.put(
                 generated_preview.data,
@@ -1525,6 +1602,8 @@ class GenerationOrchestrator:
             started_at=now,
             finished_at=None,
             error=None,
+            trial_used=False,
+            trial_remaining=None,
         )
 
     def _finalize_candidate(self, state: _RunState) -> DraftRecord:
@@ -1582,6 +1661,7 @@ class GenerationOrchestrator:
         error: AppError,
         attempt_id: UUID,
     ) -> GenerationEvent:
+        error = self._trial_failure_error(state, error)
         if state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
             # A failed preview keeps the draft in STALE_PREVIEW: user fields and
             # the old visual assets remain, only the attempt state is cleared.
@@ -1668,6 +1748,7 @@ class GenerationOrchestrator:
         status. Synchronous so the GeneratorExit path can run it without
         yielding an event.
         """
+        self._release_trial_reservation(state)
         if state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
             # A cancelled preview keeps the draft in STALE_PREVIEW.
             rolled = staged.model_copy(
@@ -1799,7 +1880,7 @@ def _error_category(error: AppError) -> ErrorCategory:
         "PTS_WORKSPACE_SECRET_STORE_UNAVAILABLE",
     }:
         return ErrorCategory.SETTINGS
-    if code == "PTS_PROVIDER_UNAVAILABLE":
+    if code in {"PTS_PROVIDER_UNAVAILABLE", "PTS_TRIAL_SERVICE_UNAVAILABLE"}:
         return ErrorCategory.NETWORK
     if code in {
         "PTS_GEN_LOW_CONFIDENCE",

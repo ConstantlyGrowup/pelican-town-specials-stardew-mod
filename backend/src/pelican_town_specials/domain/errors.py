@@ -155,3 +155,18 @@ def trial_unavailable_error() -> AppError:
         details={},
         retryable=False,
     )
+
+
+def trial_service_unavailable_error() -> AppError:
+    """Return the redacted, retryable error for a failed trial provider call."""
+
+    return AppError(
+        code="PTS_TRIAL_SERVICE_UNAVAILABLE",
+        message=(
+            "公共试用服务暂时无法完成本次请求，本次未消耗试用次数。"
+            "请稍后重试，或在设置中配置自己的服务。"
+        ),
+        http_status=503,
+        details={},
+        retryable=True,
+    )

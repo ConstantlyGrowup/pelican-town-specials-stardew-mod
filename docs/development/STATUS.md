@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_11_authorized_task_40_packet_next |
-| project_phase | v1.4.0 已发布；M11“试用体验与可用性保护”规划已获用户验收并授权开发，Task 40 尚未实施 |
+| overall_state | milestone_11_task_40_auto_accepted_task_41_packet_next |
+| project_phase | v1.4.0 已发布；M11 开发中，Task 40 已实现并通过独立验收，Task 41 待实施 |
 | product_implementation_started | true |
-| active_session_id | none；M11 规划 Session 已关闭 |
+| active_session_id | none；Task 40 Session 已关闭 |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | Task 40 Context Packet 闭包与实施准备；正式实施顺序为 Task 40 → Task 41 → Task 42 |
+| current_task | Task 41 公共试用失败后的显式个人额度接管 Context Packet 闭包准备 |
 | blocker | none；用户已验收 M11 规划并明确授权按规划开发 |
-| next_action | 从 M11 规划 focused commit 创建 Task 40 独立 Session 与 READY_FOR_IMPLEMENTATION Context Packet，随后派发 luna_worker |
+| next_action | 创建 Task 41 独立 Session 与 READY_FOR_IMPLEMENTATION Context Packet，随后派发新的 luna_worker |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -37,6 +37,13 @@
 - Task 40“试用可用性保护与确认扣次”先完成 trial-state v2、并发 reserve/commit/release、友好错误、attempt 快照和 M10 回归；Task 41“公共试用失败后的个人额度接管”提供用户明确确认的个人服务切换；Task 42“试用消耗结果提示”再在 Ask Gus 与 Blueprint 结果预览显示固定的本次试用与剩余次数。
 - 详细设计：`docs/architecture/TRIAL_EXPERIENCE_TECHNICAL_DESIGN.md` v1.0；实施计划：`docs/plans/2026-08-30-milestone-11-trial-experience.md` v1.0。
 - 2026-08-30 用户明确要求按当前 M11 规划开发，规划已验收并授权 Task 40→41→42 串行实施；规划 focused commit 为 `docs: accept milestone 11 trial experience plan`。尚未授权 push、版本提升、tag 或 Release。
+
+## 已关闭 M11 Task 40 Session（auto_accepted / committed）
+
+- Session：`2026-08-30-milestone-11-task-40-trial-reservation`；实现 trial-state v2、按 attemptId 幂等 reserve/commit/release、首次真实 Provider 成功后确认扣次、首次成功前失败/取消释放、attempt 固定 `trialUsed` / `trialRemaining` 快照和脱敏友好错误。
+- 不增加 `/models`、最短 Chat、图片或其他探测；Task 40 不自动使用个人付费服务。v1 `claimedAttempts` 无损迁移为 `consumedAttempts`，启动清理未确认 reservation；N=2 与 R-09 试用优先保持不变。
+- detector round 1 唯一 REVISE 为 M9 Canonical HIT 测试 fake 的旧 claim 协议；round 2 最小修复后 detector `PASS`，M11-T40-001..008 全部通过，无 must-fix、无范围漂移。
+- 主 Agent 最终证据：九文件 focused backend `155 passed`，GenerationError `8 passed`，Ruff、mypy 96 files、frontend lint、TypeScript、OpenAPI 生成与 diff-check 全部 PASS。focused commit：`feat: protect trial quota until first provider success`；仅本地，不 push。
 
 ## 已 deferred 的 Task 30 规划 Session
 

@@ -8,11 +8,13 @@ import pytest
 from backend.tests.domain.factories import (
     archived_dish_fixture,
     ask_gus_reviewable_fixture,
+    initial_attempt_fixture,
 )
 
 from pelican_town_specials.persistence.repositories import (
     ArchiveRepository,
     DraftRepository,
+    GenerationAttemptRepository,
     IdempotencyConflictError,
     RevisionConflictError,
     TombstonedDishError,
@@ -30,6 +32,45 @@ def test_draft_repository_save_get_and_list_round_trip(tmp_path: Path) -> None:
     assert saved.revision == 1
     assert repository.get(saved.draft_id) == saved
     assert [item.draft_id for item in repository.list()] == [saved.draft_id]
+
+
+def test_generation_attempt_repository_round_trips_trial_snapshot(
+    tmp_path: Path,
+) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace", today=date(2026, 8, 2))
+    repository = GenerationAttemptRepository(workspace)
+    attempt = initial_attempt_fixture().model_copy(
+        update={"trial_used": True, "trial_remaining": 1}
+    )
+
+    repository.save(attempt)
+
+    loaded = repository.get(attempt.attempt_id)
+    assert loaded.trial_used is True
+    assert loaded.trial_remaining == 1
+
+
+def test_generation_attempt_repository_fills_trial_defaults_for_old_json(
+    tmp_path: Path,
+) -> None:
+    workspace = WorkspacePaths.create(tmp_path / "workspace", today=date(2026, 8, 2))
+    repository = GenerationAttemptRepository(workspace)
+    attempt = initial_attempt_fixture()
+    repository.save(attempt)
+    path = (
+        workspace.staging_dir
+        / f"attempt-{attempt.attempt_id}"
+        / "attempt.json"
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload.pop("trialUsed")
+    payload.pop("trialRemaining")
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = repository.get(attempt.attempt_id)
+
+    assert loaded.trial_used is False
+    assert loaded.trial_remaining is None
 
 
 def test_draft_repository_raises_on_expected_revision_conflict(

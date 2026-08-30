@@ -82,6 +82,8 @@ const zh = {
   trialEnableButton: "不想配置，先试试效果",
   trialEnabledStatus: "试用模式已开启，还可生成 {remaining} 次",
   trialLimitReached: "你已经达到试用额度，请配置自己的服务",
+  trialServiceUnavailable:
+    "公共试用服务暂时无法完成本次请求，本次未消耗试用次数。请稍后重试，或在设置中配置自己的服务。",
   trialUnavailable: "试用功能暂时不可用，请配置自己的服务",
   trialExitButton: "退出试用",
   trialEnableFailed: "启用试用失败，请稍后重试。",
@@ -466,6 +468,8 @@ const en: Copy = {
   trialEnableButton: "Skip setup, try it first",
   trialEnabledStatus: "Trial mode is on — {remaining} generations left",
   trialLimitReached: "You've reached the trial limit. Configure your own provider to continue.",
+  trialServiceUnavailable:
+    "The public trial service could not complete this request. This attempt did not use a trial credit. Please try again later or configure your own service.",
   trialUnavailable: "Trial is temporarily unavailable. Configure your own provider.",
   trialExitButton: "Exit trial",
   trialEnableFailed: "Could not enable trial mode. Please try again.",

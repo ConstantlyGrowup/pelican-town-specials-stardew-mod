@@ -2651,6 +2651,22 @@
                 "type": "null"
               }
             ]
+          },
+          "trialUsed": {
+            "type": "boolean",
+            "title": "Trialused"
+          },
+          "trialRemaining": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trialremaining"
           }
         },
         "additionalProperties": false,

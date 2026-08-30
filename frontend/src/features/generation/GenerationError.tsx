@@ -17,6 +17,11 @@ const GENERATION_BUSY_CODE = "PTS_GEN_BUSY";
  * Settings trial panel. */
 const TRIAL_LIMIT_CODE = "PTS_TRIAL_LIMIT_REACHED";
 
+/** Backend code for a transient trial-provider failure. The UI replaces the
+ * backend message so provider configuration details can never become user
+ * copy, while preserving the retry-safe explanation. */
+const TRIAL_SERVICE_UNAVAILABLE_CODE = "PTS_TRIAL_SERVICE_UNAVAILABLE";
+
 /**
  * Renders a generation ErrorEnvelope with an optional retry entry. The old
  * draft result remains visible on the page while this is shown, so a failed
@@ -32,6 +37,8 @@ export function GenerationError({ error, onRetry }: GenerationErrorProps) {
       ? copy.generationBusyLimit
       : error.code === TRIAL_LIMIT_CODE
         ? copy.trialLimitReached
+        : error.code === TRIAL_SERVICE_UNAVAILABLE_CODE
+          ? copy.trialServiceUnavailable
         : error.message;
   return (
     <div className="status-banner status-error" role="alert">

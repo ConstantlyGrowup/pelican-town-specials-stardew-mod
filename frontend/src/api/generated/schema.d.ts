@@ -1080,6 +1080,10 @@ export interface components {
             /** Finishedat */
             finishedAt?: string | null;
             error?: components["schemas"]["ErrorSummary"] | null;
+            /** Trialused */
+            trialUsed?: boolean;
+            /** Trialremaining */
+            trialRemaining?: number | null;
         };
         /**
          * GenerationProgressPublic
