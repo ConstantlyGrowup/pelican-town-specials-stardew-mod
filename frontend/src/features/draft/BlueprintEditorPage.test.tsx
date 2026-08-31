@@ -6,7 +6,8 @@ import { setupServer } from "msw/node";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GenerationErrorEnvelope, GenerationStage } from "../../api/ndjson";
-import { catalogs } from "../../i18n/copy";
+import { catalogs, LOCALE_STORAGE_KEY } from "../../i18n/copy";
+import { LocaleProvider } from "../../i18n/locale";
 import { resetGenerationStore } from "../generation/generationStore";
 import type { GenerationPhase } from "../generation/useGeneration";
 import { BlueprintEditorPage } from "./BlueprintEditorPage";
@@ -67,6 +68,7 @@ const successfulProgress = {
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeEach(() => {
   resetGenerationStore();
+  window.localStorage.removeItem(LOCALE_STORAGE_KEY);
   server.use(
     http.get("/api/v1/drafts/:draft_id/generation", () =>
       HttpResponse.json({ draftId: "draft-1", active: false, attempt: null }),
@@ -75,6 +77,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   useGenerationOverride.current = null;
+  window.localStorage.removeItem(LOCALE_STORAGE_KEY);
   server.resetHandlers();
   vi.restoreAllMocks();
 });
@@ -145,14 +148,16 @@ function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={["/drafts/draft-1"]}>
-        <Routes>
-          <Route path="/drafts/:draftId" element={<BlueprintEditorPage />} />
-          <Route path="/cookbook/:dishId" element={<div>cookbook page</div>} />
-          <Route path="/settings" element={<div>settings page</div>} />
-          <Route path="/" element={<div>home page</div>} />
-        </Routes>
-      </MemoryRouter>
+      <LocaleProvider>
+        <MemoryRouter initialEntries={["/drafts/draft-1"]}>
+          <Routes>
+            <Route path="/drafts/:draftId" element={<BlueprintEditorPage />} />
+            <Route path="/cookbook/:dishId" element={<div>cookbook page</div>} />
+            <Route path="/settings" element={<div>settings page</div>} />
+            <Route path="/" element={<div>home page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -430,7 +435,127 @@ describe("blueprint editor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: copy.pickTags }));
     fireEvent.click(await screen.findByRole("button", { name: "家常" }));
-    expect(await screen.findByText("家常")).toBeVisible();
+    expect(
+      await screen.findByRole("button", { name: "移除标签：家常" }),
+    ).toBeVisible();
+  });
+
+  it("removes the selected category and allows choosing it again", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft()),
+      ),
+      http.get("/api/v1/meta/categories", () =>
+        HttpResponse.json({
+          items: [{ value: "主菜" }, { value: "汤类" }],
+          nextCursor: null,
+          total: 2,
+        }),
+      ),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    fireEvent.click(screen.getByRole("button", { name: "移除分类：汤类" }));
+
+    expect(screen.getByText("—")).toBeVisible();
+    expect(screen.queryByText("汤类")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: copy.pickCategory }));
+    fireEvent.click(await screen.findByRole("button", { name: "主菜" }));
+
+    expect(screen.getByText("主菜")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "移除分类：主菜" }),
+    ).toBeVisible();
+  });
+
+  it("gives category and tag removal buttons clear English names", async () => {
+    const english = catalogs["en-US"];
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft()),
+      ),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    expect(
+      screen.getByRole("button", {
+        name: english.removeCategoryAriaLabel.replace("{category}", "汤类"),
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: english.removeTagAriaLabel.replace("{tag}", "fall"),
+      }),
+    ).toBeVisible();
+  });
+
+  it("keeps the remaining tags in order when one tag is removed", async () => {
+    const patchSpy = vi.fn((info: { request: Request }) => {
+      void info;
+      return HttpResponse.json(
+        blueprintDraft({
+          revision: 2,
+          presentation: {
+            ...blueprintDraft().presentation,
+            tags: ["first", "third"],
+          },
+        }),
+      );
+    });
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          blueprintDraft({
+            presentation: {
+              ...blueprintDraft().presentation,
+              tags: ["first", "second", "third"],
+            },
+          }),
+        ),
+      ),
+      http.patch("/api/v1/drafts/:draft_id", patchSpy),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    fireEvent.click(screen.getByRole("button", { name: "移除标签：second" }));
+
+    expect(screen.getByText("first")).toBeVisible();
+    expect(screen.queryByText("second")).toBeNull();
+    expect(screen.getByText("third")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: copy.saveDraft }));
+    await waitFor(() => expect(patchSpy).toHaveBeenCalled());
+    const request = patchSpy.mock.calls[0]?.[0]?.request as Request;
+    const body = (await request.clone().json()) as {
+      presentation: { tags: string[] };
+    };
+    expect(body.presentation.tags).toEqual(["first", "third"]);
+  });
+
+  it("keeps category required after removing the selected category", async () => {
+    const patchSpy = vi.fn((info: { request: Request }) => {
+      void info;
+      return HttpResponse.json(blueprintDraft({ revision: 2 }));
+    });
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft()),
+      ),
+      http.patch("/api/v1/drafts/:draft_id", patchSpy),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    fireEvent.click(screen.getByRole("button", { name: "移除分类：汤类" }));
+    fireEvent.click(screen.getByRole("button", { name: copy.saveDraft }));
+
+    expect(await screen.findByText(copy.requiredField)).toBeVisible();
+    expect(patchSpy).not.toHaveBeenCalled();
   });
 
   it("shows an update preview action when STALE_PREVIEW and blocks accept", async () => {
@@ -701,6 +826,136 @@ describe("blueprint editor", () => {
     const dialog = screen.getByRole("dialog", { name: "放弃这张料理蓝图？" });
     fireEvent.click(within(dialog).getByRole("button", { name: copy.cancelDelete }));
     expect(discardSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText("home page")).toBeNull();
+  });
+
+  it("opens the existing discard confirmation from a trial service error", async () => {
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "DRAFT", revision: 1 })),
+      ),
+      http.post(
+        "/api/v1/drafts/:draft_id/generate",
+        () =>
+          new Response(
+            JSON.stringify({
+              type: "attempt.failed",
+              attemptId: "a-1",
+              error: {
+                code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                message: "公共试用失败",
+                retryable: true,
+                requestId: "req-1",
+                recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              },
+            }) + "\n",
+            { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+          ),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.generatePreview }));
+    expect(await screen.findByText(copy.trialServiceUnavailable)).toBeVisible();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: copy.discardDraftAndReturnHome }),
+    );
+    const dialog = screen.getByRole("dialog", { name: copy.discardBlueprintTitle });
+    expect(discardSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.cancelDelete }));
+    expect(discardSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByText("home page")).toBeNull();
+  });
+
+  it("discards once from the trial service error after confirmation and returns home", async () => {
+    const discardSpy = vi.fn((info: { request: Request }) => {
+      expect(info.request.method).toBe("POST");
+      expect(info.request.credentials).toBe("same-origin");
+      return new Response(null, { status: 204 });
+    });
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "DRAFT", revision: 1 })),
+      ),
+      http.post(
+        "/api/v1/drafts/:draft_id/generate",
+        () =>
+          new Response(
+            JSON.stringify({
+              type: "attempt.failed",
+              attemptId: "a-1",
+              error: {
+                code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                message: "公共试用失败",
+                retryable: true,
+                requestId: "req-1",
+                recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              },
+            }) + "\n",
+            { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+          ),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.generatePreview }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.discardDraftAndReturnHome }),
+    );
+    const dialog = screen.getByRole("dialog", { name: copy.discardBlueprintTitle });
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.discardDraft }));
+
+    await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("home page")).toBeVisible();
+  });
+
+  it("keeps the page and shows the existing error when trial-error discard fails", async () => {
+    const discardSpy = vi.fn(() =>
+      HttpResponse.json({ error: { code: "PTS_DISCARD_FAILED" } }, { status: 503 }),
+    );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft({ status: "DRAFT", revision: 1 })),
+      ),
+      http.post(
+        "/api/v1/drafts/:draft_id/generate",
+        () =>
+          new Response(
+            JSON.stringify({
+              type: "attempt.failed",
+              attemptId: "a-1",
+              error: {
+                code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                message: "公共试用失败",
+                retryable: true,
+                requestId: "req-1",
+                recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              },
+            }) + "\n",
+            { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+          ),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.generatePreview }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.discardDraftAndReturnHome }),
+    );
+    const dialog = screen.getByRole("dialog", { name: copy.discardBlueprintTitle });
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.discardDraft }));
+
+    await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(copy.discardDraftFailed)).toBeVisible();
+    expect(screen.getByText(copy.trialServiceUnavailable)).toBeVisible();
+    expect(screen.getByRole("heading", { name: copy.editingBlueprint })).toBeVisible();
     expect(screen.queryByText("home page")).toBeNull();
   });
 

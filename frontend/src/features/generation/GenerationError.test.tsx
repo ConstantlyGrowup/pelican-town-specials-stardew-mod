@@ -101,7 +101,8 @@ describe("GenerationError", () => {
     expect(screen.queryByText(/hidden\.example/)).toBeNull();
   });
 
-  it("shows the English retry-safe trial service hint", () => {
+  it("shows the English trial service hint with an immediate retry action", () => {
+    const onRetry = vi.fn();
     window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
     render(
       <LocaleProvider>
@@ -110,6 +111,7 @@ describe("GenerationError", () => {
             "PTS_TRIAL_SERVICE_UNAVAILABLE",
             BACKEND_TRIAL_SERVICE_MESSAGE,
           )}
+          onRetry={onRetry}
         />
       </LocaleProvider>,
     );
@@ -117,6 +119,49 @@ describe("GenerationError", () => {
       screen.getByText(catalogs["en-US"].trialServiceUnavailable),
     ).toBeVisible();
     expect(screen.queryByText(BACKEND_TRIAL_SERVICE_MESSAGE)).toBeNull();
+    const retry = screen.getByRole("button", {
+      name: catalogs["en-US"].retryNow,
+    });
+    expect(retry).toBeVisible();
+    fireEvent.click(retry);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("localizes the discard action and gates it to trial service errors", () => {
+    const onDiscard = vi.fn();
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    const { rerender } = render(
+      <LocaleProvider>
+        <GenerationError
+          error={envelope(
+            "PTS_TRIAL_SERVICE_UNAVAILABLE",
+            BACKEND_TRIAL_SERVICE_MESSAGE,
+          )}
+          onDiscard={onDiscard}
+        />
+      </LocaleProvider>,
+    );
+
+    const discard = screen.getByRole("button", {
+      name: catalogs["en-US"].discardDraftAndReturnHome,
+    });
+    expect(discard).toBeVisible();
+    fireEvent.click(discard);
+    expect(onDiscard).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <LocaleProvider>
+        <GenerationError
+          error={envelope("PTS_GEN_VALIDATION_FAILED", "生成结果未通过校验。")}
+          onDiscard={onDiscard}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: catalogs["en-US"].discardDraftAndReturnHome,
+      }),
+    ).toBeNull();
   });
 
   it("keeps showing the backend message for non-busy codes", () => {
@@ -152,7 +197,7 @@ describe("GenerationError", () => {
     ).toBeNull();
   });
 
-  it("offers personal takeover and a later retry when personal service is configured", () => {
+  it("offers personal takeover and an immediate retry when personal service is configured", () => {
     const onTakeover = vi.fn();
     const onRetry = vi.fn();
     render(
@@ -171,7 +216,7 @@ describe("GenerationError", () => {
       screen.getByRole("button", { name: catalogs["zh-CN"].usePersonalProvider }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: catalogs["zh-CN"].retryLater }),
+      screen.getByRole("button", { name: catalogs["zh-CN"].retryNow }),
     );
     expect(onTakeover).toHaveBeenCalledTimes(1);
     expect(onRetry).toHaveBeenCalledTimes(1);

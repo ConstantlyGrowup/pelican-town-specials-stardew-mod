@@ -339,6 +339,34 @@ async def test_trial_failure_before_first_success_is_not_marked_used_in_telemetr
 
 
 @pytest.mark.asyncio
+async def test_trial_failure_after_provider_success_is_not_marked_used_in_telemetry(
+    harness: GenerationHarness,
+    ready_draft,
+) -> None:
+    recorder = RecordingTelemetryRecorder()
+    access = TrialFailureAccess()
+    orchestrator = _orchestrator(
+        harness,
+        recorder,
+        gateway=FakeGateway(fail_stage=GenerationStage.GAMEPLAY_DESIGN),
+        trial_access=access,
+    )
+
+    events = await _consume(orchestrator, initial_command(ready_draft))
+
+    assert events[-1].type == "attempt.failed"
+    assert events[-1].error is not None
+    assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert "本次未消耗试用次数" in events[-1].error.message
+    started = _event(recorder, TelemetryEventName.GENERATION_STARTED)
+    finished = _event(recorder, TelemetryEventName.GENERATION_FINISHED)
+    assert started.properties.trial_used is False
+    assert finished.properties.trial_used is False
+    assert finished.properties.error_category is ErrorCategory.NETWORK
+    assert access.release_calls == 1
+
+
+@pytest.mark.asyncio
 async def test_provider_failure_has_started_and_finished_without_rejection(
     harness: GenerationHarness,
     ready_draft,

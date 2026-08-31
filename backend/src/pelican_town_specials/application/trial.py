@@ -216,11 +216,11 @@ class TrialAccessService:
 
     ``enable()`` marks the trial profile active; ``reserve_attempt()`` records
     an in-flight reservation before the first possibly-paid provider call;
-    ``commit_attempt()`` consumes it only after the first real provider
-    response. ``release_attempt()`` returns an unconfirmed reservation. Saving
-    personal provider settings or an API key calls ``disable()``, which
-    preserves the consumed count so re-enabling reuses the remaining quota
-    (R-05, T30-TRIAL-004).
+    ``commit_attempt()`` consumes it only after the complete generation attempt
+    succeeds and the Draft has been promoted. ``release_attempt()`` returns an
+    unconfirmed reservation. Saving personal provider settings or an API key
+    calls ``disable()``, which preserves the consumed count so re-enabling
+    reuses the remaining quota (R-05, T30-TRIAL-004).
     """
 
     def __init__(
@@ -250,10 +250,10 @@ class TrialAccessService:
             return self._state.enabled
 
     def trial_opportunity(self) -> bool:
-        """True when the trial is ready and still has quota to claim.
+        """True when the trial is ready and still has quota to reserve.
 
         R-09 trial-first routing: a user who already configured their own
-        provider consumes the free trial allowance before their personal
+        provider reserves the free trial allowance before their personal
         provider is billed. The opt-in ``enabled`` flag is deliberately not
         required here — the trial is preferred automatically while an
         opportunity exists.
@@ -267,9 +267,10 @@ class TrialAccessService:
         """Atomically reserve one attempt, without consuming quota.
 
         The opt-in ``enabled`` gate is enforced by the orchestrator's
-        non-configured path (``is_active()``) before any claim is attempted.
+        non-configured path (``is_active()``) before any reservation is
+        attempted.
         R-09: a configured user drains the free allowance automatically without
-        clicking the opt-in, so an active quota is claimable regardless of the
+        clicking the opt-in, so an active quota is reservable regardless of the
         ``enabled`` flag. An exhausted quota always returns ``False``.
 
         Repeating a reservation for the same attempt is a successful no-op;

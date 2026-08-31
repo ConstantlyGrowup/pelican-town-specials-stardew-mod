@@ -166,6 +166,10 @@ export function BlueprintEditorPage() {
     );
   }
 
+  function removeCategory() {
+    form.setValue("categoryLabel", "", { shouldDirty: true });
+  }
+
   function toggleTag(value: string) {
     const current = (form.getValues("tags") ?? "")
       .split(",")
@@ -175,6 +179,18 @@ export function BlueprintEditorPage() {
       ? current.filter((tag) => tag !== value)
       : [...current, value];
     form.setValue("tags", next.join(","), { shouldDirty: true });
+  }
+
+  function removeTag(value: string) {
+    const current = (form.getValues("tags") ?? "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    form.setValue(
+      "tags",
+      current.filter((tag) => tag !== value).join(","),
+      { shouldDirty: true },
+    );
   }
 
   const categoryLabel = form.watch("categoryLabel");
@@ -451,7 +467,8 @@ export function BlueprintEditorPage() {
           onRetry={canRetry ? generation.begin : undefined}
           onTakeover={canRetry ? onTakeoverPersonal : undefined}
           onConfigure={canRetry ? onConfigurePersonal : undefined}
-          actionPending={preferenceBusy}
+          onDiscard={() => setConfirmingDiscard(true)}
+          actionPending={busy || preferenceBusy}
         />
       )}
       {generation.phase === "cancelled" && (
@@ -506,9 +523,29 @@ export function BlueprintEditorPage() {
         <div className="field">
           <label htmlFor="categoryLabel">{copy.categoryLabel}</label>
           <div>
-            <span id="categoryLabel" className="picker-value">
-              {categoryLabel || "—"}
-            </span>
+            {categoryLabel ? (
+              <>
+                <span id="categoryLabel" className="picker-value">
+                  {categoryLabel}
+                </span>
+                <button
+                  className="blueprint-selection-remove"
+                  type="button"
+                  aria-label={copy.removeCategoryAriaLabel.replace(
+                    "{category}",
+                    categoryLabel,
+                  )}
+                  title={copy.removeCategory}
+                  onClick={removeCategory}
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </>
+            ) : (
+              <span id="categoryLabel" className="picker-value">
+                —
+              </span>
+            )}
             <button
               className="btn"
               type="button"
@@ -536,8 +573,26 @@ export function BlueprintEditorPage() {
         <div className="field">
           <label htmlFor="tags">{copy.tagsLabel}</label>
           <div>
-            <span id="tags" className="picker-value">
-              {tagList.join(copy.tagJoiner) || "—"}
+            <span id="tags" className="picker-value blueprint-tags-value">
+              {tagList.length > 0
+                ? tagList.map((tag) => (
+                    <span className="blueprint-selection-chip" key={tag}>
+                      <span>{tag}</span>
+                      <button
+                        className="blueprint-selection-remove"
+                        type="button"
+                        aria-label={copy.removeTagAriaLabel.replace(
+                          "{tag}",
+                          tag,
+                        )}
+                        title={copy.removeTag}
+                        onClick={() => removeTag(tag)}
+                      >
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </span>
+                  ))
+                : "—"}
             </span>
             <button
               className="btn"

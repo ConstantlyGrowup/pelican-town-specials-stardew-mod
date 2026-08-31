@@ -211,7 +211,8 @@ export function AskGusReviewPage() {
           onRetry={canRetry ? generation.begin : undefined}
           onTakeover={canRetry ? onTakeoverPersonal : undefined}
           onConfigure={canRetry ? onConfigurePersonal : undefined}
-          actionPending={preferenceBusy}
+          onDiscard={() => setConfirmingDiscard(true)}
+          actionPending={busy || preferenceBusy}
         />
       )}
       {generation.phase === "cancelled" && (

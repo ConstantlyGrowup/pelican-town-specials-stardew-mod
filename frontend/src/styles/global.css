@@ -1537,6 +1537,51 @@ input[type="checkbox"] {
   border: 3px solid var(--pts-blue);
 }
 
+.blueprint-form .blueprint-tags-value {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.blueprint-selection-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 2px 6px 2px 8px;
+  color: var(--pts-blue-ink);
+  background: var(--pts-blue-cyan);
+  border: 2px solid var(--pts-blue);
+  font-family: var(--pts-font-mono);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.blueprint-selection-remove {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--pts-blue-ink);
+  background: var(--pts-blue-white);
+  border: 2px solid var(--pts-blue-ink);
+  border-radius: 0;
+  font-family: var(--pts-font-mono);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.blueprint-selection-remove:hover:not(:disabled),
+.blueprint-selection-remove:focus-visible:not(:disabled) {
+  color: var(--pts-blue-white);
+  background: var(--pts-blue);
+}
+
 .blueprint-form > ul {
   display: grid;
   gap: 8px;

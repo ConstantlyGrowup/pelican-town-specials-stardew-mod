@@ -6,6 +6,7 @@ type GenerationErrorProps = {
   onRetry?: () => void | Promise<void>;
   onTakeover?: () => void | Promise<void>;
   onConfigure?: () => void | Promise<void>;
+  onDiscard?: () => void | Promise<void>;
   actionPending?: boolean;
 };
 
@@ -38,6 +39,7 @@ export function GenerationError({
   onRetry,
   onTakeover,
   onConfigure,
+  onDiscard,
   actionPending = false,
 }: GenerationErrorProps) {
   const copy = useCopy();
@@ -78,6 +80,16 @@ export function GenerationError({
             {copy.configurePersonalProvider}
           </button>
         )}
+      {trialServiceUnavailable && onDiscard && (
+        <button
+          className="btn"
+          type="button"
+          onClick={() => void onDiscard()}
+          disabled={actionPending}
+        >
+          {copy.discardDraftAndReturnHome}
+        </button>
+      )}
       {onRetry && (
         <button
           className="btn"
@@ -85,7 +97,7 @@ export function GenerationError({
           onClick={() => void onRetry()}
           disabled={actionPending}
         >
-          {trialServiceUnavailable ? copy.retryLater : copy.retryGeneration}
+          {trialServiceUnavailable ? copy.retryNow : copy.retryGeneration}
         </button>
       )}
     </div>

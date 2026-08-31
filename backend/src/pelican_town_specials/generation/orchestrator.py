@@ -183,7 +183,6 @@ class _RunState:
         "telemetry_started",
         "trial_remaining",
         "trial_reserved",
-        "trial_response_received",
         "trial_used",
         "visual_brief",
     )
@@ -212,7 +211,6 @@ class _RunState:
     telemetry_started: bool
     telemetry_finished: bool
     provider_started: bool
-    trial_response_received: bool
     trial_reserved: bool
     trial_used: bool
     trial_remaining: int | None
@@ -258,7 +256,6 @@ class _RunState:
         self.telemetry_started = False
         self.telemetry_finished = False
         self.provider_started = False
-        self.trial_response_received = False
         self.trial_reserved = False
         self.trial_used = False
         self.trial_remaining = None
@@ -1081,6 +1078,22 @@ class GenerationOrchestrator:
         except (RevisionConflictError, AttemptMismatchError):
             yield await self._finish_failed(state, staged, _stale_error(), attempt_id)
             return
+        except Exception as exc:  # noqa: BLE001 - promotion failures must release trial reservations
+            yield await self._finish_failed(
+                state, staged, _unexpected_error(exc), attempt_id
+            )
+            return
+        try:
+            self._commit_trial_after_generation_success(state)
+        except Exception as exc:  # noqa: BLE001 - quota commit must fail closed
+            yield await self._finish_failed(
+                state,
+                staged,
+                _unexpected_error(exc),
+                attempt_id,
+                promoted=promoted,
+            )
+            return
         finished = self._finish_success(state, promoted)
         self._attempts.save(finished)
         self._record_generation_finished(
@@ -1098,7 +1111,7 @@ class GenerationOrchestrator:
         """Build the per-attempt gateway lazily at the first provider call.
 
         Idempotent: the first call caches the gateway on the run state so a
-        single attempt claims at most one trial generation. The persisted
+        single attempt reserves at most one trial generation. The persisted
         preference is read only at this boundary; once a gateway is selected,
         later preference changes cannot hot-switch the running attempt.
 
@@ -1158,22 +1171,21 @@ class GenerationOrchestrator:
             # storage details. Keep the conservative historical route.
             return TrialProviderPreference.TRIAL_FIRST
 
-    def _commit_trial_after_provider_success(self, state: _RunState) -> None:
-        """Commit a trial only after an awaited provider response succeeds."""
+    def _commit_trial_after_generation_success(self, state: _RunState) -> None:
+        """Commit a trial only after complete generation and Draft promotion."""
         if (
             self._trial_access is None
             or not state.trial_reserved
             or state.trial_used
         ):
             return
-        state.trial_response_received = True
         remaining = self._trial_access.commit_attempt(state.attempt_id)
         if remaining is None:
             # The real service returns a fixed snapshot for every reservation.
             # Treat a missing snapshot as an accounting failure rather than
             # silently claiming a quota unit without persisting its attempt
-            # state. ``trial_response_received`` prevents a later error path
-            # from refunding a provider call that already returned.
+            # state. The reservation remains available for the failure path to
+            # release because no successful attempt snapshot was written.
             raise RuntimeError("trial reservation disappeared before commit")
         state.trial_used = True
         state.trial_remaining = remaining
@@ -1189,12 +1201,11 @@ class GenerationOrchestrator:
         self._record_generation_started(state)
 
     def _release_trial_reservation(self, state: _RunState) -> None:
-        """Release only a pre-response reservation; committed trials are final."""
+        """Release a reservation that has not reached terminal success."""
         if (
             self._trial_access is None
             or not state.trial_reserved
             or state.trial_used
-            or state.trial_response_received
         ):
             return
         with suppress(Exception):
@@ -1211,7 +1222,6 @@ class GenerationOrchestrator:
             self._trial_access is not None
             and state.trial_reserved
             and not state.trial_used
-            and not state.trial_response_received
         ):
             self._release_trial_reservation(state)
             return trial_service_unavailable_error(
@@ -1296,7 +1306,7 @@ class GenerationOrchestrator:
         assert state.analysis is not None
         # Keep _ensure_gateway outside the fail-open recall boundary: a trial
         # limit error is the existing generation error and must not cause a
-        # second claim attempt while falling back to design.
+        # second reservation attempt while falling back to design.
         gateway = self._ensure_gateway(state)
         try:
             state.provider_started = True
@@ -1310,7 +1320,6 @@ class GenerationOrchestrator:
                 self._catalog.version,
                 state.command.request_id,
             )
-            self._commit_trial_after_provider_success(state)
             state.recall_decision = _memory_outcome_for_recall(result.decision)
             if result.decision is not RecallDecision.MATCH_HIT:
                 return False
@@ -1373,7 +1382,6 @@ class GenerationOrchestrator:
                     request_id=state.command.request_id,
                 )
             )
-            self._commit_trial_after_provider_success(state)
             if state.analysis.confidence < self._min_confidence:
                 raise _low_confidence_error(state.analysis.confidence)
             self._update_candidate(state, analysis=state.analysis)
@@ -1393,7 +1401,6 @@ class GenerationOrchestrator:
                         request_id=state.command.request_id,
                     )
                 )
-                self._commit_trial_after_provider_success(state)
                 state.presentation = state.core.presentation
                 self._update_candidate(state, presentation=state.presentation)
         elif stage is GenerationStage.INGREDIENT_MAPPING:
@@ -1455,7 +1462,6 @@ class GenerationOrchestrator:
                     request_id=state.command.request_id,
                 )
             )
-            self._commit_trial_after_provider_success(state)
             # R12: models often return an opaque solid backdrop despite the
             # transparent-background instruction; key it out deterministically
             # so the stored icon source and the 16x16 icon are truly
@@ -1556,7 +1562,6 @@ class GenerationOrchestrator:
                     request_id=state.command.request_id,
                 )
             )
-            self._commit_trial_after_provider_success(state)
             preview_w, preview_h = _image_dimensions(generated_preview.data)
             state.preview = self._assets.put(
                 generated_preview.data,
@@ -1700,12 +1705,24 @@ class GenerationOrchestrator:
         staged: DraftRecord,
         error: AppError,
         attempt_id: UUID,
+        *,
+        promoted: DraftRecord | None = None,
     ) -> GenerationEvent:
         error = self._trial_failure_error(state, error)
+        # Trial accounting is committed only after Draft promotion. If that
+        # final accounting step fails, the persisted Draft already owns the
+        # promoted revision and has no active attempt. Reuse the normal
+        # generation-kind rollback record at that exact revision instead of
+        # trying to write through the stale pre-promotion owner boundary.
+        rollback_source = (
+            staged.model_copy(update={"revision": promoted.revision})
+            if promoted is not None
+            else staged
+        )
         if state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
             # A failed preview keeps the draft in STALE_PREVIEW: user fields and
             # the old visual assets remain, only the attempt state is cleared.
-            rolled = staged.model_copy(
+            rolled = rollback_source.model_copy(
                 update={
                     "last_attempt_id": attempt_id,
                     "last_error": _to_summary(error),
@@ -1718,7 +1735,7 @@ class GenerationOrchestrator:
                 action = DraftAction.GENERATION_FAILED
             else:
                 action = DraftAction.REGENERATION_FAILED
-            rolled = transition(staged, action)
+            rolled = transition(rollback_source, action)
             rolled = rolled.model_copy(
                 update={
                     "last_attempt_id": attempt_id,
@@ -1730,8 +1747,8 @@ class GenerationOrchestrator:
         try:
             self._drafts.control_write(
                 rolled,
-                expected_revision=staged.revision,
-                expected_attempt_id=attempt_id,
+                expected_revision=rollback_source.revision,
+                expected_attempt_id=None if promoted is not None else attempt_id,
             )
         except (RevisionConflictError, AttemptMismatchError):
             pass

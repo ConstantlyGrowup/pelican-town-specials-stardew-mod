@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | awaiting_milestone_11_acceptance |
-| project_phase | v1.4.0 已发布；M11 Task 40–42 全部实现、detector PASS 并本地提交，等待统一用户验收 |
+| overall_state | milestone_11_accepted_release_authorized |
+| project_phase | v1.4.0 已发布；M11 核心修复与 Task 43/44 已统一验收，用户授权 push、提升至 v1.5.0 并发布新 Release |
 | product_implementation_started | true |
-| active_session_id | none |
-| active_session_state | none（M11 awaiting_milestone_acceptance） |
-| active_session_type | none |
-| current_task | Milestone 11 统一验收 |
+| active_session_id | `2026-08-31-milestone-11-unified-acceptance` |
+| active_session_state | accepted |
+| active_session_type | milestone-acceptance |
+| current_task | 创建 M11 focused commit 并进入 v1.5.0 Release |
 | blocker | none；用户已验收 M11 规划并明确授权按规划开发 |
-| next_action | 向用户提交 M11 Task 40–42 的统一验收说明；用户验收后再请求独立 push/版本/tag/Release 授权 |
+| next_action | 只提交 M11 已验收变更与控制面；随后全链路提升至 v1.5.0、构建 installer/portable、推送分支与 tag 并核验 GitHub Release |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -27,7 +27,41 @@
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | 最新提交 | `1ad271a docs: close v1.4.0 release session` 已同步 `origin/feat/mvp-implementation`；发布 tag `v1.4.0` 指向 `0673221` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | M11 规划与文档同步属于当前工作；未修改产品源码。既有 prototype、samples、Claude worktree 与历史 review/pytest/release 临时目录仍为用户或历史未跟踪范围，不纳入本规划。 |
+| 当前工作树范围 | M11 验收修复控制面与后续 generation/trial 最小源码及测试属于当前工作；既有 prototype、samples、Claude worktree 与历史 review/pytest/release 临时目录仍为用户或历史未跟踪范围，不纳入本修复。 |
+
+## 已完成验证、等待统一验收的 M11 验收修复 Session
+
+- Session：`2026-08-31-milestone-11-complete-generation-redemption-fix`；用户实测确认公共试用在后续生成阶段服务不可用时仍被扣次，并明确要求“完整走完一个生成动作”才算一次试用兑现。
+- 根因：Task 40 旧合同在第一次 Provider 成功响应后立即 commit；后续阶段失败时 reservation 已转为 consumed，无法释放。
+- 用户新口径覆盖旧设计：首次 Provider 调用前仍原子 reserve，但只有全部 stage 成功并完成 Draft promotion 后才 commit；任何中途失败、取消、校验失败或 promotion 冲突均 release，失败 attempt 保持 `trialUsed=false/trialRemaining=null`。
+- N=2、三路并发、TRIAL_FIRST/PERSONAL、显式个人服务接管、M10 统计最小事实和 Task 42 结果提示均保持；不增加 Provider 调用或新架构。
+- Round 0 detector 唯一 REVISE 为 promotion 后 accounting failure 的 Draft/attempt 不一致；round 1 已按 promoted revision/owner 安全回滚并覆盖三种 generation kind × 两种账本异常，detector 最终 `PASS`，M11-FIX-001..008 全部通过。
+- 最终证据：focused `106 passed`；完整 backend/integration `889 passed / 2 skipped`；frontend `180 passed`；Ruff、mypy 96 files、TypeScript/Vite、OpenAPI、PyInstaller 内容门与 bundle Phase A/B smoke 全绿。
+- 新本地 EXE 位于 `dist/PelicanTownSpecials-windows-x64/PelicanTownSpecials.exe`；试用状态已可恢复地重置为 2 次，当前等待用户人工复验。未 commit、未 push、未提升版本、未 tag 或发布。
+- 用户已复验确认失败不扣次；验收新增唯一文案修订：可点击按钮实际立即重试，必须从“稍后重试”改为“直接重试”（英文同步），点击行为不变。旧试用 Key 已无额度，用户授权替换本地 gitignored 资源及 GitHub Actions secret；Key 不得进入 Git、日志、API、文档或最终回复。
+- Round 2 文案修订已由 worker/主 Agent/detector 验收：中文“直接重试”、英文“Retry now”，点击仍调用 `onRetry`；focused `10 passed`、TypeScript/ESLint 全绿。新 Key 已安全写入 gitignored 本地资源并进入新 bundle，bundle smoke PASS；本机试用状态恢复为 2 次。
+- 用户已明确授权并完成远端 Actions Secret 轮换：仓库 `ConstantlyGrowup/pelican-town-specials-stardew-mod` 的 `PTS_TRIAL_API_KEY` 更新时间已刷新；Secret 值未被读取或输出。当前只等待最新本地 EXE 的最终人工验收。
+- 2026-08-31 用户在最终验收前追加 Task 43/44；本 Session 已收口为 `verification_complete`，原验证证据保持有效并纳入新增 UI Task 完成后的统一验收。
+
+## 已完成验证 Task 43 Session
+
+- Session：`2026-08-31-task-43-blueprint-removable-selections`；只处理料理蓝图已选分类和标签的直接移除交互。
+- 分类单项清空、标签逐项移除；保持 Picker API、保存合同、分类必填校验和原料行为不变。
+- Task 43 完成独立 detector 审阅后再串行启动 Task 44；两个 UI Task 与既有 M11 修复最终统一交付人工验收。
+- `luna_worker` 实施后 focused 页面 `27 passed`，TypeScript、ESLint、diff-check 全绿；正式 Packet/TASK_HANDOFF 补齐后 detector `PASS`，M11-T43-001..005 全满足、无 must-fix/scope delta。未 commit/push。
+
+## 已完成验证 Task 44 Session
+
+- Session：`2026-08-31-task-44-trial-error-discard-draft`；只处理 `PTS_TRIAL_SERVICE_UNAVAILABLE` 反馈区的安全放弃草稿入口。
+- Ask Gus 与 Blueprint 均复用已有确认弹窗、discard API、失败提示和成功回主页链路；不新增后端接口，不跳过确认。
+- `luna_worker` 实施后主 Agent focused `71 passed`，TypeScript、ESLint、diff-check 全绿；detector `PASS`，M11-T44-001..005 全满足、无 must-fix/scope delta。未 commit/push。
+
+## 活动 M11 统一验收 Session
+
+- Session：`2026-08-31-milestone-11-unified-acceptance`；汇总失败不扣次、直接重试、Key 轮换与 Task 43/44。
+- 最终门禁：backend/integration `889 passed / 2 skipped`，frontend `191 passed`，生产构建、OpenAPI、ignore policy、telemetry manifest、PyInstaller、图标/版本/内容门和 bundle smoke 全绿。
+- 最新 EXE：`dist/PelicanTownSpecials-windows-x64/PelicanTownSpecials.exe`，SHA256 `112C55A2A642BBE4FE38A7FDCC5D97E4A2A02AD442739DAAB14E18E2826AD30C`；试用资源安全匹配且未输出正文。
+- 2026-08-31 用户明确验收通过，并授权 push 与更新 Release 版本；采用下一个 minor 版本 `v1.5.0` 承载 Milestone 11。
 
 ## 已关闭 Milestone 11 规划 Session（accepted / committed）
 

@@ -1,16 +1,17 @@
-"""Orchestrator trial-claim integration tests.
+"""Orchestrator trial reservation/commit lifecycle integration tests.
 
-Covers T30-TRIAL-002 (limit error before any provider call), T30-TRIAL-003
-(personal mode does not consume trial quota), T30-TRIAL-006 (input validation
-failure does not claim; a successful attempt claims exactly once).
+Covers the frozen trial lifecycle: reserve before the first provider call,
+commit only after complete promotion, and release every failed or cancelled
+attempt without exposing provider details.
 """
 
 from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
+import pytest
 from backend.tests.domain.factories import make_draft as make_domain_draft
 from backend.tests.generation.conftest import (
     FakeGateway,
@@ -27,10 +28,15 @@ from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind, AssetRef, MediaType
 from pelican_town_specials.domain.common import DraftMode, GenerationStage
 from pelican_town_specials.domain.dish import DishAnalysis
-from pelican_town_specials.domain.draft import DraftStatus
+from pelican_town_specials.domain.draft import (
+    AttemptStatus,
+    DraftStatus,
+    GenerationAttemptKind,
+)
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import (
+    GenerationCommand,
     GenerationOrchestrator,
     TrialAccess,
 )
@@ -138,6 +144,20 @@ class _QuotaTrialAccess(FakeTrialAccess):
         self.reserved_attempts.remove(attempt_id)
         self._remaining -= 1
         return self._remaining
+
+
+class _AccountingFailureTrialAccess(FakeTrialAccess):
+    def __init__(self, failure_mode: str) -> None:
+        super().__init__(active=True, reserve_result=True, commit_remaining=None)
+        self._failure_mode = failure_mode
+
+    def commit_attempt(self, attempt_id: UUID) -> int | None:
+        if self._failure_mode == "raise":
+            self.commit_calls += 1
+            raise RuntimeError(
+                "hidden trial accounting failure at C:\\private\\trial-state.json"
+            )
+        return super().commit_attempt(attempt_id)
 
 
 def _put_original_image(asset_store: FileAssetStore) -> AssetRef:
@@ -576,7 +596,152 @@ async def test_trial_success_commits_once_and_persists_fixed_attempt_snapshot(
     assert attempt.trial_remaining == 1
 
 
-async def test_trial_post_success_failure_does_not_release_or_clear_snapshot(
+@pytest.mark.parametrize(
+    ("mode", "status", "kind"),
+    [
+        (DraftMode.ASK_GUS, DraftStatus.READY, GenerationAttemptKind.INITIAL),
+        (
+            DraftMode.ASK_GUS,
+            DraftStatus.REVIEWABLE,
+            GenerationAttemptKind.FULL_REGENERATE,
+        ),
+        (
+            DraftMode.BLUEPRINT,
+            DraftStatus.STALE_PREVIEW,
+            GenerationAttemptKind.BLUEPRINT_PREVIEW,
+        ),
+    ],
+)
+async def test_trial_success_commits_once_for_each_generation_mode(
+    tmp_path: Path,
+    mode: DraftMode,
+    status: DraftStatus,
+    kind: GenerationAttemptKind,
+) -> None:
+    trial_access = FakeTrialAccess(active=True, reserve_result=True, commit_remaining=1)
+    orchestrator, _personal, _trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+    )
+    draft = make_domain_draft(mode=mode, status=status, revision=2)
+    ref = _put_original_image(orchestrator.assets)
+    draft = draft.model_copy(
+        update={
+            "source": draft.source.model_copy(
+                update={"original_image_asset_id": ref.asset_id}
+            )
+        }
+    )
+    draft = orchestrator.drafts.save(draft, expected_revision=None)
+    command = GenerationCommand(
+        draftId=draft.draft_id,
+        kind=kind,
+        requestId=uuid4(),
+    )
+
+    events = [event async for event in orchestrator.run(command)]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert trial_access.reserve_calls == 1
+    assert trial_access.commit_calls == 1
+    assert trial_access.release_calls == 0
+    attempt_id = orchestrator.drafts.get(draft.draft_id).last_attempt_id
+    assert attempt_id is not None
+    attempt = orchestrator.attempts.get(attempt_id)
+    assert attempt.trial_used is True
+    assert attempt.trial_remaining == 1
+
+
+@pytest.mark.parametrize("accounting_failure", ["none", "raise"])
+@pytest.mark.parametrize(
+    ("mode", "status", "kind", "expected_status"),
+    [
+        (
+            DraftMode.ASK_GUS,
+            DraftStatus.READY,
+            GenerationAttemptKind.INITIAL,
+            DraftStatus.FAILED,
+        ),
+        (
+            DraftMode.ASK_GUS,
+            DraftStatus.REVIEWABLE,
+            GenerationAttemptKind.FULL_REGENERATE,
+            DraftStatus.REVIEWABLE,
+        ),
+        (
+            DraftMode.BLUEPRINT,
+            DraftStatus.STALE_PREVIEW,
+            GenerationAttemptKind.BLUEPRINT_PREVIEW,
+            DraftStatus.STALE_PREVIEW,
+        ),
+    ],
+)
+async def test_trial_accounting_failure_after_promotion_rolls_back_draft(
+    tmp_path: Path,
+    accounting_failure: str,
+    mode: DraftMode,
+    status: DraftStatus,
+    kind: GenerationAttemptKind,
+    expected_status: DraftStatus,
+) -> None:
+    trial_access = _AccountingFailureTrialAccess(accounting_failure)
+    orchestrator, _personal, _trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+    )
+    draft = make_domain_draft(mode=mode, status=status, revision=2)
+    ref = _put_original_image(orchestrator.assets)
+    draft = draft.model_copy(
+        update={
+            "source": draft.source.model_copy(
+                update={"original_image_asset_id": ref.asset_id}
+            )
+        }
+    )
+    draft = orchestrator.drafts.save(draft, expected_revision=None)
+    original_content = draft.model_dump(
+        include={"analysis", "presentation", "gameplay", "visuals", "provenance"}
+    )
+    command = GenerationCommand(
+        draftId=draft.draft_id,
+        kind=kind,
+        requestId=uuid4(),
+    )
+
+    events = [event async for event in orchestrator.run(command)]
+
+    assert events[-1].type == "attempt.failed"
+    assert events[-1].error is not None
+    assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert events[-1].error.details == {"personalProviderConfigured": False}
+    assert "本次未消耗试用次数" in events[-1].error.message
+    assert "trial-state.json" not in events[-1].error.message
+
+    restored = orchestrator.drafts.get(draft.draft_id)
+    assert restored.status is expected_status
+    assert restored.revision == draft.revision + 1
+    assert restored.active_attempt_id is None
+    assert restored.last_attempt_id is not None
+    assert restored.last_error is not None
+    assert restored.last_error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert "trial-state.json" not in restored.last_error.message
+    assert restored.model_dump(
+        include={"analysis", "presentation", "gameplay", "visuals", "provenance"}
+    ) == original_content
+
+    attempt = orchestrator.attempts.get(restored.last_attempt_id)
+    assert attempt.status is AttemptStatus.FAILED
+    assert attempt.error is not None
+    assert attempt.error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert attempt.trial_used is False
+    assert attempt.trial_remaining is None
+    assert trial_access.reserve_calls == 1
+    assert trial_access.commit_calls == 1
+    assert trial_access.release_calls == 1
+    assert trial_access.reserved_attempts == set()
+
+
+async def test_trial_post_provider_success_failure_releases_without_snapshot(
     tmp_path: Path,
 ) -> None:
     trial_access = FakeTrialAccess(active=True, reserve_result=True, commit_remaining=1)
@@ -591,13 +756,84 @@ async def test_trial_post_success_failure_does_not_release_or_clear_snapshot(
     events = [event async for event in orchestrator.run(initial_command(draft))]
 
     assert events[-1].type == "attempt.failed"
-    assert trial_access.commit_calls == 1
-    assert trial_access.release_calls == 0
+    assert events[-1].error is not None
+    assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert "本次未消耗试用次数" in events[-1].error.message
+    assert trial_access.commit_calls == 0
+    assert trial_access.release_calls == 1
     attempt_id = orchestrator.drafts.get(draft.draft_id).last_attempt_id
     assert attempt_id is not None
     attempt = orchestrator.attempts.get(attempt_id)
-    assert attempt.trial_used is True
-    assert attempt.trial_remaining == 1
+    assert attempt.trial_used is False
+    assert attempt.trial_remaining is None
+
+
+async def test_trial_validation_failure_after_provider_success_releases_without_snapshot(
+    tmp_path: Path,
+) -> None:
+    trial_access = FakeTrialAccess(active=True, reserve_result=True)
+    orchestrator, _personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+        trial_gateway=FakeGateway(confidence=0.1),
+    )
+    draft = _saved_ready_draft(orchestrator)
+
+    events = [event async for event in orchestrator.run(initial_command(draft))]
+
+    assert events[-1].type == "attempt.failed"
+    assert events[-1].error is not None
+    assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert "本次未消耗试用次数" in events[-1].error.message
+    assert trial.calls == ["analyze"]
+    assert trial_access.commit_calls == 0
+    assert trial_access.release_calls == 1
+    attempt_id = orchestrator.drafts.get(draft.draft_id).last_attempt_id
+    assert attempt_id is not None
+    attempt = orchestrator.attempts.get(attempt_id)
+    assert attempt.trial_used is False
+    assert attempt.trial_remaining is None
+
+
+async def test_trial_final_validation_failure_after_provider_success_releases_without_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trial_access = FakeTrialAccess(active=True, reserve_result=True)
+    orchestrator, _personal, trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+    )
+    draft = _saved_ready_draft(orchestrator)
+    execute_stage = orchestrator._execute_stage
+
+    async def fail_final_validation(state, stage):
+        if stage is GenerationStage.RESULT_VALIDATION:
+            raise AppError(
+                code="PTS_GEN_VALIDATION_FAILED",
+                message="final validation failed",
+                http_status=422,
+                details={},
+                retryable=False,
+            )
+        await execute_stage(state, stage)
+
+    monkeypatch.setattr(orchestrator, "_execute_stage", fail_final_validation)
+
+    events = [event async for event in orchestrator.run(initial_command(draft))]
+
+    assert events[-1].type == "attempt.failed"
+    assert events[-1].error is not None
+    assert events[-1].error.code == "PTS_TRIAL_SERVICE_UNAVAILABLE"
+    assert "本次未消耗试用次数" in events[-1].error.message
+    assert trial.calls == ["analyze", "design", "image", "image"]
+    assert trial_access.commit_calls == 0
+    assert trial_access.release_calls == 1
+    attempt_id = orchestrator.drafts.get(draft.draft_id).last_attempt_id
+    assert attempt_id is not None
+    attempt = orchestrator.attempts.get(attempt_id)
+    assert attempt.trial_used is False
+    assert attempt.trial_remaining is None
 
 
 class _UnexpectedProviderGateway(FakeGateway):
@@ -656,8 +892,20 @@ class _TimelineGateway(FakeGateway):
         self._timeline.append("provider-response")
         return result
 
+    async def design_ask_gus(self, request, *, json_only: bool = False):
+        self._timeline.append("design-provider-start")
+        result = await super().design_ask_gus(request, json_only=json_only)
+        self._timeline.append("design-provider-response")
+        return result
 
-async def test_trial_commit_waits_for_first_provider_response(
+    async def generate_image(self, request):
+        self._timeline.append("image-provider-start")
+        result = await super().generate_image(request)
+        self._timeline.append("image-provider-response")
+        return result
+
+
+async def test_trial_commit_waits_for_complete_generation_after_all_provider_responses(
     tmp_path: Path,
 ) -> None:
     timeline: list[str] = []
@@ -673,7 +921,15 @@ async def test_trial_commit_waits_for_first_provider_response(
 
     assert events[-1].type == "attempt.succeeded"
     assert timeline.index("reserved") < timeline.index("provider-start")
+    assert timeline[-1] == "commit"
     assert timeline.index("provider-response") < timeline.index("commit")
+    assert timeline.index("design-provider-response") < timeline.index("commit")
+    assert timeline.count("image-provider-response") == 2
+    second_image_response = timeline.index(
+        "image-provider-response",
+        timeline.index("image-provider-response") + 1,
+    )
+    assert second_image_response < timeline.index("commit")
 
 
 async def test_trial_cancellation_before_first_success_releases_reservation(
@@ -701,6 +957,58 @@ async def test_trial_cancellation_before_first_success_releases_reservation(
             break
         await asyncio.sleep(0.01)
     assert "analyze" in trial_gateway.calls
+    attempt_id = events[0].attempt_id
+    assert attempt_id is not None
+
+    assert orchestrator.cancel(attempt_id) is True
+    await task
+
+    assert events[-1].type == "attempt.failed"
+    assert events[-1].error is not None
+    assert events[-1].error.code == "PTS_GEN_CANCELLED"
+    assert trial_access.commit_calls == 0
+    assert trial_access.release_calls == 1
+    assert personal.calls == []
+    attempt = orchestrator.attempts.get(attempt_id)
+    assert attempt.trial_used is False
+    assert attempt.trial_remaining is None
+
+
+class _HoldAfterAnalysisGateway(FakeGateway):
+    def __init__(self, hold: asyncio.Event, design_started: asyncio.Event) -> None:
+        super().__init__()
+        self._hold = hold
+        self.design_started = design_started
+
+    async def design_ask_gus(self, request, *, json_only: bool = False):
+        self.design_started.set()
+        await self._hold.wait()
+        return await super().design_ask_gus(request, json_only=json_only)
+
+
+async def test_trial_cancellation_after_provider_success_releases_reservation(
+    tmp_path: Path,
+) -> None:
+    hold = asyncio.Event()
+    design_started = asyncio.Event()
+    trial_access = FakeTrialAccess(active=True, reserve_result=True)
+    trial_gateway = _HoldAfterAnalysisGateway(hold, design_started)
+    orchestrator, personal, _trial = _orchestrator(
+        tmp_path,
+        trial_access=trial_access,
+        trial_gateway=trial_gateway,
+    )
+    draft = _saved_ready_draft(orchestrator)
+    stream = orchestrator.run(initial_command(draft))
+    events = []
+
+    async def consume() -> None:
+        async for event in stream:
+            events.append(event)
+
+    task = asyncio.create_task(consume())
+    await asyncio.wait_for(design_started.wait(), timeout=2)
+    assert trial_gateway.calls == ["analyze"]
     attempt_id = events[0].attempt_id
     assert attempt_id is not None
 

@@ -533,6 +533,143 @@ describe("ask gus review", () => {
     expect(screen.queryByText("home page")).toBeNull();
   });
 
+  it("opens the existing discard confirmation from a trial service error", async () => {
+    const discardSpy = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
+        ),
+      ),
+      http.post(
+        "/api/v1/drafts/:draft_id/generate",
+        () =>
+          new Response(
+            JSON.stringify({
+              type: "attempt.failed",
+              attemptId: "a-1",
+              error: {
+                code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                message: "公共试用失败",
+                retryable: true,
+                requestId: "req-1",
+                recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+                details: { personalProviderConfigured: false },
+              },
+            }) + "\n",
+            { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+          ),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
+    expect(await screen.findByText(copy.trialServiceUnavailable)).toBeVisible();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: copy.discardDraftAndReturnHome }),
+    );
+    const dialog = screen.getByRole("dialog", { name: copy.rejectDraftTitle });
+    expect(discardSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.cancelDelete }));
+    expect(discardSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByText("home page")).toBeNull();
+  });
+
+  it("discards once from the trial service error after confirmation and returns home", async () => {
+    const discardSpy = vi.fn((info: { request: Request }) => {
+      expect(info.request.method).toBe("POST");
+      expect(info.request.credentials).toBe("same-origin");
+      return new Response(null, { status: 204 });
+    });
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
+        ),
+      ),
+      http.post(
+        "/api/v1/drafts/:draft_id/generate",
+        () =>
+          new Response(
+            JSON.stringify({
+              type: "attempt.failed",
+              attemptId: "a-1",
+              error: {
+                code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                message: "公共试用失败",
+                retryable: true,
+                requestId: "req-1",
+                recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              },
+            }) + "\n",
+            { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+          ),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.discardDraftAndReturnHome }),
+    );
+    const dialog = screen.getByRole("dialog", { name: copy.rejectDraftTitle });
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.rejectDraft }));
+
+    await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("home page")).toBeVisible();
+  });
+
+  it("keeps the page and shows the existing error when trial-error discard fails", async () => {
+    const discardSpy = vi.fn(() =>
+      HttpResponse.json({ error: { code: "PTS_DISCARD_FAILED" } }, { status: 503 }),
+    );
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
+        ),
+      ),
+      http.post(
+        "/api/v1/drafts/:draft_id/generate",
+        () =>
+          new Response(
+            JSON.stringify({
+              type: "attempt.failed",
+              attemptId: "a-1",
+              error: {
+                code: "PTS_TRIAL_SERVICE_UNAVAILABLE",
+                message: "公共试用失败",
+                retryable: true,
+                requestId: "req-1",
+                recommendedAction: "CHECK_LOCAL_CONFIGURATION",
+              },
+            }) + "\n",
+            { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+          ),
+      ),
+      http.post("/api/v1/drafts/:draft_id/discard", discardSpy),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.discardDraftAndReturnHome }),
+    );
+    const dialog = screen.getByRole("dialog", { name: copy.rejectDraftTitle });
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.rejectDraft }));
+
+    await waitFor(() => expect(discardSpy).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(copy.discardFailed)).toBeVisible();
+    expect(screen.getByText(copy.trialServiceUnavailable)).toBeVisible();
+    expect(screen.getByRole("heading", { name: copy.askGusReviewTitle })).toBeVisible();
+    expect(screen.queryByText("home page")).toBeNull();
+  });
+
   it("starts an initial generation for a fresh DRAFT", async () => {
     const getSpy = vi
       .fn()
