@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_0_release_in_progress |
-| project_phase | v1.4.0 已发布；M11 已验收并提交为 `3e59447`，v1.5.0 版本链与 Release 正在实施 |
+| overall_state | v1_5_0_release_candidate_verified |
+| project_phase | v1.4.0 已发布；M11 `3e59447` 与 v1.5.0 版本链 `cd03d2a` 已提交，本地 installer/portable 全量门禁通过，等待 push/tag/远端 Release 核验 |
 | product_implementation_started | true |
 | active_session_id | `2026-08-31-v1-5-0-release` |
-| active_session_state | active |
+| active_session_state | verification_complete |
 | active_session_type | release |
-| current_task | v1.5.0 版本链同步与发布门禁 |
+| current_task | 推送 v1.5.0 分支/tag 并核验 GitHub Release |
 | blocker | none；用户已验收 M11 规划并明确授权按规划开发 |
-| next_action | 创建 detector PASS 的 v1.5.0 版本链 focused commit；从该 Git 基线重跑完整 installer/portable 门禁，再推送/tag/核验 Release |
+| next_action | 提交本地 RC 证据，推送 `feat/mvp-implementation` 与 annotated tag `v1.5.0`；等待 release.yml 完成并核验 setup/ZIP/SHA256SUMS |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,7 +25,7 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `1ad271a docs: close v1.4.0 release session` 已同步 `origin/feat/mvp-implementation`；发布 tag `v1.4.0` 指向 `0673221` |
+| 最新提交 | 本地 `cd03d2a build: prepare v1.5.0 release chain`；此前远端 `1ad271a`，待推送本轮 M11 与 v1.5.0 RC 提交；正式发布仍为 v1.4.0 |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
 | 当前工作树范围 | M11 验收修复控制面与后续 generation/trial 最小源码及测试属于当前工作；既有 prototype、samples、Claude worktree 与历史 review/pytest/release 临时目录仍为用户或历史未跟踪范围，不纳入本修复。 |
 
