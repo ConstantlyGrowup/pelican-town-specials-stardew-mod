@@ -6,10 +6,10 @@
 # the notes always match the artifacts they describe.
 #
 # Run from anywhere; the script locates the repo root via $PSScriptRoot.
-#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.0.0 -OutputFile RELEASE_NOTES.md
+#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.0 -OutputFile RELEASE_NOTES.md
 
 param(
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.5.0",
     [string]$OutputFile = ""
 )
 
@@ -23,6 +23,13 @@ $body = @"
 感谢使用「鹈鹕镇新菜单」！这是一个本地运行、为《星露谷物语》生成自定义食谱
 内容包的桌面工具。
 
+## v$normalized / Milestone 11 亮点
+
+- 试用额度仅在完整成功后才扣试用；失败/取消不扣次。
+- 失败提示提供“直接重试”；蓝图分类/标签可移除。
+- 试用不可用时可确认放弃草稿并返回主页。
+- 可先使用公共试用，也可以在「设置」页配置个人服务。
+
 ## 下载
 
 - 安装程序（推荐）：`PelicanTownSpecials-Setup-v$normalized.exe`
@@ -34,7 +41,7 @@ $body = @"
 1. 双击安装程序，应用安装到 `%LOCALAPPDATA%\Programs\PelicanTownSpecials`，
    无需管理员权限，不需要 Python、Node.js 或 Git。
 2. 安装会创建开始菜单快捷方式「Pelican Town Specials」（可选择创建桌面快捷方式）。
-3. 在「设置」页填入你的 Provider API Key，上传菜品照片即可开始生成食谱。
+3. 可以先使用公共试用，也可以在「设置」页配置个人服务；然后上传菜品照片即可开始生成食谱。
 
 卸载会删除程序文件和快捷方式，但**保留**你的工作区与用户数据
 （`%LOCALAPPDATA%\PelicanTownSpecials`），重新安装后数据仍在。

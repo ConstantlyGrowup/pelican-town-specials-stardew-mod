@@ -8,12 +8,13 @@
 # optional workflow-call secret and both callers forward it, so the gitignored
 # trial bundle resource can be injected for the newcomer trial (Task 30); when
 # the repo secret is unset the resource stays absent and the trial safely
-# reports unavailable. The version is resolved from the tag (v1.4.0) or the
+# reports unavailable. The version is resolved from the tag (v1.5.0) or the
 # manual input, must match packaging/pyinstaller/version_info.txt (drift gate
 # in build.yml), and drives the installer / portable ZIP / checksum / release
 # title so they can never disagree. The release job knows its repository via GH_REPO and
 # creates the Release if absent, or edits and re-uploads (--clobber) if the tag
 # already has one, so re-running a tag flow is repeatable instead of failing.
+# v1.5.0 (2026-08-31): Milestone 11 — trial recovery UX and blueprint selection removal.
 # v1.4.0 (2026-08-29): Milestones 9–10 — Canonical recall and anonymous Release telemetry.
 # v1.3.0 (2026-08-17): Task 30 — newcomer trial entry; R-09 configured-user trial-first.
 # v1.2.0 (2026-08-14): Milestone 8 — three-slot concurrent generation.
@@ -26,9 +27,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to release (with or without a leading v), e.g. v1.4.0
+        description: Version to release (with or without a leading v), e.g. v1.5.0
         required: false
-        default: 'v1.4.0'
+        default: 'v1.5.0'
 
 permissions:
   contents: read

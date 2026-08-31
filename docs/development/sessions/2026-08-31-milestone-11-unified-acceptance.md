@@ -9,7 +9,7 @@
 | started_at | `2026-08-31` |
 | user_authorization | `M11 规划已授权；用户在最终验收前追加失败不扣次修复、直接重试、Key 轮换及 Task 43/44` |
 | base_commit | `1ad271a docs: close v1.4.0 release session` |
-| focused_commit | pending |
+| focused_commit | `3e59447 feat: complete milestone 11 trial recovery UX` |
 | user_acceptance | `2026-08-31 用户明确反馈“验收完毕，已通过”，并授权推送与更新 Release 版本` |
 
 ## 本次统一验收范围
@@ -36,4 +36,4 @@
 2. 触发“试用功能暂时不可用”后，确认出现“放弃草稿并返回主页”；点击后先弹确认，取消保留草稿，确认才删除并回主页。
 3. 可选复验“直接重试”和失败不扣次；这些链路已有自动与前次人工证据。
 
-用户已明确验收并授权 push、版本提升、tag 与 Release。下一步创建 M11 focused commit，再进入 v1.5.0 版本链与发布门禁。
+用户已明确验收并授权 push、版本提升、tag 与 Release。M11 focused commit `3e59447` 已创建，当前进入 v1.5.0 版本链与发布门禁。

@@ -9,15 +9,16 @@
 # version-drift gate (scripts/check_release_version.ps1) fails the build if the
 # requested version does not match packaging/pyinstaller/version_info.txt, so a
 # Release can never carry a mislabeled artifact.
+# v1.5.0 (2026-08-31): Milestone 11 — trial recovery UX and blueprint selection removal.
 name: build-and-verify
 
 on:
   workflow_call:
     inputs:
       version:
-        description: Release version without a leading v (e.g. 1.4.0)
+        description: Release version without a leading v (e.g. 1.5.0)
         required: false
-        default: '1.4.0'
+        default: '1.5.0'
         type: string
       telemetry_host:
         description: HTTPS origin for the public Release telemetry capture endpoint; empty keeps telemetry disabled.

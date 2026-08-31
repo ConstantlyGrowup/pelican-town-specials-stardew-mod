@@ -18,6 +18,7 @@ CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 RELEASE = REPO_ROOT / ".github" / "workflows" / "release.yml"
 CHECK_VERSION = REPO_ROOT / "scripts" / "check_release_version.ps1"
 NOTES = REPO_ROOT / "scripts" / "generate_release_notes.ps1"
+RELEASE_README = REPO_ROOT / "packaging" / "release" / "README.txt"
 VERSION_INFO = REPO_ROOT / "packaging" / "pyinstaller" / "version_info.txt"
 
 
@@ -61,7 +62,7 @@ def test_build_pipeline_reused_and_gated() -> None:
 
 def test_version_consistency_driven_by_one_define() -> None:
     version = _frozen_version()
-    assert version == "1.4.0", "frozen metadata version is expected to be 1.4.0"
+    assert version == "1.5.0", "frozen metadata version is expected to be 1.5.0"
     # The pipeline default, the drift gate and the release input all center on
     # the same version, so the installer / ZIP / checksum / title can't disagree.
     build = _text(BUILD)
@@ -155,3 +156,18 @@ def test_release_assets_checksum_and_notes_consistent() -> None:
     assert "%LOCALAPPDATA%\\Programs\\PelicanTownSpecials" in notes, (
         "notes must give the per-user install steps"
     )
+    for expected in (
+        "完整成功后才扣试用",
+        "失败/取消不扣次",
+        "直接重试",
+        "蓝图分类/标签可移除",
+        "试用不可用时可确认放弃草稿并返回主页",
+        "公共试用",
+        "个人服务",
+    ):
+        assert expected in notes, f"release notes must mention {expected!r}"
+
+    readme = _text(RELEASE_README)
+    assert "v1.5.0" in readme, "bundle README must identify v1.5.0"
+    assert "可先使用公共试用，也可以在「设置」页配置个人服务" in readme
+    assert "完整成功后才扣试用" in readme

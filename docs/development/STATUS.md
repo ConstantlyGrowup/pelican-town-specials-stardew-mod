@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | milestone_11_accepted_release_authorized |
-| project_phase | v1.4.0 已发布；M11 核心修复与 Task 43/44 已统一验收，用户授权 push、提升至 v1.5.0 并发布新 Release |
+| overall_state | v1_5_0_release_in_progress |
+| project_phase | v1.4.0 已发布；M11 已验收并提交为 `3e59447`，v1.5.0 版本链与 Release 正在实施 |
 | product_implementation_started | true |
-| active_session_id | `2026-08-31-milestone-11-unified-acceptance` |
-| active_session_state | accepted |
-| active_session_type | milestone-acceptance |
-| current_task | 创建 M11 focused commit 并进入 v1.5.0 Release |
+| active_session_id | `2026-08-31-v1-5-0-release` |
+| active_session_state | active |
+| active_session_type | release |
+| current_task | v1.5.0 版本链同步与发布门禁 |
 | blocker | none；用户已验收 M11 规划并明确授权按规划开发 |
-| next_action | 只提交 M11 已验收变更与控制面；随后全链路提升至 v1.5.0、构建 installer/portable、推送分支与 tag 并核验 GitHub Release |
+| next_action | 创建 detector PASS 的 v1.5.0 版本链 focused commit；从该 Git 基线重跑完整 installer/portable 门禁，再推送/tag/核验 Release |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
