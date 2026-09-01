@@ -6,10 +6,10 @@
 # the notes always match the artifacts they describe.
 #
 # Run from anywhere; the script locates the repo root via $PSScriptRoot.
-#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.1 -OutputFile RELEASE_NOTES.md
+#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.2 -OutputFile RELEASE_NOTES.md
 
 param(
-    [string]$Version = "1.5.1",
+    [string]$Version = "1.5.2",
     [string]$OutputFile = ""
 )
 
@@ -23,11 +23,10 @@ $body = @"
 感谢使用「鹈鹕镇新菜单」！这是一个本地运行、为《星露谷物语》生成自定义食谱
 内容包的桌面工具。
 
-## v$normalized / 料理蓝图显示补丁
+## v$normalized / 报错信息本地化补丁
 
-- 英文界面的料理蓝图现在会显示英文标签和英文分类。
-- 英文搜索可以直接查找这些分类与标签。
-- 保存时仍使用兼容现有生成流程的中文标准值；中文界面保持不变。
+- 英文界面的生成报错信息（蓝图、问问 Gus 与系统级生成错误）现在会显示英文提示。
+- 中文界面保持原有提示内容不变。
 
 ## 下载
 

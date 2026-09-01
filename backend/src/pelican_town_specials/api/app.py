@@ -349,7 +349,7 @@ def create_app(
 
     app = FastAPI(
         title="PelicanTownSpecials API",
-        version="1.5.1",
+        version="1.5.2",
         docs_url="/docs" if enable_docs else None,
         redoc_url="/redoc" if enable_docs else None,
         openapi_url="/openapi.json" if enable_docs else None,
