@@ -62,7 +62,7 @@ def test_build_pipeline_reused_and_gated() -> None:
 
 def test_version_consistency_driven_by_one_define() -> None:
     version = _frozen_version()
-    assert version == "1.5.0", "frozen metadata version is expected to be 1.5.0"
+    assert version == "1.5.1", "frozen metadata version is expected to be 1.5.1"
     # The pipeline default, the drift gate and the release input all center on
     # the same version, so the installer / ZIP / checksum / title can't disagree.
     build = _text(BUILD)
@@ -157,17 +157,14 @@ def test_release_assets_checksum_and_notes_consistent() -> None:
         "notes must give the per-user install steps"
     )
     for expected in (
-        "完整成功后才扣试用",
-        "失败/取消不扣次",
-        "直接重试",
-        "蓝图分类/标签可移除",
-        "试用不可用时可确认放弃草稿并返回主页",
-        "公共试用",
-        "个人服务",
+        "料理蓝图",
+        "英文标签",
+        "英文搜索",
+        "中文标准值",
     ):
         assert expected in notes, f"release notes must mention {expected!r}"
 
     readme = _text(RELEASE_README)
-    assert "v1.5.0" in readme, "bundle README must identify v1.5.0"
+    assert "v1.5.1" in readme, "bundle README must identify v1.5.1"
     assert "可先使用公共试用，也可以在「设置」页配置个人服务" in readme
-    assert "完整成功后才扣试用" in readme
+    assert "英文分类与标签" in readme
