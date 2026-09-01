@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_0_released |
-| project_phase | v1.5.0 已正式发布；M11、版本链、本地 RC、GitHub Actions 与远端 Release 资产均完成验收 |
+| overall_state | v1_5_2_release_candidate |
+| project_phase | Task 46 已同步 main/MVP；v1.5.2 本地 RC 门禁（bundle + installer）全绿，待推送与 tag |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none |
 | active_session_type | none |
 | current_task | none；等待下一项用户授权工作 |
 | blocker | none |
-| next_action | 等待下一项用户授权工作；不自动扩大 M11 或启动新 Milestone |
+| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,11 +25,45 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `9f104a7 docs: record v1.5.0 release candidate verification` 已推送；annotated tag `v1.5.0` 指向该提交；本收尾记录随后同步当前分支 |
+| 最新提交 | MVP：Task 46 `40b2a6e`、版本链 `d51164b`；main：`23232cd`；v1.5.2 tag 待推送 |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 当前工作树范围 | v1.5.0 产品与发布修改均已提交；既有 prototype、samples、Claude worktree、生成的 `RELEASE_NOTES.md` 与历史 review/pytest/release 临时目录仍为用户或历史未跟踪范围，不纳入发布提交。 |
+| 最新发布 | v1.5.1；GitHub Actions run `33464868361` success；正式 Release 非 draft/pre-release；setup.exe（43,505,824 B）、portable ZIP（48,535,518 B）与 SHA256SUMS 已独立下载并逐项核验一致。 |
+| 当前工作树范围 | Task 46 产品补丁与版本链已提交，RC 证据文档随本提交进入；推送、tag 与 Release 核验后收口。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
 
-## 已完成验证、等待统一验收的 M11 验收修复 Session
+## 已关闭 Task 46 / v1.5.2 Release Session（release_candidate）
+
+- 英文界面下生成报错横幅（Blueprint / Ask Gus / 系统级）按后端错误码映射英文文案；未知错误码回退后端消息；中文界面除 `PTS_PROVIDER_IMAGE_INVALID` 改为友好中文外行为不变。
+- MVP：`40b2a6e`；main：`23232cd`。两分支补丁内容 diff 为空；两份根 README 无产品补丁差异。
+- 验证：frontend 全量 `197 passed`（含新增 4 个本地化用例）、ESLint、TypeScript 全绿；无 API 改动。
+- 版本链 v1.5.2（`d51164b`）：repo 门禁 `52 passed`；`build_windows.ps1` 全流程绿（backend `891 passed`、OpenAPI drift、ignore policy、PyInstaller、EXE 图标/版本身份、bundle 内容门）；`build_installer.ps1` 产出 `PelicanTownSpecials-Setup-v1.5.2.exe`。
+- 完整会话记录见 `docs/development/sessions/2026-09-01-task-46-generation-error-localization-release.md`。
+
+## 已关闭 Task 45 / v1.5.1 Release Session（released）
+
+- 英文料理蓝图分类/标签改为英文显示并支持英文搜索；保存仍提交中文 canonical 值，后端/schema/Prompt 不变。
+- MVP：`9144848`；main：`016fc5b`。两份根 README 无产品补丁差异。
+- 验证：MVP Blueprint `32 passed`，frontend 全量 `193 passed`，ESLint、TypeScript、Vite build 全绿；main focused `32 passed`。
+- 采用 patch 版本 `v1.5.1`；版本链一致性、OpenAPI、Windows bundle/installer 与隔离安装冒烟均已通过。
+- 完整门禁：backend `889 passed / 2 skipped`；frontend `193 passed`；ESLint、TypeScript/Vite、OpenAPI、ignore policy、telemetry manifest、PyInstaller、图标/版本/内容门均通过。
+- bundle 两次干净启动、health/首页/SQLite 持久化通过；installer 安装、健康检查、覆盖重装、卸载及工作区保留通过。
+- main 已推送至 `73ee31a`，MVP 已推送至 `aeb745d`；tag `v1.5.1` 已推送并触发 run `33464868361` success。
+- Release 为正式版本，三项资产已独立下载；SHA256：setup `b67807b69524fcadaa8ada64c43b18b1a1f8efbb44fbffccaea200763b9938ae`，portable ZIP `b100d377bcfab533f98828866c960a67d3c607a0dedc446b27f4e64d3f40073b`，与 `SHA256SUMS.txt` 一致。
+
+## 已关闭分支文档边界维护 Session（accepted / committed / pushed）
+
+- Session：`2026-09-01-branch-documentation-boundary-sync`；更新 `docs/development/README.md` 中残留的 v1.3.0/v1.4.0 发布前状态。
+- `main/README.md` 继续作为普通用户手册；`feat/mvp-implementation/README.md` 继续作为源码开发说明，不进行整篇同步。
+- 当前态扫描未发现其他需要改写的过期文档；历史 Session 和变更日志中的旧状态继续保留。
+- 无产品源码或根 README 改动；用户已验收并授权提交推送，本 Session 已关闭。
+
+## 已关闭文档维护 Session（accepted / committed）
+
+- Session：`2026-09-01-v1-5-0-documentation-sync`；只同步 M11 Task 40–44、验收补丁、统一验收和 v1.5.0 发布事实。
+- 最终规则：试用名额在首次真实 Provider 调用前预留，只有完整生成与 Draft promotion 成功才确认；任一失败或取消均释放。
+- 同步范围覆盖 M11 专属设计/计划、MVP 总设计/计划、顶层规划、设计源索引与开发约束；不修改产品源码或发布配置。
+- 用户已验收并授权提交；focused documentation commit `3216fdf` 已随 `9652a5f` 推送。
+
+## 已关闭的 M11 验收修复 Session（已统一验收并发布）
 
 - Session：`2026-08-31-milestone-11-complete-generation-redemption-fix`；用户实测确认公共试用在后续生成阶段服务不可用时仍被扣次，并明确要求“完整走完一个生成动作”才算一次试用兑现。
 - 根因：Task 40 旧合同在第一次 Provider 成功响应后立即 commit；后续阶段失败时 reservation 已转为 consumed，无法释放。
@@ -37,26 +71,26 @@
 - N=2、三路并发、TRIAL_FIRST/PERSONAL、显式个人服务接管、M10 统计最小事实和 Task 42 结果提示均保持；不增加 Provider 调用或新架构。
 - Round 0 detector 唯一 REVISE 为 promotion 后 accounting failure 的 Draft/attempt 不一致；round 1 已按 promoted revision/owner 安全回滚并覆盖三种 generation kind × 两种账本异常，detector 最终 `PASS`，M11-FIX-001..008 全部通过。
 - 最终证据：focused `106 passed`；完整 backend/integration `889 passed / 2 skipped`；frontend `180 passed`；Ruff、mypy 96 files、TypeScript/Vite、OpenAPI、PyInstaller 内容门与 bundle Phase A/B smoke 全绿。
-- 新本地 EXE 位于 `dist/PelicanTownSpecials-windows-x64/PelicanTownSpecials.exe`；试用状态已可恢复地重置为 2 次，当前等待用户人工复验。未 commit、未 push、未提升版本、未 tag 或发布。
+- 阶段性本地 EXE 位于 `dist/PelicanTownSpecials-windows-x64/PelicanTownSpecials.exe`；试用状态已可恢复地重置为 2 次。该阶段随后已完成人工复验、统一提交与 v1.5.0 发布。
 - 用户已复验确认失败不扣次；验收新增唯一文案修订：可点击按钮实际立即重试，必须从“稍后重试”改为“直接重试”（英文同步），点击行为不变。旧试用 Key 已无额度，用户授权替换本地 gitignored 资源及 GitHub Actions secret；Key 不得进入 Git、日志、API、文档或最终回复。
 - Round 2 文案修订已由 worker/主 Agent/detector 验收：中文“直接重试”、英文“Retry now”，点击仍调用 `onRetry`；focused `10 passed`、TypeScript/ESLint 全绿。新 Key 已安全写入 gitignored 本地资源并进入新 bundle，bundle smoke PASS；本机试用状态恢复为 2 次。
-- 用户已明确授权并完成远端 Actions Secret 轮换：仓库 `ConstantlyGrowup/pelican-town-specials-stardew-mod` 的 `PTS_TRIAL_API_KEY` 更新时间已刷新；Secret 值未被读取或输出。当前只等待最新本地 EXE 的最终人工验收。
+- 用户已明确授权并完成远端 Actions Secret 轮换：仓库 `ConstantlyGrowup/pelican-town-specials-stardew-mod` 的 `PTS_TRIAL_API_KEY` 更新时间已刷新；Secret 值未被读取或输出。最新本地 EXE 随后已通过最终人工验收。
 - 2026-08-31 用户在最终验收前追加 Task 43/44；本 Session 已收口为 `verification_complete`，原验证证据保持有效并纳入新增 UI Task 完成后的统一验收。
 
-## 已完成验证 Task 43 Session
+## 已关闭 Task 43 Session（已统一验收并发布）
 
 - Session：`2026-08-31-task-43-blueprint-removable-selections`；只处理料理蓝图已选分类和标签的直接移除交互。
 - 分类单项清空、标签逐项移除；保持 Picker API、保存合同、分类必填校验和原料行为不变。
 - Task 43 完成独立 detector 审阅后再串行启动 Task 44；两个 UI Task 与既有 M11 修复最终统一交付人工验收。
-- `luna_worker` 实施后 focused 页面 `27 passed`，TypeScript、ESLint、diff-check 全绿；正式 Packet/TASK_HANDOFF 补齐后 detector `PASS`，M11-T43-001..005 全满足、无 must-fix/scope delta。未 commit/push。
+- `luna_worker` 实施后 focused 页面 `27 passed`，TypeScript、ESLint、diff-check 全绿；正式 Packet/TASK_HANDOFF 补齐后 detector `PASS`，M11-T43-001..005 全满足、无 must-fix/scope delta。随后纳入 M11 focused commit 与 v1.5.0 发布。
 
-## 已完成验证 Task 44 Session
+## 已关闭 Task 44 Session（已统一验收并发布）
 
 - Session：`2026-08-31-task-44-trial-error-discard-draft`；只处理 `PTS_TRIAL_SERVICE_UNAVAILABLE` 反馈区的安全放弃草稿入口。
 - Ask Gus 与 Blueprint 均复用已有确认弹窗、discard API、失败提示和成功回主页链路；不新增后端接口，不跳过确认。
-- `luna_worker` 实施后主 Agent focused `71 passed`，TypeScript、ESLint、diff-check 全绿；detector `PASS`，M11-T44-001..005 全满足、无 must-fix/scope delta。未 commit/push。
+- `luna_worker` 实施后主 Agent focused `71 passed`，TypeScript、ESLint、diff-check 全绿；detector `PASS`，M11-T44-001..005 全满足、无 must-fix/scope delta。随后纳入 M11 focused commit 与 v1.5.0 发布。
 
-## 活动 M11 统一验收 Session
+## 已关闭 M11 统一验收 Session（accepted / committed / released）
 
 - Session：`2026-08-31-milestone-11-unified-acceptance`；汇总失败不扣次、直接重试、Key 轮换与 Task 43/44。
 - 最终门禁：backend/integration `889 passed / 2 skipped`，frontend `191 passed`，生产构建、OpenAPI、ignore policy、telemetry manifest、PyInstaller、图标/版本/内容门和 bundle smoke 全绿。
