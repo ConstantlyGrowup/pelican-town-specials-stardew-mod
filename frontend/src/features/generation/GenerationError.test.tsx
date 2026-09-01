@@ -164,14 +164,59 @@ describe("GenerationError", () => {
     ).toBeNull();
   });
 
-  it("keeps showing the backend message for non-busy codes", () => {
+  it("keeps showing the backend message for unknown codes", () => {
+    render(
+      <GenerationError
+        error={envelope("PTS_UNKNOWN_CODE", "未知错误，仅用于诊断。")}
+      />,
+    );
+    expect(screen.getByText("未知错误，仅用于诊断。")).toBeVisible();
+    expect(screen.queryByText(catalogs["zh-CN"].generationBusyLimit)).toBeNull();
+  });
+
+  it("shows the fixed zh-CN backend phrasing for mapped generation codes", () => {
     render(
       <GenerationError
         error={envelope("PTS_GEN_VALIDATION_FAILED", "生成结果未通过校验。")}
       />,
     );
-    expect(screen.getByText("生成结果未通过校验。")).toBeVisible();
-    expect(screen.queryByText(catalogs["zh-CN"].generationBusyLimit)).toBeNull();
+    expect(screen.getByText(catalogs["zh-CN"].errGenerationValidationFailed)).toBeVisible();
+  });
+
+  it("shows English copy instead of the Chinese backend message for mapped codes", () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    render(
+      <LocaleProvider>
+        <GenerationError
+          error={envelope("PTS_GEN_LOW_CONFIDENCE", "图片识别置信度过低，请换一张更清晰的照片。")}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText(catalogs["en-US"].errLowConfidence)).toBeVisible();
+    expect(screen.queryByText(/置信度过低/)).toBeNull();
+  });
+
+  it("shows the English provider-key hint instead of the Chinese backend message", () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    render(
+      <LocaleProvider>
+        <GenerationError
+          error={envelope("PTS_PROVIDER_AUTH_FAILED", "Provider Key 无效或未授权。")}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText(catalogs["en-US"].errProviderAuthFailed)).toBeVisible();
+    expect(screen.queryByText(/Provider Key 无效或未授权/)).toBeNull();
+  });
+
+  it("keeps the zh-CN backend wording for variable provider messages", () => {
+    render(
+      <GenerationError
+        error={envelope("PTS_PROVIDER_AUTH_FAILED", "Provider Key 未配置。")}
+      />,
+    );
+    expect(screen.getByText("Provider Key 未配置。")).toBeVisible();
+    expect(screen.queryByText(catalogs["zh-CN"].errProviderAuthFailed)).toBeNull();
   });
 
   it("renders the retry entry only when onRetry is provided", () => {

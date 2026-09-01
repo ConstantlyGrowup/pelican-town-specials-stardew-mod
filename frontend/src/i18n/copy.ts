@@ -236,6 +236,26 @@ const zh = {
   generationStreamError: "生成流异常",
   cancelStreamError: "取消失败",
   generationBusyLimit: "最多同时运行 3 个生成任务，请等待其中一个完成后重试。",
+  errDraftNotFound: "草稿不存在或已删除。",
+  errDraftStateBlocked: "草稿当前状态不允许生成。",
+  errImageInputUnsupported:
+    "图片无法被图像服务接受：分辨率过低或格式不受支持。请上传更高分辨率的照片。",
+  errPreviewPromptTooLong:
+    "菜品字段内容过长，无法生成词条卡预览。请缩短描述、名称或增益后重试。",
+  errLowConfidence: "图片识别置信度过低，请换一张更清晰的照片。",
+  errGenerationValidationFailed: "生成结果未通过校验。",
+  errImageEditUnsupported: "当前图像服务不支持双图编辑，无法生成词条卡预览。",
+  errGenerationStale: "生成结果已过期，请重试。",
+  errGenerationCancelled: "生成任务已取消。",
+  errGenerationInterrupted: "生成任务已中断，请重新生成。",
+  errGenerationUnexpected: "生成过程出现意外错误。",
+  errProviderNotConfigured: "Provider 模型未配置，请先在设置页填写模型 ID。",
+  errProviderRequestFailed: "Provider 返回了无法处理的响应。",
+  errProviderImageInvalid: "Provider 返回的图片无效。",
+  errProviderStructuredOutputInvalid: "Provider 结构化输出无法通过校验。",
+  errProviderRateLimited: "Provider 请求被限流，请稍后重试。",
+  errProviderAuthFailed: "Provider Key 未配置、无效或未授权。",
+  errProviderUnavailable: "Provider 请求超时或服务暂时不可用，请稍后重试。",
   usePersonalProvider: "改用我的服务继续",
   configurePersonalProvider: "配置我的服务",
   retryNow: "直接重试",
@@ -639,6 +659,31 @@ const en: Copy = {
   generationStreamError: "Generation stream error",
   cancelStreamError: "Cancel failed",
   generationBusyLimit: "Up to 3 generations can run at the same time. Please wait for one to finish before retrying.",
+  errDraftNotFound: "The draft doesn't exist or was deleted.",
+  errDraftStateBlocked: "The draft's current state doesn't allow generation.",
+  errImageInputUnsupported:
+    "The image was rejected by the image service: the resolution is too low or the format isn't supported. Please upload a higher-resolution photo.",
+  errPreviewPromptTooLong:
+    "The dish fields are too long to generate a dish-card preview. Shorten the description, name, or buffs and try again.",
+  errLowConfidence: "Image recognition confidence was too low. Please try a clearer photo.",
+  errGenerationValidationFailed: "The generated result failed validation.",
+  errImageEditUnsupported:
+    "The current image service doesn't support dual-image editing, so the dish-card preview can't be generated.",
+  errGenerationStale: "The generation result is outdated. Please retry.",
+  errGenerationCancelled: "The generation was cancelled.",
+  errGenerationInterrupted: "The generation was interrupted. Please generate again.",
+  errGenerationUnexpected: "An unexpected error occurred during generation.",
+  errProviderNotConfigured:
+    "The provider model isn't configured. Fill in the model IDs on the Settings page first.",
+  errProviderRequestFailed: "The provider returned a response that can't be processed.",
+  errProviderImageInvalid: "The provider returned an invalid image.",
+  errProviderStructuredOutputInvalid:
+    "The provider's structured output failed validation.",
+  errProviderRateLimited: "The provider rate-limited the request. Please try again later.",
+  errProviderAuthFailed:
+    "The provider key is missing, invalid, or unauthorized. Check the key on the Settings page.",
+  errProviderUnavailable:
+    "The provider request timed out or the service is temporarily unavailable. Please try again later.",
   usePersonalProvider: "Continue with my service",
   configurePersonalProvider: "Configure my service",
   retryNow: "Retry now",
