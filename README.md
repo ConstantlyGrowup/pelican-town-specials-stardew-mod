@@ -1,6 +1,6 @@
 # Pelican Town Specials · 鹈鹕镇新菜单
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+ [简体中文](README.zh-CN.md) | [English](README.md)
 
 > Turn the food you make into Pelican Town's next special.
 
