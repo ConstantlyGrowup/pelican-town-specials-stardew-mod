@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_1_release_candidate_verified |
-| project_phase | Task 45 Blueprint 英文分类/标签补丁与 v1.5.1 Windows 发布候选已完整验证 |
+| overall_state | v1_5_1_released |
+| project_phase | Task 45 已同步 main/MVP；v1.5.1 GitHub Actions 与正式 Release 资产均完成核验 |
 | product_implementation_started | true |
-| active_session_id | 2026-09-01-task-45-blueprint-meta-localization-release |
-| active_session_state | accepted |
-| active_session_type | product_patch_release |
-| current_task | Task 45：Blueprint 英文分类/标签显示与搜索；同步 main/MVP 并发布 v1.5.1 |
+| active_session_id | none |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | none；等待下一项用户授权工作 |
 | blocker | none |
-| next_action | 推送 main 与 MVP，推送 v1.5.1 tag，等待并核验 GitHub Release 三项资产 |
+| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,19 +25,21 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | Task 45 产品补丁 `9144848`；v1.5.1 版本链 `dce9909`；main 对应提交为 `016fc5b` / `73ee31a`；annotated tag `v1.5.0` 指向 `9f104a7` |
+| 最新提交 | MVP：Task 45 `9144848`、版本链 `dce9909`、RC 证据 `aeb745d`；main：`016fc5b` / `73ee31a`；annotated tag `v1.5.1` 指向 `aeb745d` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 最新发布 | v1.5.0；GitHub Actions run `33403142756` success；setup.exe、portable ZIP 与 SHA256SUMS 已独立下载并核验一致。M11 产品 focused commit 为 `3e59447`。 |
-| 当前工作树范围 | Task 45 产品补丁与 v1.5.1 版本链已分别提交到 MVP/main；当前仅收口发布控制面。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
+| 最新发布 | v1.5.1；GitHub Actions run `33464868361` success；正式 Release 非 draft/pre-release；setup.exe（43,505,824 B）、portable ZIP（48,535,518 B）与 SHA256SUMS 已独立下载并逐项核验一致。 |
+| 当前工作树范围 | Task 45 产品、版本链和 RC 证据已推送；当前只提交最终发布事实。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
 
-## 活动 Task 45 / v1.5.1 Release Session
+## 已关闭 Task 45 / v1.5.1 Release Session（released）
 
 - 英文料理蓝图分类/标签改为英文显示并支持英文搜索；保存仍提交中文 canonical 值，后端/schema/Prompt 不变。
 - MVP：`9144848`；main：`016fc5b`。两份根 README 无产品补丁差异。
 - 验证：MVP Blueprint `32 passed`，frontend 全量 `193 passed`，ESLint、TypeScript、Vite build 全绿；main focused `32 passed`。
 - 采用 patch 版本 `v1.5.1`；版本链一致性、OpenAPI、Windows bundle/installer 与隔离安装冒烟均已通过。
 - 完整门禁：backend `889 passed / 2 skipped`；frontend `193 passed`；ESLint、TypeScript/Vite、OpenAPI、ignore policy、telemetry manifest、PyInstaller、图标/版本/内容门均通过。
-- bundle 两次干净启动、health/首页/SQLite 持久化通过；installer 安装、健康检查、覆盖重装、卸载及工作区保留通过。下一步只剩远端 push/tag/Release 核验。
+- bundle 两次干净启动、health/首页/SQLite 持久化通过；installer 安装、健康检查、覆盖重装、卸载及工作区保留通过。
+- main 已推送至 `73ee31a`，MVP 已推送至 `aeb745d`；tag `v1.5.1` 已推送并触发 run `33464868361` success。
+- Release 为正式版本，三项资产已独立下载；SHA256：setup `b67807b69524fcadaa8ada64c43b18b1a1f8efbb44fbffccaea200763b9938ae`，portable ZIP `b100d377bcfab533f98828866c960a67d3c607a0dedc446b27f4e64d3f40073b`，与 `SHA256SUMS.txt` 一致。
 
 ## 已关闭分支文档边界维护 Session（accepted / committed / pushed）
 

@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-09-01-task-45-blueprint-meta-localization-release` |
-| status | `accepted` |
+| status | `released` |
 | session_type | `product_patch_release` |
 | owner | Codex 主 Agent |
 | started_at | `2026-09-01` |
@@ -43,4 +43,11 @@ v1.5.1 Release Candidate 已完成：
 - release/version tests `11 passed`；完整 backend `889 passed / 2 skipped`；完整 frontend `193 passed`；ESLint、TypeScript/Vite、OpenAPI 与 release version gate 全绿。
 - PyInstaller onedir 构建成功，EXE ProductVersion/FileVersion 均为 `1.5.1`；bundle health、首页、SQLite 与两次启动 smoke 通过。
 - Inno Setup `PelicanTownSpecials-Setup-v1.5.1.exe` 构建成功；隔离安装、启动、覆盖重装、卸载与工作区保留 smoke 通过。
-- 用户原始指令已明确授权同步 main/MVP 与最新发布包；下一步推送两分支和 `v1.5.1` tag，并核验 GitHub Actions/Release 资产。
+- 用户原始指令已明确授权同步 main/MVP 与最新发布包；该授权范围内的推送、tag 与 Release 核验均已完成。
+
+## 发布结果
+
+- `main` 已推送至 `73ee31a`，`feat/mvp-implementation` 已推送至 `aeb745d`；两分支根 README 保持各自用途。
+- annotated tag `v1.5.1` 指向 `aeb745d`；GitHub Actions run `33464868361` 全部成功。
+- GitHub Release `Pelican Town Specials v1.5.1` 为正式发布，包含 setup.exe（43,505,824 B）、portable ZIP（48,535,518 B）和 `SHA256SUMS.txt`。
+- 独立下载核验：setup SHA256 `b67807b69524fcadaa8ada64c43b18b1a1f8efbb44fbffccaea200763b9938ae`；portable ZIP SHA256 `b100d377bcfab533f98828866c960a67d3c607a0dedc446b27f4e64d3f40073b`，均与发布校验文件一致。
