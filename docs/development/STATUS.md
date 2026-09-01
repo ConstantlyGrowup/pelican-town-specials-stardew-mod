@@ -25,10 +25,17 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | `0815b0f docs: close v1.5.0 release session` 已推送；annotated tag `v1.5.0` 指向 `9f104a7` |
+| 最新提交 | 分支文档边界同步 focused commit `docs: sync branch documentation boundaries` 已推送至 `origin/feat/mvp-implementation`；此前本地文档提交 `3216fdf` 同次推送；annotated tag `v1.5.0` 指向 `9f104a7` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
 | 最新发布 | v1.5.0；GitHub Actions run `33403142756` success；setup.exe、portable ZIP 与 SHA256SUMS 已独立下载并核验一致。M11 产品 focused commit 为 `3e59447`。 |
-| 当前工作树范围 | v1.5.0 产品、发布与 M11/v1.5.0 文档同步均已提交。既有 prototype、samples、Claude worktree、生成的 `RELEASE_NOTES.md` 与历史 review/pytest/release 临时目录仍为用户或历史未跟踪范围，不纳入本次文档提交。 |
+| 当前工作树范围 | v1.5.0 产品、发布、M11/v1.5.0 文档同步与分支文档边界同步均已提交；两个分支的根 README 保持各自用途。既有 prototype、samples、Claude worktree、生成的 `RELEASE_NOTES.md` 与历史 review/pytest/release 临时目录仍为用户或历史未跟踪范围，不纳入文档提交。 |
+
+## 已关闭分支文档边界维护 Session（accepted / committed / pushed）
+
+- Session：`2026-09-01-branch-documentation-boundary-sync`；更新 `docs/development/README.md` 中残留的 v1.3.0/v1.4.0 发布前状态。
+- `main/README.md` 继续作为普通用户手册；`feat/mvp-implementation/README.md` 继续作为源码开发说明，不进行整篇同步。
+- 当前态扫描未发现其他需要改写的过期文档；历史 Session 和变更日志中的旧状态继续保留。
+- 无产品源码或根 README 改动；用户已验收并授权提交推送，本 Session 已关闭。
 
 ## 已关闭文档维护 Session（accepted / committed）
 

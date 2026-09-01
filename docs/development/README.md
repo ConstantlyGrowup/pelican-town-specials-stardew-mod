@@ -33,4 +33,11 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-Task 1–30、Milestone 9 Task 31–36、Task 36.1/36.2 与 Milestone 10 Task 37–39 均已完成审阅和用户验收。M10 使用 personless 人工事件统计匿名活跃安装与核心漏斗，不改变 UI/API；用户已配置 Release Variables，并于 2026-08-29 授权统一 push、提升至 v1.4.0 和发布 GitHub Release。正式 Release 在发布完成前仍为 v1.3.0。
+Task 1–44、Task 36.1/36.2、Milestone 9、Milestone 10 与 Milestone 11 均已完成审阅和用户验收。当前正式版本为 v1.5.0；GitHub Actions、Windows 安装包、便携 ZIP 与 SHA256SUMS 均已核验。当前没有活动产品开发 Task，精确状态和下一步始终以 `STATUS.md` 为准。
+
+## 分支文档边界
+
+- `main` 分支的根目录 `README.md` 面向普通用户，重点说明下载、试用、创作、打包和安装 Mod。
+- `feat/mvp-implementation` 分支的根目录 `README.md` 面向源码开发和当前实现，保留开发启动、测试与构建入口。
+- 两份 README 的受众和结构本来就不同，不进行整篇复制或强制统一；只在正式版本、已发布能力、安装方式等共同事实发生变化时分别核对。
+- 开发控制面、技术设计和实施计划只在 MVP 开发分支维护，不把内部 Session、Task 或验收流程写入 `main` 的用户手册。
