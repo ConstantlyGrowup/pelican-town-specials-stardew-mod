@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-09-01-task-46-generation-error-localization-release` |
-| status | `accepted` |
+| status | `released` |
 | session_type | `product_patch_release` |
 | owner | WorkBuddy 主会话（Codex 协作模式休眠，单会话直接实施） |
 | started_at | `2026-09-01` |
@@ -35,4 +35,11 @@
 - ESLint、TypeScript `--noEmit` 全绿；无 API 改动，OpenAPI 仅 `info.version` 随版本链更新。
 - MVP release commit `d51164b`：版本链 13 文件同步 v1.5.2（workflows、app.py、diagnostics.py、version_info.txt、.iss、README.txt、notes/下载脚本、repo 门禁测试）。
 - repo 门禁 `52 passed`；`scripts/build_windows.ps1` 全流程通过：backend `891 passed`、frontend `197 passed`、OpenAPI drift、ignore policy、telemetry dashboard contract、PyInstaller onedir、EXE 图标与版本身份（`1.5.2`）、bundle 结构与内容门全绿。
-- 用户原始指令已明确授权同步 main/MVP 与最新发布包；下一步构建 installer、推送两分支和 `v1.5.2` tag，并核验 GitHub Actions/Release 资产。
+- 用户原始指令已明确授权同步 main/MVP 与最新发布包；两分支、tag、GitHub Actions 与 Release 资产核验均已完成。
+
+## 发布结果
+
+- `main` 已推送至 `14a3915`，`feat/mvp-implementation` 已推送至 `40466ef`；两分支根 README 保持各自用途。
+- annotated tag `v1.5.2` 指向 `40466ef`；GitHub Actions run `33470806371` 全部成功。
+- 正式 Release 包含 setup.exe（43,502,645 B）、portable ZIP（48,536,844 B）和 `SHA256SUMS.txt`。
+- 独立下载核验：setup SHA256 `32390ec7d9411ad6489d06d362ce4aedbcd50077bbdb8cfa451dccda4c8990a5`；portable ZIP SHA256 `290bfc9c46248ddaa79fc6e6fe82e9590bbd46a9119779223168037d4f0b2632`，均与发布校验文件一致。
