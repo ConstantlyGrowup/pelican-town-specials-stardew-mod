@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../../api/client";
 import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
-import { useCopy } from "../../i18n/locale";
+import { metaDisplayLabel } from "../../i18n/metaLabels";
+import { useCopy, useLocale } from "../../i18n/locale";
 
 type MetaOption = components["schemas"]["MetaOption"];
 type IngredientCatalogItemView = components["schemas"]["IngredientCatalogItemView"];
@@ -119,17 +120,20 @@ function MetaPickerModal({
   onClose: () => void;
 }) {
   const copy = useCopy();
+  const locale = useLocale();
   const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<MetaOption[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // The curated option lists are small, so they are fetched in full and
+  // filtered locally: the backend can only match the canonical Chinese
+  // values, while the visible labels follow the UI locale.
   useEffect(() => {
     let active = true;
     setLoading(true);
     void apiClient
-      .GET(endpoint, { params: { query: { query, limit: PAGE_SIZE, offset } } })
+      .GET(endpoint, { params: { query: { query: "", limit: 100, offset: 0 } } })
       .then(({ data, error }) => {
         if (!active) {
           return;
@@ -137,13 +141,25 @@ function MetaPickerModal({
         setLoading(false);
         if (!error && data) {
           setItems(data.items);
-          setTotal(data.total);
         }
       });
     return () => {
       active = false;
     };
-  }, [endpoint, query, offset]);
+  }, [endpoint]);
+
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return items;
+    }
+    return items.filter(
+      (item) =>
+        item.value.toLowerCase().includes(normalized) ||
+        metaDisplayLabel(item.value, locale).toLowerCase().includes(normalized),
+    );
+  }, [items, query, locale]);
+  const visible = filtered.slice(offset, offset + PAGE_SIZE);
 
   return (
     <Modal title={title} onClose={onClose}>
@@ -158,24 +174,24 @@ function MetaPickerModal({
       />
       {loading ? (
         <p>{copy.loading}</p>
-      ) : items.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <p>{copy.pickEmpty}</p>
       ) : (
         <ul className="picker-list">
-          {items.map((item) => (
+          {visible.map((item) => (
             <li key={item.value}>
               <button
                 className="btn picker-option"
                 type="button"
                 onClick={() => onPick(item.value)}
               >
-                {item.value}
+                {metaDisplayLabel(item.value, locale)}
               </button>
             </li>
           ))}
         </ul>
       )}
-      <Pager offset={offset} total={total} onOffset={setOffset} />
+      <Pager offset={offset} total={filtered.length} onOffset={setOffset} />
     </Modal>
   );
 }

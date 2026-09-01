@@ -483,7 +483,7 @@ describe("blueprint editor", () => {
     await screen.findByDisplayValue("南瓜汤");
     expect(
       screen.getByRole("button", {
-        name: english.removeCategoryAriaLabel.replace("{category}", "汤类"),
+        name: english.removeCategoryAriaLabel.replace("{category}", "Soup"),
       }),
     ).toBeVisible();
     expect(
@@ -491,6 +491,98 @@ describe("blueprint editor", () => {
         name: english.removeTagAriaLabel.replace("{tag}", "fall"),
       }),
     ).toBeVisible();
+    expect(screen.getByText("Soup")).toBeVisible();
+  });
+
+  it("lists English category/tag options and stores the canonical values", async () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    const patchSpy = vi.fn((info: { request: Request }) => {
+      void info;
+      return HttpResponse.json(blueprintDraft({ revision: 2 }));
+    });
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          blueprintDraft({
+            presentation: {
+              ...blueprintDraft().presentation,
+              categoryLabel: "",
+              tags: [],
+            },
+          }),
+        ),
+      ),
+      http.get("/api/v1/meta/categories", () =>
+        HttpResponse.json({
+          items: [{ value: "主菜" }, { value: "汤类" }],
+          nextCursor: null,
+          total: 2,
+        }),
+      ),
+      http.get("/api/v1/meta/tags", () =>
+        HttpResponse.json({
+          items: [{ value: "家常" }, { value: "香辣" }],
+          nextCursor: null,
+          total: 2,
+        }),
+      ),
+      http.patch("/api/v1/drafts/:draft_id", patchSpy),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    expect(screen.queryByText("Soup")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose category" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Soup" }));
+    expect(screen.getByText("Soup")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose tags" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Home-style" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Spicy" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(patchSpy).toHaveBeenCalled());
+    const request = patchSpy.mock.calls[0]?.[0]?.request as Request;
+    const body = (await request.clone().json()) as {
+      presentation: { categoryLabel: string; tags: string[] };
+    };
+    expect(body.presentation.categoryLabel).toBe("汤类");
+    expect(body.presentation.tags).toEqual(["家常", "香辣"]);
+  });
+
+  it("filters meta options by English search text", async () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(blueprintDraft()),
+      ),
+      http.get("/api/v1/meta/tags", () =>
+        HttpResponse.json({
+          items: [
+            { value: "家常" },
+            { value: "香辣" },
+            { value: "酸甜" },
+          ],
+          nextCursor: null,
+          total: 3,
+        }),
+      ),
+    );
+    renderPage();
+
+    await screen.findByDisplayValue("南瓜汤");
+    fireEvent.click(screen.getByRole("button", { name: "Choose tags" }));
+    expect(await screen.findByRole("button", { name: "Home-style" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Spicy" })).toBeVisible();
+
+    const searchBox = screen.getByRole("textbox", { name: "Search…" });
+    fireEvent.change(searchBox, { target: { value: "spicy" } });
+
+    expect(screen.queryByRole("button", { name: "Home-style" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Spicy" })).toBeVisible();
   });
 
   it("keeps the remaining tags in order when one tag is removed", async () => {

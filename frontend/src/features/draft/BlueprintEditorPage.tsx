@@ -6,7 +6,8 @@ import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
 import { PixelModal } from "../../components/ui/PixelModal";
 import type { components } from "../../api/generated/schema";
-import { useCopy } from "../../i18n/locale";
+import { useCopy, useLocale } from "../../i18n/locale";
+import { metaDisplayLabel } from "../../i18n/metaLabels";
 import {
   fromDraftView,
   toPatchInput,
@@ -30,6 +31,7 @@ type IngredientCatalogItemView = components["schemas"]["IngredientCatalogItemVie
 export function BlueprintEditorPage() {
   const { draftId } = useParams<{ draftId: string }>();
   const copy = useCopy();
+  const locale = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [ingredients, setIngredients] = useState<BlueprintIngredientRow[]>([]);
@@ -526,14 +528,14 @@ export function BlueprintEditorPage() {
             {categoryLabel ? (
               <>
                 <span id="categoryLabel" className="picker-value">
-                  {categoryLabel}
+                  {metaDisplayLabel(categoryLabel, locale)}
                 </span>
                 <button
                   className="blueprint-selection-remove"
                   type="button"
                   aria-label={copy.removeCategoryAriaLabel.replace(
                     "{category}",
-                    categoryLabel,
+                    metaDisplayLabel(categoryLabel, locale),
                   )}
                   title={copy.removeCategory}
                   onClick={removeCategory}
@@ -577,13 +579,13 @@ export function BlueprintEditorPage() {
               {tagList.length > 0
                 ? tagList.map((tag) => (
                     <span className="blueprint-selection-chip" key={tag}>
-                      <span>{tag}</span>
+                      <span>{metaDisplayLabel(tag, locale)}</span>
                       <button
                         className="blueprint-selection-remove"
                         type="button"
                         aria-label={copy.removeTagAriaLabel.replace(
                           "{tag}",
-                          tag,
+                          metaDisplayLabel(tag, locale),
                         )}
                         title={copy.removeTag}
                         onClick={() => removeTag(tag)}
