@@ -35,6 +35,7 @@
 - 为降低小白用户配置门槛，应用维护当前 Windows 用户级环境变量 PTS_OPENAI_API_KEY；支持新增、更新和删除，不写机器级环境变量，不要求管理员权限。Key 不得进入 JSON、日志、错误正文、前端状态、测试快照、Context Packet 或 Git。
 - Task 30 新手试用入口已实施、验收并随 v1.3.0 发布（Session `2026-08-16-task-30-trial-entry-impl`）：独立隐藏试用档案 + `app-state/trial-state.json` 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + 已配置用户优先消耗试用额度 + CI Secret 注入 gitignored 资源 Key；试用 Key 不进入 Git/API/前端/日志；仍不属于第三期。
 - Milestone 11 已完成、统一验收并随 v1.5.0 发布：不发送 `/models`、最小 Token query 或图像探测；每个试用 attempt 的首次真实 Provider 调用就是可用性检查。Task 40 把永久 claim 改为按 attemptId 预留，只有全部生成阶段与 Draft promotion 完整成功才确认，任一失败/取消均释放；Task 41 提供用户显式确认的个人额度接管，禁止无提示自动付费 fallback；Task 42 显示固定 `trialUsed/trialRemaining` 快照；验收补丁加入“直接重试”和试用 Key 轮换；Task 43 支持清空蓝图分类及逐个移除标签；Task 44 支持试用不可用时经确认放弃草稿并返回主页。
+- Task 45 Blueprint 英文 metadata 补丁：curated 分类/标签继续以中文 canonical 值保存并进入后端、Prompt 与存档；`en-US` 只在前端显示英文标签并允许英文搜索，`zh-CN` 保持中文，未映射自由值原样回退。不得借此改变 API/schema、候选集合或根 README 的分支定位。
 - Milestone 8 将生成执行扩展为进程级固定 3 个并行运行槽；第 4 个请求在创建 attempt、改变草稿状态和调用 Provider 前返回 `PTS_GEN_BUSY`，提示最多同时运行 3 个任务并由用户稍后手动重试。
 - 三个运行任务必须按 draftId/attemptId 隔离 owner、task、cancel、NDJSON 和进度；完成、失败、取消、删除或异常 cleanup 只释放自己的槽。
 - M8 不实现 QUEUED 状态、排队、排位、自动补位或队列持久化。完整队列留到未来在线化或数据库/分布式消息队列/worker 架构时重新设计。

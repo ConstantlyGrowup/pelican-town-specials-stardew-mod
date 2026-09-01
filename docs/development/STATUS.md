@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_0_released |
-| project_phase | v1.5.0 已正式发布；M11、版本链、本地 RC、GitHub Actions 与远端 Release 资产均完成验收 |
+| overall_state | v1_5_1_release_candidate_verified |
+| project_phase | Task 45 Blueprint 英文分类/标签补丁与 v1.5.1 Windows 发布候选已完整验证 |
 | product_implementation_started | true |
-| active_session_id | none |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
+| active_session_id | 2026-09-01-task-45-blueprint-meta-localization-release |
+| active_session_state | accepted |
+| active_session_type | product_patch_release |
+| current_task | Task 45：Blueprint 英文分类/标签显示与搜索；同步 main/MVP 并发布 v1.5.1 |
 | blocker | none |
-| next_action | 等待下一项用户授权工作；不自动启动新 Milestone |
+| next_action | 推送 main 与 MVP，推送 v1.5.1 tag，等待并核验 GitHub Release 三项资产 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,10 +25,19 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | 分支文档边界同步 focused commit `docs: sync branch documentation boundaries` 已推送至 `origin/feat/mvp-implementation`；此前本地文档提交 `3216fdf` 同次推送；annotated tag `v1.5.0` 指向 `9f104a7` |
+| 最新提交 | Task 45 产品补丁 `9144848`；v1.5.1 版本链 `dce9909`；main 对应提交为 `016fc5b` / `73ee31a`；annotated tag `v1.5.0` 指向 `9f104a7` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
 | 最新发布 | v1.5.0；GitHub Actions run `33403142756` success；setup.exe、portable ZIP 与 SHA256SUMS 已独立下载并核验一致。M11 产品 focused commit 为 `3e59447`。 |
-| 当前工作树范围 | v1.5.0 产品、发布、M11/v1.5.0 文档同步与分支文档边界同步均已提交；两个分支的根 README 保持各自用途。既有 prototype、samples、Claude worktree、生成的 `RELEASE_NOTES.md` 与历史 review/pytest/release 临时目录仍为用户或历史未跟踪范围，不纳入文档提交。 |
+| 当前工作树范围 | Task 45 产品补丁与 v1.5.1 版本链已分别提交到 MVP/main；当前仅收口发布控制面。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
+
+## 活动 Task 45 / v1.5.1 Release Session
+
+- 英文料理蓝图分类/标签改为英文显示并支持英文搜索；保存仍提交中文 canonical 值，后端/schema/Prompt 不变。
+- MVP：`9144848`；main：`016fc5b`。两份根 README 无产品补丁差异。
+- 验证：MVP Blueprint `32 passed`，frontend 全量 `193 passed`，ESLint、TypeScript、Vite build 全绿；main focused `32 passed`。
+- 采用 patch 版本 `v1.5.1`；版本链一致性、OpenAPI、Windows bundle/installer 与隔离安装冒烟均已通过。
+- 完整门禁：backend `889 passed / 2 skipped`；frontend `193 passed`；ESLint、TypeScript/Vite、OpenAPI、ignore policy、telemetry manifest、PyInstaller、图标/版本/内容门均通过。
+- bundle 两次干净启动、health/首页/SQLite 持久化通过；installer 安装、健康检查、覆盖重装、卸载及工作区保留通过。下一步只剩远端 push/tag/Release 核验。
 
 ## 已关闭分支文档边界维护 Session（accepted / committed / pushed）
 
@@ -42,7 +51,7 @@
 - Session：`2026-09-01-v1-5-0-documentation-sync`；只同步 M11 Task 40–44、验收补丁、统一验收和 v1.5.0 发布事实。
 - 最终规则：试用名额在首次真实 Provider 调用前预留，只有完整生成与 Draft promotion 成功才确认；任一失败或取消均释放。
 - 同步范围覆盖 M11 专属设计/计划、MVP 总设计/计划、顶层规划、设计源索引与开发约束；不修改产品源码或发布配置。
-- 用户已验收并授权提交；focused documentation commit 已创建，**尚未 push**，等待用户单独授权。
+- 用户已验收并授权提交；focused documentation commit `3216fdf` 已随 `9652a5f` 推送。
 
 ## 已关闭的 M11 验收修复 Session（已统一验收并发布）
 
