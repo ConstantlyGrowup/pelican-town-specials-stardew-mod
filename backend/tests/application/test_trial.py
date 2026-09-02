@@ -73,6 +73,97 @@ def test_initial_status_is_available_disabled_with_full_quota(tmp_path: Path) ->
     assert status.provider_preference is TrialProviderPreference.TRIAL_FIRST
 
 
+def test_public_trial_preset_uses_gpt_image_2_and_five_attempts(
+    tmp_path: Path,
+) -> None:
+    service, _ = _service(tmp_path)
+
+    status = service.status()
+    settings = service.trial_provider_settings()
+
+    assert status.limit == 5
+    assert status.remaining == 5
+    assert settings.image_model == "gpt-image-2"
+
+
+def test_v2_trial_state_migrates_to_v3_with_fresh_quota_and_preference(
+    tmp_path: Path,
+) -> None:
+    service, workspace = _service(tmp_path)
+    reservation_id = str(uuid4())
+    committed_id = str(uuid4())
+    service.state_path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 2,
+                "enabled": True,
+                "consumedAttempts": 2,
+                "reservations": [reservation_id],
+                "committedAttempts": {committed_id: 3},
+                "providerPreference": "PERSONAL",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+
+    status = reloaded.status()
+    assert status.enabled is True
+    assert status.claimed_attempts == 0
+    assert status.limit == TRIAL_GENERATION_LIMIT == 5
+    assert status.remaining == 5
+    assert status.provider_preference is TrialProviderPreference.PERSONAL
+    payload = json.loads(reloaded.state_path.read_text(encoding="utf-8"))
+    assert payload == {
+        "committedAttempts": {},
+        "consumedAttempts": 0,
+        "enabled": True,
+        "providerPreference": "PERSONAL",
+        "reservations": [],
+        "schemaVersion": 3,
+    }
+
+
+def test_v2_snake_case_trial_state_migrates_to_v3_with_fresh_quota_and_preference(
+    tmp_path: Path,
+) -> None:
+    service, workspace = _service(tmp_path)
+    reservation_id = str(uuid4())
+    committed_id = str(uuid4())
+    service.state_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "enabled": True,
+                "consumed_attempts": 2,
+                "reservations": [reservation_id],
+                "committed_attempts": {committed_id: 3},
+                "provider_preference": "PERSONAL",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+
+    status = reloaded.status()
+    assert status.enabled is True
+    assert status.provider_preference is TrialProviderPreference.PERSONAL
+    assert status.claimed_attempts == 0
+    assert status.limit == 5
+    assert status.remaining == 5
+    payload = json.loads(reloaded.state_path.read_text(encoding="utf-8"))
+    assert payload == {
+        "committedAttempts": {},
+        "consumedAttempts": 0,
+        "enabled": True,
+        "providerPreference": "PERSONAL",
+        "reservations": [],
+        "schemaVersion": 3,
+    }
+
+
 def test_status_surfaces_camel_case_fields(tmp_path: Path) -> None:
     service, _ = _service(tmp_path)
     attempt_id = uuid4()
@@ -123,8 +214,8 @@ def test_claim_attempt_increments_until_limit_then_false(tmp_path: Path) -> None
     service, _ = _service(tmp_path)
     service.enable()
 
-    assert service.claim_attempt() is True
-    assert service.claim_attempt() is True
+    for _ in range(TRIAL_GENERATION_LIMIT):
+        assert service.claim_attempt() is True
     assert service.claim_attempt() is False
 
     status = service.status()
@@ -180,14 +271,16 @@ def test_release_returns_quota_without_affecting_other_attempts(
     assert service.status().claimed_attempts == 1
 
 
-def test_v1_claimed_attempts_migrate_without_resetting_quota(tmp_path: Path) -> None:
+def test_v1_claimed_attempts_migrate_to_v3_with_fresh_quota(
+    tmp_path: Path,
+) -> None:
     service, workspace = _service(tmp_path)
     service.state_path.write_text(
         json.dumps(
             {
                 "schemaVersion": 1,
                 "enabled": True,
-                "claimedAttempts": 1,
+                "claimedAttempts": 2,
             }
         ),
         encoding="utf-8",
@@ -197,17 +290,57 @@ def test_v1_claimed_attempts_migrate_without_resetting_quota(tmp_path: Path) -> 
 
     status = reloaded.status()
     assert status.enabled is True
-    assert status.claimed_attempts == 1
-    assert status.remaining == TRIAL_GENERATION_LIMIT - 1
+    assert status.claimed_attempts == 0
+    assert status.remaining == TRIAL_GENERATION_LIMIT == 5
     payload = json.loads(reloaded.state_path.read_text(encoding="utf-8"))
     assert payload == {
         "committedAttempts": {},
-        "consumedAttempts": 1,
+        "consumedAttempts": 0,
         "enabled": True,
         "providerPreference": "TRIAL_FIRST",
         "reservations": [],
-        "schemaVersion": 2,
+        "schemaVersion": 3,
     }
+
+
+def test_v3_trial_state_does_not_reset_consumption_after_restart(
+    tmp_path: Path,
+) -> None:
+    service, workspace = _service(tmp_path)
+    service.state_path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 2,
+                "enabled": True,
+                "consumedAttempts": 2,
+                "reservations": [],
+                "committedAttempts": {},
+                "providerPreference": "TRIAL_FIRST",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    migrated = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+    attempt_id = uuid4()
+    assert migrated.reserve_attempt(attempt_id) is True
+    assert migrated.commit_attempt(attempt_id) == 4
+
+    committed_payload = json.loads(
+        migrated.state_path.read_text(encoding="utf-8")
+    )
+    assert committed_payload["schemaVersion"] == 3
+    assert committed_payload["consumedAttempts"] == 1
+
+    reloaded = TrialAccessService(workspace, key_provider=lambda: "sk-test-trial")
+
+    status = reloaded.status()
+    assert status.claimed_attempts == 1
+    assert status.remaining == 4
+    payload = json.loads(reloaded.state_path.read_text(encoding="utf-8"))
+    assert payload["schemaVersion"] == 3
+    assert payload["consumedAttempts"] == 1
+    assert payload["committedAttempts"] == {str(attempt_id): 4}
 
 
 def test_trial_state_personal_preference_round_trips_through_public_status(
@@ -329,8 +462,8 @@ def test_trial_opportunity_true_while_quota_remains(tmp_path: Path) -> None:
 def test_trial_opportunity_false_when_exhausted(tmp_path: Path) -> None:
     service, _ = _service(tmp_path)
     service.enable()
-    service.claim_attempt()
-    service.claim_attempt()
+    for _ in range(TRIAL_GENERATION_LIMIT):
+        assert service.claim_attempt() is True
 
     assert service.trial_opportunity() is False
     assert service.status().remaining == 0
