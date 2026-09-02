@@ -33,7 +33,7 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-Task 1–46、Task 36.1/36.2、Milestone 9、Milestone 10 与 Milestone 11 均已完成审阅和验收。当前正式版本为 v1.5.2；Task 46 已同步 main/MVP，GitHub Actions、Windows 安装包、便携 ZIP 与 SHA256SUMS 均已核验。当前没有活动产品开发 Task，精确状态和下一步始终以 `STATUS.md` 为准。
+Task 1–46、Task 36.1/36.2、Milestone 9、Milestone 10 与 Milestone 11 均已完成审阅和验收。当前正式版本仍为 v1.5.2；Task 47 公共试用模型/额度热修复已通过独立审阅，正在同步 main/MVP 并准备 v1.5.3 Release。精确状态和下一步始终以 `STATUS.md` 为准。
 
 ## 分支文档边界
 

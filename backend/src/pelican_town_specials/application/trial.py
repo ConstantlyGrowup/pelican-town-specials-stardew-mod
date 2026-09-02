@@ -49,11 +49,11 @@ from pelican_town_specials.providers.contracts import (
     ModelGateway,
 )
 
-TRIAL_GENERATION_LIMIT = 2
+TRIAL_GENERATION_LIMIT = 5
 TRIAL_BASE_URL = "https://yibuapi.com/v1"
 TRIAL_VISION_MODEL = "gpt-5.6-luna"
 TRIAL_TEXT_MODEL = "gpt-5.6-luna"
-TRIAL_IMAGE_MODEL = "gpt-image-2-max"
+TRIAL_IMAGE_MODEL = "gpt-image-2"
 TRIAL_CHAT_TIMEOUT_SECONDS = 120
 TRIAL_IMAGE_TIMEOUT_SECONDS = 300
 TRIAL_MAX_AUTOMATIC_RETRIES = 0
@@ -74,7 +74,7 @@ class TrialState(StrictModel):
     fixed ``remainingAfterCommit`` snapshot for idempotent retries.
     """
 
-    schema_version: Literal[2] = 2
+    schema_version: Literal[3] = 3
     enabled: bool = False
     consumed_attempts: int = Field(default=0, ge=0)
     reservations: list[str] = Field(default_factory=list)
@@ -473,12 +473,37 @@ class TrialAccessService:
             if isinstance(claimed, bool) or claimed < 0:
                 raise ValueError("invalid v1 claimed attempts")
             return (
-                TrialState(enabled=enabled, consumed_attempts=claimed),
+                TrialState(enabled=enabled),
                 True,
             )
-        if schema_version != 2:
+        if schema_version == 2:
+            normalized = dict(payload)
+            normalized.pop("schema_version", None)
+            normalized["schemaVersion"] = 3
+            preference = normalized.get(
+                "providerPreference", normalized.get("provider_preference")
+            )
+            if isinstance(preference, str):
+                normalized[
+                    "providerPreference"
+                ] = TrialProviderPreference(preference)
+            normalized.pop("provider_preference", None)
+            state = TrialState.model_validate(normalized)
+            return (
+                state.model_copy(
+                    update={
+                        "consumed_attempts": 0,
+                        "reservations": [],
+                        "committed_attempts": {},
+                    }
+                ),
+                True,
+            )
+        if schema_version != 3:
             raise ValueError("unknown trial state schema")
         normalized = dict(payload)
+        normalized.pop("schema_version", None)
+        normalized["schemaVersion"] = 3
         preference = normalized.get(
             "providerPreference", normalized.get("provider_preference")
         )
@@ -486,6 +511,7 @@ class TrialAccessService:
             normalized[
                 "providerPreference"
             ] = TrialProviderPreference(preference)
+        normalized.pop("provider_preference", None)
         state = TrialState.model_validate(normalized)
         if state.reservations:
             return state.model_copy(update={"reservations": []}), True

@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_2_released |
-| project_phase | Task 46 已同步 main/MVP；v1.5.2 GitHub Actions 与正式 Release 资产均完成核验 |
+| overall_state | task_47_auto_accepted |
+| project_phase | v1.5.2 已发布；Task 47 v2 已通过 worker/detector/主 Agent验收，等待 focused commit、双分支同步与 v1.5.3 发布 |
 | product_implementation_started | true |
-| active_session_id | none |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
+| active_session_id | `2026-09-02-task-47-trial-model-quota-hotfix` |
+| active_session_state | auto_accepted |
+| active_session_type | product_patch |
+| current_task | 公共试用 image model 改为 `gpt-image-2`，总额度从 2 提高到 5 |
 | blocker | none |
-| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
+| next_action | 创建 Task 47 focused commit → 同步 main/MVP → 建立 v1.5.3 Release Session并执行完整门禁 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
