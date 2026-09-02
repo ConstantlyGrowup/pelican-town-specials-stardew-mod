@@ -6,16 +6,16 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.7 | v1.4.0 已发布本地版协议，并链接 Milestone 9/10、Task 36.1/36.2 与 M11 编码扩展 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.8 | v1.5.0 已发布本地版协议，并链接 Milestone 9/10/11 与 Task 36.1/36.2 编码扩展 |
 | `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
 | `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.2 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；已实施、独立审阅并随 v1.4.0 发布 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.0 | 已完成并发布 Task 1–39，登记 Milestone 11 Task 40–42 顺序和边界 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.1 | 已完成并发布 Task 1–44，记录 Milestone 11 最终顺序、补丁与发布证据 |
 | `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
 | `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.2 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已实施、验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并推送 |
-| `docs/architecture/TRIAL_EXPERIENCE_TECHNICAL_DESIGN.md` v1.0 | Milestone 11 试用预留/确认扣次、首次失败不扣、友好错误与结果试用快照；用户已验收并授权实施 |
-| `docs/plans/2026-08-30-milestone-11-trial-experience.md` v1.0 | Task 40→41→42 的依赖、Acceptance、测试与提交边界；用户已授权按顺序开发 |
+| `docs/architecture/TRIAL_EXPERIENCE_TECHNICAL_DESIGN.md` v1.2 | Milestone 11 试用预留/完整成功确认、任意失败不扣、个人服务接管、结果快照及 Task 43/44；已随 v1.5.0 发布 |
+| `docs/plans/2026-08-30-milestone-11-trial-experience.md` v1.2 | Task 40–44 的依赖、Acceptance、测试、统一验收与 v1.5.0 发布结果 |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |
 | `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.2 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
@@ -34,7 +34,9 @@
 - 默认工作区为 `%LOCALAPPDATA%\\PelicanTownSpecials\\workspace`；浏览器不直接访问任意本地文件路径。
 - 为降低小白用户配置门槛，应用维护当前 Windows 用户级环境变量 PTS_OPENAI_API_KEY；支持新增、更新和删除，不写机器级环境变量，不要求管理员权限。Key 不得进入 JSON、日志、错误正文、前端状态、测试快照、Context Packet 或 Git。
 - Task 30 新手试用入口已实施、验收并随 v1.3.0 发布（Session `2026-08-16-task-30-trial-entry-impl`）：独立隐藏试用档案 + `app-state/trial-state.json` 本机软额度（N=2）+ 首次 Provider 调用前原子 claim + 保存个人配置自动退出 + 已配置用户优先消耗试用额度 + CI Secret 注入 gitignored 资源 Key；试用 Key 不进入 Git/API/前端/日志；仍不属于第三期。
-- Milestone 11 已获用户规划验收与开发授权：不发送 `/models`、最小 Token query 或图像探测；每个试用 attempt 的首次真实 Provider 调用就是可用性检查。Task 40 把永久 claim 改为按 attemptId 预留、首次成功响应后确认、首次响应前失败/取消释放；Task 41 在公共试用失败后提供用户显式确认的个人额度接管，未配置者进入 Settings，禁止无提示自动付费 fallback；Task 42 再把确认后的 `trialUsed/trialRemaining` 固定快照显示在 Ask Gus 与 Blueprint 结果预览。严格按 40→41→42 串行实施。
+- Milestone 11 已完成、统一验收并随 v1.5.0 发布：不发送 `/models`、最小 Token query 或图像探测；每个试用 attempt 的首次真实 Provider 调用就是可用性检查。Task 40 把永久 claim 改为按 attemptId 预留，只有全部生成阶段与 Draft promotion 完整成功才确认，任一失败/取消均释放；Task 41 提供用户显式确认的个人额度接管，禁止无提示自动付费 fallback；Task 42 显示固定 `trialUsed/trialRemaining` 快照；验收补丁加入“直接重试”和试用 Key 轮换；Task 43 支持清空蓝图分类及逐个移除标签；Task 44 支持试用不可用时经确认放弃草稿并返回主页。
+- Task 47 当前正式试用口径（2026-09-02 用户明确覆盖旧 N=2/历史保留规则）：隐藏公共试用使用 `gpt-image-2`，总额度为 5；合法 v1/v2 `trial-state.json` 在升级时一次性迁移为 schema v3，清空消费/预留/commit 快照，使所有旧用户恢复完整 5 次，同时保留 `enabled` 和 v2 `providerPreference`。schema v3 后续重启不重复重置。个人 `ProviderSettings.image_model` 默认 `gpt-image-2-max` 与已保存设置不变；Key、完整成功才扣次、失败释放、R-09、API、遥测与 Canonical 均不变。
+- Task 45 Blueprint 英文 metadata 补丁：curated 分类/标签继续以中文 canonical 值保存并进入后端、Prompt 与存档；`en-US` 只在前端显示英文标签并允许英文搜索，`zh-CN` 保持中文，未映射自由值原样回退。不得借此改变 API/schema、候选集合或根 README 的分支定位。
 - Milestone 8 将生成执行扩展为进程级固定 3 个并行运行槽；第 4 个请求在创建 attempt、改变草稿状态和调用 Provider 前返回 `PTS_GEN_BUSY`，提示最多同时运行 3 个任务并由用户稍后手动重试。
 - 三个运行任务必须按 draftId/attemptId 隔离 owner、task、cancel、NDJSON 和进度；完成、失败、取消、删除或异常 cleanup 只释放自己的槽。
 - M8 不实现 QUEUED 状态、排队、排位、自动补位或队列持久化。完整队列留到未来在线化或数据库/分布式消息队列/worker 架构时重新设计。
