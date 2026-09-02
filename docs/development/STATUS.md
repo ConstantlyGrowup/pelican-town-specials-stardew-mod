@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_2_release_candidate |
-| project_phase | Task 46 已同步 main/MVP；v1.5.2 本地 RC 门禁（bundle + installer）全绿，待推送与 tag |
+| overall_state | v1_5_3_release_active |
+| project_phase | v1.5.2 已发布；Task 47 已在 MVP/main 本地提交，正在准备 v1.5.3 版本链与完整发布门禁 |
 | product_implementation_started | true |
-| active_session_id | none |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
+| active_session_id | `2026-09-02-v1-5-3-release` |
+| active_session_state | active |
+| active_session_type | release |
+| current_task | v1.5.3 版本链、Windows 发布门禁、双分支 push/tag/Release 核验 |
 | blocker | none |
-| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
+| next_action | `luna_worker` 更新版本链 → `detector` 审阅 → 本地完整构建/安装验收 → push 双分支/tag → 核验 Release |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 当前 Git 状态事实
@@ -25,17 +25,19 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | MVP：Task 46 `40b2a6e`、版本链 `d51164b`；main：`23232cd`；v1.5.2 tag 待推送 |
+| 最新提交 | MVP：Task 46 `40b2a6e`、版本链 `d51164b`、RC 证据 `40466ef`；main：`23232cd` / `953e22f` / `14a3915`；tag `v1.5.2` 指向 `40466ef` |
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。 |
-| 最新发布 | v1.5.1；GitHub Actions run `33464868361` success；正式 Release 非 draft/pre-release；setup.exe（43,505,824 B）、portable ZIP（48,535,518 B）与 SHA256SUMS 已独立下载并逐项核验一致。 |
-| 当前工作树范围 | Task 46 产品补丁与版本链已提交，RC 证据文档随本提交进入；推送、tag 与 Release 核验后收口。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
+| 最新发布 | v1.5.2；GitHub Actions run `33470806371` success；正式 Release 非 draft/pre-release；setup.exe（43,502,645 B）、portable ZIP（48,536,844 B）与 SHA256SUMS 已独立下载并逐项核验一致。 |
+| 当前工作树范围 | Task 46 产品、版本链与 RC 证据均已推送；当前只提交最终发布事实。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
 
-## 已关闭 Task 46 / v1.5.2 Release Session（release_candidate）
+## 已关闭 Task 46 / v1.5.2 Release Session（released）
 
 - 英文界面下生成报错横幅（Blueprint / Ask Gus / 系统级）按后端错误码映射英文文案；未知错误码回退后端消息；中文界面除 `PTS_PROVIDER_IMAGE_INVALID` 改为友好中文外行为不变。
 - MVP：`40b2a6e`；main：`23232cd`。两分支补丁内容 diff 为空；两份根 README 无产品补丁差异。
 - 验证：frontend 全量 `197 passed`（含新增 4 个本地化用例）、ESLint、TypeScript 全绿；无 API 改动。
 - 版本链 v1.5.2（`d51164b`）：repo 门禁 `52 passed`；`build_windows.ps1` 全流程绿（backend `891 passed`、OpenAPI drift、ignore policy、PyInstaller、EXE 图标/版本身份、bundle 内容门）；`build_installer.ps1` 产出 `PelicanTownSpecials-Setup-v1.5.2.exe`。
+- main 已推送至 `14a3915`，MVP 已推送至 `40466ef`；tag `v1.5.2` 已触发 run `33470806371` success。
+- Release 三项资产已独立下载；SHA256：setup `32390ec7d9411ad6489d06d362ce4aedbcd50077bbdb8cfa451dccda4c8990a5`，portable ZIP `290bfc9c46248ddaa79fc6e6fe82e9590bbd46a9119779223168037d4f0b2632`，与 `SHA256SUMS.txt` 一致。
 - 完整会话记录见 `docs/development/sessions/2026-09-01-task-46-generation-error-localization-release.md`。
 
 ## 已关闭 Task 45 / v1.5.1 Release Session（released）
