@@ -6,10 +6,11 @@
 # the notes always match the artifacts they describe.
 #
 # Run from anywhere; the script locates the repo root via $PSScriptRoot.
-#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.2 -OutputFile RELEASE_NOTES.md
+#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.3 -OutputFile RELEASE_NOTES.md
+# v1.5.3 (2026-09-02): Task 47 public trial model/quota hotfix; personal settings unchanged.
 
 param(
-    [string]$Version = "1.5.2",
+    [string]$Version = "1.5.3",
     [string]$OutputFile = ""
 )
 
@@ -23,7 +24,13 @@ $body = @"
 感谢使用「鹈鹕镇新菜单」！这是一个本地运行、为《星露谷物语》生成自定义食谱
 内容包的桌面工具。
 
-## v$normalized / 报错信息本地化补丁
+## v$normalized / 公共试用模型与额度热修复
+
+- 公共试用使用 `gpt-image-2`，总额度为 5 次。
+- 旧用户升级后会一次性恢复完整 5 次（仅对合法的 v1/v2 试用状态执行一次迁移，之后不会重复重置）。
+- 个人设置不受影响；已保存的个人服务与图像模型仍保持原设置。
+
+## v1.5.2 / 报错信息本地化补丁
 
 - 英文界面的生成报错信息（蓝图、问问 Gus 与系统级生成错误）现在会显示英文提示。
 - 中文界面保持原有提示内容不变。

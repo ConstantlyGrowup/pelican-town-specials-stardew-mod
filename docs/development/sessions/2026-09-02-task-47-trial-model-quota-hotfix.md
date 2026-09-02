@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-09-02-task-47-trial-model-quota-hotfix` |
-| status | `auto_accepted`（detector PASS，用户已预授权双分支推送与 Release） |
+| status | `committed`（detector PASS；双分支本地提交完成） |
 | session_type | `product_patch` |
 | owner | Codex 主 Agent（`luna_worker` 实施，`detector` 独立审阅） |
 | started_at | `2026-09-02` |
@@ -43,3 +43,5 @@
 - Round 1 worker 已按最小范围修复：v2/v3 归一化写入 canonical `providerPreference` 后移除 `provider_preference`，新增 snake_case v2 迁移回归。主 Agent相关回归 `80 passed`；Ruff、mypy 96 files、diff-check 全绿，等待同一 detector 封闭复审。
 - detector round 1 封闭复审 `PASS`：T47-003/T47-006 通过，`must_fix=[]`、`scope_delta=none`，实际路由为 implementer `gpt-5.6-luna/max`、review `gpt-5.6-sol/medium`。
 - T47-001..006 全部满足；按普通 Task 自动路径进入 `auto_accepted`，准备创建一个产品+控制面 focused commit，不包含 Key、构建产物或历史未跟踪目录。
+- MVP focused commit：`3add397 fix: refresh public trial access`；main 产品提交：`b0dcc38 fix: refresh public trial access`。main 只同步两份产品文件，保留两分支各自 README/控制面边界。
+- 产品 Session 关闭；发布交接到 `2026-09-02-v1-5-3-release`。

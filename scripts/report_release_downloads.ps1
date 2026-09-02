@@ -4,10 +4,11 @@
 # API.  ``-FixturePath`` replaces the request for offline/reproducible tests.
 # The installer and portable ZIP totals intentionally remain separate: GitHub
 # may reset an asset's count when the asset is replaced or re-uploaded.
+# v1.5.3 (2026-09-02): report the current patch release tag by default.
 
 param(
     [string]$Repository = "ConstantlyGrowup/pelican-town-specials-stardew-mod",
-    [string]$Tag = "v1.5.2",
+    [string]$Tag = "v1.5.3",
     [string]$FixturePath = ""
 )
 

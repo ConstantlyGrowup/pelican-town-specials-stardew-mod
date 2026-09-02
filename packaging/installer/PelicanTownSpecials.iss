@@ -9,9 +9,10 @@
 ; PtsBundleDir / PtsOutputDir / PtsAppVersion are injected by
 ; scripts/build_installer.ps1 via ISCC /D defines; the defaults below make a
 ; plain `ISCC PelicanTownSpecials.iss` work from packaging/installer.
+; v1.5.3 (2026-09-02): Task 47 public trial model/quota hotfix; personal settings unchanged.
 
 #ifndef PtsAppVersion
-  #define PtsAppVersion "1.5.2"
+  #define PtsAppVersion "1.5.3"
 #endif
 #ifndef PtsBundleDir
   #define PtsBundleDir "..\..\dist\PelicanTownSpecials-windows-x64"

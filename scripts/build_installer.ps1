@@ -14,12 +14,13 @@
 #   6. Print the SHA-256 for downstream release checksumming.
 #
 # Run from anywhere; the script locates the repo root via $PSScriptRoot.
+# v1.5.3 (2026-09-02): Task 47 public trial model/quota hotfix; personal settings unchanged.
 
 param(
     [string]$BundleDir = "",
     [string]$IsccPath = "",
     [string]$OutputDir = "",
-    [string]$Version = "1.5.2"
+    [string]$Version = "1.5.3"
 )
 
 $ErrorActionPreference = 'Stop'
