@@ -98,3 +98,7 @@ Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记
 - Task 9 自治提交范式实验已成功（2026-08-04 用户确认）；普通 Task 的 `PASS` 自动进入 `auto_accepted` 并创建本地 focused commit，Milestone 才进入用户验收和 push。
 
 开始任何工作前还必须读取 `docs/development/REVIEW_PROTOCOL.md` 和 `docs/development/CONTEXT_PACKET_SCHEMA.md`。
+
+## Milestone 12 量化评测实施（2026-09-03，已获授权）
+
+用户提供 starvalley_quant_evaluation_plan_v2.pdf 并要求构建里程碑与 Task；随后要求前置无人工输入的工作，并明确授权开始实施、到需要人工参与时停止。计划 docs/plans/2026-09-03-milestone-12-quant-evaluation.md v1.1：Task 50 最小工具与 Current/Embedding 接线准备 → Task 51 数据构建/标签核对 → Task 52 Current 正式评测 → Task 53 Embedding 正式对照/资源测量 → Task 54 20 组真实 E2E 人审 → Task 55 汇总与最终清理。Task 50 不等待原图、人审标签或已有成本表；数据标签仍需在正式计分前核对，E2E 后移执行前人工清除 synthetic Memory，避免污染正常生成。最低 30 Canonical/60 Positive/10 Negative、Top 5/0.85 保持；复用当前 workspace 和小脚本，无平台/ANN/向量库/新服务，Embedding 不进入生产包。任务均未实施，执行前置按阶段满足，不把后期人工材料作为前期工具开发门槛。状态以 STATUS.md 为准。

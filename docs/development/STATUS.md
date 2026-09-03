@@ -6,16 +6,23 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | task49_committed_local |
-| project_phase | Task 49 上游分析命名一致性与 Canonical 0.85 阈值已通过独立审阅/验收，本地提交；正式 Release 仍为 v1.5.4 |
+| overall_state | milestone12_plan_accepted |
+| project_phase | M12 v1.1 已获实施授权，即将启动 Task 50；正式 Release 仍为 v1.5.4 |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | committed |
 | active_session_type | none |
-| current_task | none；Task 49 已本地完成 |
+| current_task | Task 50 待启动 |
 | blocker | none |
-| next_action | 等待用户安排真实命名一致性/召回测试或授权后续工作；未授权 push/tag/Release |
+| next_action | 按已接受 M12 v1.1 实施 Task 50；持续推进到实际需要人工参与处停止；不 push/发布 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
+
+## 已关闭 Milestone 12 规划 Session
+
+- 计划：`docs/plans/2026-09-03-milestone-12-quant-evaluation.md`；Session：`docs/development/sessions/2026-09-03-milestone-12-quant-evaluation-planning.md`。
+- 用户提供 3 页量化收尾 PDF，要求建立下一里程碑与任务拆解；v1.1 新增前置工具准备，Task 50–55 依次为工具/对照接线、约 30 Canonical/60 Positive/10 Negative 数据与标签、Current 正式评测、Embedding 正式对照、20 组 E2E 人审、汇总与最终清理。
+- 最低完成规模不含 90 Query/大池扩展；不建平台、不变更生产召回策略、Top 5/0.85 固定、复用当前开发 workspace。
+- 本轮仅规划及顺序修订；用户认可总体方向并要求人工工作后排。Task 50 无原图/人工标签前置；E2E 后移前先清除 synthetic Memory。无产品源码改动、模型下载、真实模型调用或 Memory 写入/删除；2026-09-03 用户随后明确授权开始实施，在实际需要人工介入处停止。
 
 ## 已关闭 Task 49 Session（committed / local only）
 
