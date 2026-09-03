@@ -20,7 +20,7 @@ param(
     [string]$BundleDir = "",
     [string]$IsccPath = "",
     [string]$OutputDir = "",
-    [string]$Version = "1.5.3"
+    [string]$Version = "1.5.4"
 )
 
 $ErrorActionPreference = 'Stop'

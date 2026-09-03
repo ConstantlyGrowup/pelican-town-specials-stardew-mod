@@ -9,6 +9,7 @@
 # version-drift gate (scripts/check_release_version.ps1) fails the build if the
 # requested version does not match packaging/pyinstaller/version_info.txt, so a
 # Release can never carry a mislabeled artifact.
+# v1.5.4 (2026-09-03): Cookbook batch delete for selected dishes.
 # v1.5.3 (2026-09-02): Task 47 — public trial uses gpt-image-2 with five
 # opportunities; legacy trial state resets once on upgrade and personal settings stay unchanged.
 # v1.5.2 (2026-09-01): Localized generation error banners for the English UI.
@@ -19,9 +20,9 @@ on:
   workflow_call:
     inputs:
       version:
-        description: Release version without a leading v (e.g. 1.5.3)
+        description: Release version without a leading v (e.g. 1.5.4)
         required: false
-        default: '1.5.3'
+        default: '1.5.4'
         type: string
       telemetry_host:
         description: HTTPS origin for the public Release telemetry capture endpoint; empty keeps telemetry disabled.
