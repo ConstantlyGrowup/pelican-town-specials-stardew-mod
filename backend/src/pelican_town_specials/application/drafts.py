@@ -736,6 +736,13 @@ class DraftService:
             referenced.update(self._draft_asset_ids(other))
         for archive in self._archives.list_active():
             referenced.update(self._visual_asset_ids(archive.visuals))
+        # A failed generation retains its checkpoint assets until the existing
+        # orphan-GC policy reclaims them.  Include checkpoints from other
+        # drafts so deduplicated icons are never removed while still eligible
+        # for continuation.
+        referenced.update(
+            self._attempts.list_checkpoint_asset_ids(excluding=excluding)
+        )
         return referenced
 
     @staticmethod

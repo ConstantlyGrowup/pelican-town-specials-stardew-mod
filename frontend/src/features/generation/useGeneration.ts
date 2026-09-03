@@ -47,8 +47,10 @@ type UseGenerationOptions = {
  *   tab), the persisted attempt hydrates the store and the progress endpoint is
  *   polled until the attempt terminates. The module store is a cache; the
  *   server snapshot wins on conflict.
- * - `begin` starts a fresh NDJSON stream; `cancel` awaits the backend `/cancel`
- *   (server rolls the draft back) before clearing local stream state.
+ * - `begin` starts the default NDJSON stream (the backend resumes a compatible
+ *   checkpoint or starts a new attempt); `restart` starts explicitly from
+ *   scratch. `cancel` awaits the backend `/cancel` (server rolls the draft
+ *   back) before clearing local stream state.
  */
 export function useGeneration({
   draftId,
@@ -231,14 +233,25 @@ export function useGeneration({
     };
   }, [running, draftId, queryClient, pollIntervalMs, readLatestProgress]);
 
+  const start = useCallback(
+    (restart: boolean) => {
+      progressReadSequenceRef.current += 1;
+      notifiedAttemptRef.current = null;
+      beginGeneration(draftId, onLocalSuccess, {
+        streamError: copy.generationStreamError,
+        cancelError: copy.cancelStreamError,
+      }, { restart });
+    },
+    [draftId, onLocalSuccess, copy.generationStreamError, copy.cancelStreamError],
+  );
+
   const begin = useCallback(() => {
-    progressReadSequenceRef.current += 1;
-    notifiedAttemptRef.current = null;
-    beginGeneration(draftId, onLocalSuccess, {
-      streamError: copy.generationStreamError,
-      cancelError: copy.cancelStreamError,
-    });
-  }, [draftId, onLocalSuccess, copy.generationStreamError, copy.cancelStreamError]);
+    start(false);
+  }, [start]);
+
+  const restart = useCallback(() => {
+    start(true);
+  }, [start]);
 
   const cancel = useCallback(async () => {
     progressReadSequenceRef.current += 1;
@@ -255,6 +268,7 @@ export function useGeneration({
     trialUsage: state.trialUsage,
     error: state.error,
     begin,
+    restart,
     cancel,
   };
 }

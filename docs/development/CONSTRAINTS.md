@@ -6,10 +6,10 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.12 | v1.5.0 已发布本地版协议，并链接 Milestone 9/10/11 与 Task 36.1/36.2 编码扩展 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.15 | 本地版协议，并链接 Milestone 9/10/11、Task 36.1/36.2/49 与 Task 56 故障续作扩展 |
 | `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.1 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
 | `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.2 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；已实施、独立审阅并随 v1.4.0 发布 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.5 | 已完成并发布 Task 1–44，记录 Milestone 11 最终顺序、补丁与发布证据 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.8 | Task 1–48 已发布，Task 49 已推送未发布；M12 Task 50–55 搁置，Task 56 已验收并获提交推送授权 |
 | `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.1 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
 | `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.2 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已实施、验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已验收并随 v1.4.0 发布 |
@@ -95,6 +95,17 @@
 
 ## Milestone 12 评测范围（已授权实施，非当前生产机制）
 
+2026-09-03 用户最新指令暂停整条 M12，Task50 保留在验证阶段，不继续执行或清理数据；等待重新授权。
+
 用户 2026-09-03 请求依据量化收尾 PDF 建立 Task，随后要求无人工前置工作优先；v1.1 为 Task 50–55。M9 的生产无 Embedding/只展示耗时成本规则保留；M12 单独规划本地开发评测：20 组真实 E2E、约 30 Canonical/60 同菜 Query/10 负例、当前检索与一个 CPU Embedding 的同池对照，汇总已有实验后人工清理。只允许必要评测脚本、开发依赖组及保持默认行为的内部 retriever 注入；无 UI/API/遥测/安装包扩张。Top 5 与 0.85 固定，模型错误保留分母，标签不能泄露给 Matcher；使用当前 workspace，不默认删除或重置用户数据。规划文档不是执行、付费或清理授权。详见 docs/plans/2026-09-03-milestone-12-quant-evaluation.md。
 
 M12 v1.1 调序：Task 50 先实现全部必要脚本/记录模板/Current 与单 CPU Embedding 接线，以 fake 数据和本地 smoke 验收；Task 51–53 再构造并核对语料、正式评测；Task 54 后置 20 组 E2E 人审，执行前人工清除合成 Memory；Task 55 汇总/最终清理。原图、已有实验数据只在对应后期 Task 就绪前提供；人工标签不得晚于正式计分。2026-09-03 用户已授权开始实施，到真正需要人工参与时停止；允许工具开发、开发依赖及本地 CPU 模型准备，实际付费配置/预算与人工标签仍按阶段满足。
+
+## Task 56 Gus 故障续作（2026-09-03 用户授权）
+
+2026-09-04 已完成实现/验证，用户实测验收并授权提交推送 MVP 分支；不修改 main 或正式 v1.5.4 安装包。M12 仍暂停。
+
+- 成功阶段输出写入本地 typed checkpoint，Provider 故障或进程中断后可由用户手动继续同一 Gus 方案；不自动续跑。只保存已校验的数据和受管资产引用，无 Key、Provider 原始正文或临时 URL。
+- 仅同 draft/source/revision/language/kind/catalog/protocol 兼容时复用。新配置/新 Key 可以继续旧候选；不回放旧凭据。损坏/不兼容时安全回退普通生成。
+- INITIAL 与 FULL_REGENERATE 失败均可继续；显式完整重新生成始终从头，旧成功稿到新稿全部成功才原子替换。成功、主动取消、拒绝/删除使 checkpoint 失效。
+- Blueprint 不扩展；3 槽/单草稿单 owner、失败不扣试用、显式个人服务接管、Canonical 仅正式存档登记均保留。详情和冻结验收见 Task56 Packet。

@@ -24,6 +24,7 @@ from pelican_town_specials.application.drafts import DraftService
 from pelican_town_specials.application.generation import GenerationService
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind
+from pelican_town_specials.domain.common import GenerationStage
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.persistence.asset_store import FileAssetStore
@@ -661,3 +662,24 @@ def test_progress_reflects_finished_terminal_state(
     assert body["active"] is False
     assert body["attempt"] is not None
     assert body["attempt"]["status"] == "SUCCEEDED"
+
+
+def test_failed_provider_progress_exposes_resume_flag_and_error_detail(
+    gen_services: GenServices,
+    gen_auth_client: ApiClient,
+) -> None:
+    draft_id = _create_ask_gus_draft(gen_services, gen_auth_client)
+    gen_services.gateway.fail_stage = GenerationStage.ICON_GENERATION_AND_NORMALIZATION
+
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+    )
+    assert response.status_code == 200
+    events = [json.loads(line) for line in response.text.splitlines() if line]
+    assert events[-1]["type"] == "attempt.failed"
+    assert events[-1]["error"]["details"]["progressSaved"] is True
+
+    status, body = _progress(gen_services, gen_auth_client, draft_id)
+    assert status == 200
+    assert body["attempt"]["progressSaved"] is True

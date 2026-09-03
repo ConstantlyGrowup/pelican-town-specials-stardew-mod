@@ -1097,6 +1097,8 @@ export interface components {
             /** Finishedat */
             finishedAt?: string | null;
             error?: components["schemas"]["ErrorSummary"] | null;
+            /** Progresssaved */
+            progressSaved?: boolean;
             /** Trialused */
             trialUsed?: boolean;
             /** Trialremaining */
@@ -2112,7 +2114,9 @@ export interface operations {
     };
     generate_draft_api_v1_drafts__draft_id__generate_post: {
         parameters: {
-            query?: never;
+            query?: {
+                restart?: boolean;
+            };
             header?: never;
             path: {
                 draft_id: string;

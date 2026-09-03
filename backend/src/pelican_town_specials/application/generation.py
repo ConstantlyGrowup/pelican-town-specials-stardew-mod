@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from pelican_town_specials.domain.common import DraftMode
 from pelican_town_specials.domain.draft import (
+    AttemptStatus,
     DraftRecord,
     DraftStatus,
     GenerationAttemptKind,
@@ -40,7 +41,12 @@ class GenerationService:
             telemetry if telemetry is not None else NoopTelemetryRecorder()
         )
 
-    def begin_generation(self, draft_id: UUID) -> AsyncIterator[str]:
+    def begin_generation(
+        self,
+        draft_id: UUID,
+        *,
+        restart: bool = False,
+    ) -> AsyncIterator[str]:
         """Validate the draft and start a generation attempt.
 
         Returns an iterator over NDJSON lines. AppError (404 draft missing,
@@ -59,7 +65,10 @@ class GenerationService:
             )
             raise
         command = GenerationCommand(
-            draftId=draft_id, kind=kind, requestId=uuid4()
+            draftId=draft_id,
+            kind=kind,
+            requestId=uuid4(),
+            restart=restart,
         )
         if kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
             events = run_blueprint_preview(self._orchestrator, command)
@@ -85,7 +94,10 @@ class GenerationService:
         if tracked:
             await self._orchestrator.await_cancelled(attempt_id)
             return True
-        return self._orchestrator.recover_interrupted(draft_id)
+        return self._orchestrator.recover_interrupted(
+            draft_id,
+            invalidate_checkpoint=True,
+        )
 
     def recover_interrupted(self, draft_id: UUID) -> bool:
         """Roll a previously-generating draft back to a recoverable status.
@@ -110,10 +122,24 @@ class GenerationService:
                 draft_id=draft_id, active=False, attempt=None
             )
         attempt = self._orchestrator.attempts.get(attempt_id)
+        public_attempt = GenerationAttemptPublic.from_attempt(attempt)
+        if attempt.status in {
+            AttemptStatus.FAILED,
+            AttemptStatus.INTERRUPTED,
+        }:
+            public_attempt = public_attempt.model_copy(
+                update={
+                    "progress_saved": self._orchestrator.compatible_checkpoint(
+                        draft,
+                        attempt,
+                    )
+                    is not None
+                }
+            )
         return GenerationProgressPublic(
             draft_id=draft_id,
             active=draft.active_attempt_id is not None,
-            attempt=GenerationAttemptPublic.from_attempt(attempt),
+            attempt=public_attempt,
         )
 
     def _resolve_kind(self, draft_id: UUID) -> GenerationAttemptKind:

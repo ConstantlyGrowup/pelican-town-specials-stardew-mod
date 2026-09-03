@@ -211,6 +211,11 @@ class GenerationAttemptPublic(StrictModel):
     started_at: datetime
     finished_at: datetime | None = None
     error: ErrorSummary | None = None
+    # This is derived at the application read boundary from a validated
+    # compatible private checkpoint. It intentionally is not persisted on the
+    # internal attempt record so stale/corrupt staging can never advertise
+    # resumable progress.
+    progress_saved: bool = Field(default_factory=lambda: False, alias="progressSaved")
     trial_used: bool = Field(default_factory=lambda: False)
     trial_remaining: int | None = Field(default=None, ge=0)
 

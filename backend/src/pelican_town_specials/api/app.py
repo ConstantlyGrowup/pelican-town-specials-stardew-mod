@@ -512,7 +512,7 @@ def _default_open_folder() -> Callable[[Path], None] | None:
     exports directory before invoking this adapter (ruling R17-3).
     """
     if os.name == "nt":
-        return os.startfile  # type: ignore[return-value]
+        return os.startfile  # type: ignore[return-value,unused-ignore]
     return None
 
 

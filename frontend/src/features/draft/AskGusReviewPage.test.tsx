@@ -422,14 +422,16 @@ describe("ask gus review", () => {
   });
 
   it("keeps the old result visible while full regeneration streams", async () => {
+    const generateUrls: string[] = [];
     server.use(
       http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
-      http.post("/api/v1/drafts/:draft_id/generate", () =>
-        new Response(
+      http.post("/api/v1/drafts/:draft_id/generate", ({ request }) => {
+        generateUrls.push(request.url);
+        return new Response(
           '{"type":"attempt.started","attemptId":"a-1"}\n{"type":"stage.started","stage":"DISH_ANALYSIS","ordinal":2,"total":9}\n',
           { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
-        ),
-      ),
+        );
+      }),
     );
     renderPage();
 
@@ -440,6 +442,8 @@ describe("ask gus review", () => {
 
     expect(await screen.findByText(copy.preparingNewResult)).toBeVisible();
     expect(screen.getByText("南瓜汤")).toBeVisible();
+    expect(generateUrls).toHaveLength(1);
+    expect(new URL(generateUrls[0]).searchParams.get("restart")).toBe("true");
   });
 
   it("restores the old result when full regeneration fails", async () => {
@@ -671,6 +675,7 @@ describe("ask gus review", () => {
   });
 
   it("starts an initial generation for a fresh DRAFT", async () => {
+    const generateUrls: string[] = [];
     const getSpy = vi
       .fn()
       .mockReturnValueOnce(
@@ -679,12 +684,13 @@ describe("ask gus review", () => {
       .mockReturnValueOnce(HttpResponse.json(askGusDraft({ status: "REVIEWABLE", revision: 3 })));
     server.use(
       http.get("/api/v1/drafts/:draft_id", getSpy),
-      http.post("/api/v1/drafts/:draft_id/generate", () =>
-        new Response(
+      http.post("/api/v1/drafts/:draft_id/generate", ({ request }) => {
+        generateUrls.push(request.url);
+        return new Response(
           '{"type":"attempt.started","attemptId":"a-1"}\n{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":3,"draft":{}}\n',
           { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
-        ),
-      ),
+        );
+      }),
     );
     renderPage();
 
@@ -694,6 +700,8 @@ describe("ask gus review", () => {
       await screen.findByRole("button", { name: copy.fullRegenerate }),
     ).toBeVisible();
     expect(getSpy).toHaveBeenCalledTimes(2);
+    expect(generateUrls).toHaveLength(1);
+    expect(new URL(generateUrls[0]).search).toBe("");
   });
 
   it("offers a retry entry for a FAILED draft", async () => {
@@ -786,6 +794,43 @@ describe("ask gus review", () => {
 
     expect(await screen.findByText("生成结果未通过校验。")).toBeVisible();
     expect(screen.getByRole("button", { name: copy.retryGeneration })).toBeVisible();
+  });
+
+  it("hydrates a saved-progress error after reload with a continue action", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () =>
+        HttpResponse.json(
+          askGusDraft({
+            status: "FAILED",
+            presentation: null,
+            gameplay: null,
+            visuals: null,
+          }),
+        ),
+      ),
+      http.get("/api/v1/drafts/:draft_id/generation", () =>
+        HttpResponse.json(
+          successfulProgress({
+            status: "FAILED",
+            error: {
+              code: "PTS_PROVIDER_UNAVAILABLE",
+              message: "服务暂时不可用。",
+              retryable: true,
+              requestId: "req-1",
+            },
+            progressSaved: true,
+          }),
+        ),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(copy.generationProgressSaved),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: copy.continueGeneration }),
+    ).toBeVisible();
   });
 
   it("persists personal takeover before starting the replacement generation", async () => {

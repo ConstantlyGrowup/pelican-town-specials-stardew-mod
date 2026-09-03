@@ -162,6 +162,11 @@ function trialUsageFromAttempt(
   return { remaining };
 }
 
+/** Only a validated server checkpoint can enable continuation after reload. */
+function attemptProgressSaved(attempt: GenerationAttemptPublic): boolean {
+  return attempt.progressSaved === true;
+}
+
 /**
  * Hydrate a draft's generation state from a read-only server snapshot.
  *
@@ -264,19 +269,52 @@ export function applyTerminalSnapshot(
       phase = "success";
       break;
     case "FAILED":
-      phase = "error";
-      error = attempt.error
-        ? {
-            code: attempt.error.code,
-            message: attempt.error.message,
-            retryable: attempt.error.retryable,
-            requestId: attempt.error.requestId,
-            recommendedAction: "",
-          }
-        : null;
+      {
+        const details =
+          attemptProgressSaved(attempt) ? { progressSaved: true } : undefined;
+        phase = "error";
+        error = attempt.error
+          ? {
+              code: attempt.error.code,
+              message: attempt.error.message,
+              retryable: attempt.error.retryable,
+              requestId: attempt.error.requestId,
+              recommendedAction: "",
+              ...(details ? { details } : {}),
+            }
+          : null;
+        break;
+      }
+    case "INTERRUPTED":
+      if (attemptProgressSaved(attempt)) {
+        const details = { progressSaved: true };
+        phase = "error";
+        error = attempt.error
+          ? {
+              code: attempt.error.code,
+              message: attempt.error.message,
+              retryable: attempt.error.retryable,
+              requestId: attempt.error.requestId,
+              recommendedAction: "",
+              details,
+            }
+          : {
+              code: "PTS_GEN_INTERRUPTED",
+              message: "",
+              retryable: true,
+              requestId: "",
+              recommendedAction: "",
+              details,
+            };
+      } else {
+        // An interrupted attempt without a valid checkpoint has no resumable
+        // output and keeps the historical terminal/cancelled presentation.
+        phase = "cancelled";
+      }
       break;
     default:
-      // CANCELLED / INTERRUPTED
+      // CANCELLED remains non-resumable even if a malformed response claims
+      // that progress was saved.
       phase = "cancelled";
       break;
   }
@@ -311,10 +349,16 @@ export type GenerationFallbackMessages = {
 
 type GenerationSuccessHandler = (attemptId?: string) => void | Promise<void>;
 
+export type GenerationStartOptions = {
+  /** Set only for an explicit full regeneration from the REVIEWABLE page. */
+  restart?: boolean;
+};
+
 export function beginGeneration(
   draftId: string,
   onSuccess?: GenerationSuccessHandler,
   fallback?: GenerationFallbackMessages,
+  options: GenerationStartOptions = {},
 ): void {
   const state = getState(draftId);
   state.controller?.abort();
@@ -338,9 +382,12 @@ export function beginGeneration(
 
   void (async () => {
     try {
-      await streamGeneration({ draftId, signal: controller.signal }, (event) => {
-        handleEvent(draftId, controller, event, onSuccess);
-      });
+      await streamGeneration(
+        { draftId, signal: controller.signal, restart: options.restart === true },
+        (event) => {
+          handleEvent(draftId, controller, event, onSuccess);
+        },
+      );
     } catch (cause) {
       const current = getState(draftId);
       if (current.controller !== controller) {

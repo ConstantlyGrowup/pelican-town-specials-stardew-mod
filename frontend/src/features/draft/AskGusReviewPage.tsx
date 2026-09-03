@@ -150,9 +150,10 @@ export function AskGusReviewPage() {
 
   const draft = query.data;
   const streaming = generation.phase === "streaming";
-  // Initial generation is reachable from DRAFT/READY; a FAILED draft retries
-  // through the same full INITIAL re-run path (the backend maps FAILED →
-  // INITIAL). A terminal ARCHIVED/DISCARDED draft offers no generation entry.
+  // Initial generation is reachable from DRAFT/READY; a FAILED draft uses the
+  // normal default begin path so the backend can resume a compatible checkpoint
+  // or start a new INITIAL attempt. A terminal ARCHIVED/DISCARDED draft offers
+  // no generation entry.
   const canGenerate =
     draft.status === "DRAFT" ||
     draft.status === "READY" ||
@@ -345,7 +346,7 @@ export function AskGusReviewPage() {
           >
             {copy.archiveDish}
           </button>
-          <button className="btn" type="button" onClick={generation.begin} disabled={streaming}>
+          <button className="btn" type="button" onClick={generation.restart} disabled={streaming}>
             {copy.fullRegenerate}
           </button>
           <button

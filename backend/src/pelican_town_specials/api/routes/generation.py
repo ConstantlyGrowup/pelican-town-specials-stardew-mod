@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import StreamingResponse
 
 from pelican_town_specials.api.dependencies import generation_service
@@ -39,9 +39,13 @@ class _ClosingStreamingResponse(StreamingResponse):
 
 
 @router.post("/drafts/{draft_id}/generate")
-def generate_draft(draft_id: UUID, request: Request) -> StreamingResponse:
+def generate_draft(
+    draft_id: UUID,
+    request: Request,
+    restart: bool = Query(default=False),
+) -> StreamingResponse:
     """Start Ask Gus generation and stream NDJSON GenerationEvent lines."""
-    stream = _service(request).begin_generation(draft_id)
+    stream = _service(request).begin_generation(draft_id, restart=restart)
     return _ClosingStreamingResponse(stream, media_type="application/x-ndjson")
 
 

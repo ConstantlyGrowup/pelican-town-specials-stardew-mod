@@ -1036,4 +1036,91 @@ describe("useGeneration", () => {
     expect(cancelHandler).toHaveBeenCalledTimes(1);
     expect(result.current.phase).toBe("cancelled");
   });
+
+  it("hydrates saved progress into a retryable terminal error after reload", () => {
+    act(() =>
+      hydrateGeneration("draft-1", {
+        draftId: "draft-1",
+        active: false,
+        attempt: {
+          attemptId: "failed-with-checkpoint",
+          draftId: "draft-1",
+          kind: "INITIAL",
+          sourceRevision: 1,
+          status: "FAILED",
+          currentStage: null,
+          stages: [],
+          totalStages: 9,
+          startedAt: "2026-09-03T00:00:00.000Z",
+          finishedAt: "2026-09-03T00:00:03.000Z",
+          error: {
+            code: "PTS_PROVIDER_UNAVAILABLE",
+            message: "服务暂时不可用。",
+            retryable: true,
+            requestId: "req-1",
+          },
+          progressSaved: true,
+        } as never,
+      }),
+    );
+
+    expect(getGenerationState("draft-1")).toMatchObject({
+      phase: "error",
+      error: {
+        code: "PTS_PROVIDER_UNAVAILABLE",
+        details: { progressSaved: true },
+      },
+    });
+  });
+
+  it("hydrates an interrupted checkpoint as a resumable error and keeps cancellation terminal", () => {
+    act(() =>
+      hydrateGeneration("draft-1", {
+        draftId: "draft-1",
+        active: false,
+        attempt: {
+          attemptId: "interrupted-with-checkpoint",
+          draftId: "draft-1",
+          kind: "INITIAL",
+          sourceRevision: 1,
+          status: "INTERRUPTED",
+          currentStage: null,
+          stages: [],
+          totalStages: 9,
+          startedAt: "2026-09-03T00:00:00.000Z",
+          finishedAt: "2026-09-03T00:00:03.000Z",
+          error: null,
+          progressSaved: true,
+        } as never,
+      }),
+    );
+    expect(getGenerationState("draft-1")).toMatchObject({
+      phase: "error",
+      error: {
+        code: "PTS_GEN_INTERRUPTED",
+        details: { progressSaved: true },
+      },
+    });
+
+    act(() =>
+      applyTerminalSnapshot("draft-1", {
+        attemptId: "cancelled-with-stale-flag",
+        draftId: "draft-1",
+        kind: "INITIAL",
+        sourceRevision: 1,
+        status: "CANCELLED",
+        currentStage: null,
+        stages: [],
+        totalStages: 9,
+        startedAt: "2026-09-03T00:00:00.000Z",
+        finishedAt: "2026-09-03T00:00:03.000Z",
+        error: null,
+        progressSaved: true,
+      } as never),
+    );
+    expect(getGenerationState("draft-1")).toMatchObject({
+      phase: "cancelled",
+      error: null,
+    });
+  });
 });

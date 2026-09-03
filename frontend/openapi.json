@@ -650,6 +650,16 @@
               "format": "uuid",
               "title": "Draft Id"
             }
+          },
+          {
+            "name": "restart",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Restart"
+            }
           }
         ],
         "responses": {
@@ -2689,6 +2699,10 @@
                 "type": "null"
               }
             ]
+          },
+          "progressSaved": {
+            "type": "boolean",
+            "title": "Progresssaved"
           },
           "trialUsed": {
             "type": "boolean",

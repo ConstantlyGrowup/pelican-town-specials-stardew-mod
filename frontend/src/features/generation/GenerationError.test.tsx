@@ -196,6 +196,75 @@ describe("GenerationError", () => {
     expect(screen.queryByText(/置信度过低/)).toBeNull();
   });
 
+  it("shows the saved-progress hint and continue label in Chinese", () => {
+    const onRetry = vi.fn();
+    render(
+      <GenerationError
+        error={envelope(
+          "PTS_PROVIDER_UNAVAILABLE",
+          "服务暂时不可用。",
+          { progressSaved: true },
+        )}
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(screen.getByText(catalogs["zh-CN"].generationProgressSaved)).toBeVisible();
+    const continueButton = screen.getByRole("button", {
+      name: catalogs["zh-CN"].continueGeneration,
+    });
+    expect(continueButton).toBeVisible();
+    fireEvent.click(continueButton);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the saved-progress hint and continue label in English", () => {
+    const onRetry = vi.fn();
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
+    render(
+      <LocaleProvider>
+        <GenerationError
+          error={envelope(
+            "PTS_PROVIDER_UNAVAILABLE",
+            "服务暂时不可用。",
+            { progressSaved: true },
+          )}
+          onRetry={onRetry}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText(catalogs["en-US"].generationProgressSaved)).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: catalogs["en-US"].continueGeneration,
+      }),
+    ).toBeVisible();
+  });
+
+  it("keeps the ordinary retry label when saved progress is not valid", () => {
+    const { rerender } = render(
+      <GenerationError
+        error={envelope("PTS_PROVIDER_UNAVAILABLE", "服务暂时不可用。", {
+          progressSaved: false,
+        })}
+        onRetry={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(catalogs["zh-CN"].generationProgressSaved)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: catalogs["zh-CN"].retryGeneration }),
+    ).toBeVisible();
+
+    rerender(
+      <GenerationError
+        error={envelope("PTS_PROVIDER_UNAVAILABLE", "服务暂时不可用.")}
+        onRetry={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(catalogs["zh-CN"].generationProgressSaved)).toBeNull();
+  });
+
   it("shows the English provider-key hint instead of the Chinese backend message", () => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, "en-US");
     render(

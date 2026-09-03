@@ -17,8 +17,11 @@ export type GenerationErrorEnvelope = {
   retryable: boolean;
   requestId: string;
   recommendedAction: string;
-  /** The trial contract permits only this redacted boolean detail. */
-  details?: { personalProviderConfigured?: boolean };
+  /** Only redacted boolean details cross the frontend boundary. */
+  details?: {
+    personalProviderConfigured?: boolean;
+    progressSaved?: boolean;
+  };
   [key: string]: unknown;
 };
 
@@ -50,11 +53,15 @@ function safeErrorDetails(
   if (!value || typeof value !== "object") {
     return undefined;
   }
-  const personalProviderConfigured =
-    (value as Record<string, unknown>).personalProviderConfigured;
-  return typeof personalProviderConfigured === "boolean"
-    ? { personalProviderConfigured }
-    : undefined;
+  const record = value as Record<string, unknown>;
+  const details: NonNullable<GenerationErrorEnvelope["details"]> = {};
+  if (typeof record.personalProviderConfigured === "boolean") {
+    details.personalProviderConfigured = record.personalProviderConfigured;
+  }
+  if (typeof record.progressSaved === "boolean") {
+    details.progressSaved = record.progressSaved;
+  }
+  return Object.keys(details).length > 0 ? details : undefined;
 }
 
 function sanitizeErrorEnvelope(value: unknown): GenerationErrorEnvelope {
@@ -176,6 +183,8 @@ export async function parseChunks(chunks: string[]): Promise<GenerationEvent[]> 
 
 export type StreamGenerationRequest = {
   draftId: string;
+  /** Explicit full regeneration; omitted/false means resume-compatible begin. */
+  restart?: boolean;
   signal?: AbortSignal;
 };
 
@@ -195,7 +204,9 @@ export async function streamGeneration(
     headers["X-PTS-CSRF"] = csrfToken;
   }
   const response = await fetch(
-    `/api/v1/drafts/${encodeURIComponent(request.draftId)}/generate`,
+    `/api/v1/drafts/${encodeURIComponent(request.draftId)}/generate${
+      request.restart === true ? "?restart=true" : ""
+    }`,
     {
       method: "POST",
       credentials: "same-origin",

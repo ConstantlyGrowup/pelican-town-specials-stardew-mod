@@ -27,6 +27,7 @@ from pelican_town_specials.application.settings import (
     SecretStore,
 )
 from pelican_town_specials.domain.common import StrictModel
+from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.errors import (
     AppError,
     trial_unavailable_error,
@@ -41,7 +42,6 @@ from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
     CanonicalMatchRequest,
     CanonicalMatchResponse,
-    DishAnalysis,
     DishAnalysisRequest,
     GeneratedDishCore,
     GeneratedImage,
