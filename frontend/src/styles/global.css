@@ -1999,6 +1999,12 @@ input[type="checkbox"] {
   margin: 12px 0 18px;
 }
 
+.pack-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .pack-bar__hint {
   display: block;
   color: var(--pts-ink-soft);

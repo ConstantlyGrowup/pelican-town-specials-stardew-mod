@@ -21,6 +21,15 @@ export function toggleSelection(dishId: string) {
   emit();
 }
 
+/** Clears the whole selection, e.g. after a successful batch action. */
+export function clearSelection() {
+  if (selected.size === 0) {
+    return;
+  }
+  selected = new Set<string>();
+  emit();
+}
+
 export function clearSelectionFor(dishId: string) {
   if (!selected.has(dishId)) {
     return;
