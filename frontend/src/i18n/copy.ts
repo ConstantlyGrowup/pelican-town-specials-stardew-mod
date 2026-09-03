@@ -308,6 +308,9 @@ const zh = {
   noDishSelected: "选择一个菜品查看详细信息。",
   packBarCount: "已选择 {count} 道菜",
   packBarHint: "把这些菜整理成菜单，带进游戏。",
+  batchDelete: "批量删除",
+  batchDeleteMessage: "删除后，选中的 {count} 道收集品以及对应素材将无法恢复。",
+  batchDeleteFailed: "部分选中的收集品删除失败，请重试。",
   statsTitle: "料理数据",
   noPreviewPlaceholder: "暂无预览图",
 
@@ -736,6 +739,9 @@ const en: Copy = {
   noDishSelected: "Select a dish to see its details.",
   packBarCount: "{count} dishes selected",
   packBarHint: "Turn these dishes into a menu and bring it into the game.",
+  batchDelete: "Delete selected",
+  batchDeleteMessage: "After deletion, the {count} selected items and their assets cannot be restored.",
+  batchDeleteFailed: "Some selected dishes could not be deleted. Please try again.",
   statsTitle: "Dish stats",
   noPreviewPlaceholder: "No preview yet",
 

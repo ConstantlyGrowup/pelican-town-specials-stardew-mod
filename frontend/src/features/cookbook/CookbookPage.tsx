@@ -1,13 +1,15 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSyncExternalStore, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient, assetUrl } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
 import { DishSlot } from "../../components/ui/DishSlot";
+import { PixelModal } from "../../components/ui/PixelModal";
 import { GameUiIcon } from "../../components/ui/GameAssetIcon";
 import type { components } from "../../api/generated/schema";
 import { useCopy } from "../../i18n/locale";
 import {
+  clearSelectionFor,
   getSelectedDishIds,
   subscribeSelection,
   toggleSelection,
@@ -37,7 +39,11 @@ async function loadCookbookDish(dishId: string): Promise<CookbookDishDetail> {
 export function CookbookPage() {
   const copy = useCopy();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeDishId, setActiveDishId] = useState<string | null>(null);
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchError, setBatchError] = useState(false);
   const selectedIds = useSyncExternalStore(subscribeSelection, getSelectedDishIds);
   const query = useQuery({
     queryKey: ["cookbook"],
@@ -64,6 +70,35 @@ export function CookbookPage() {
     ? query.data?.findIndex((dish) => dish.dishId === activeDish.dishId) ?? -1
     : -1;
   const activeDetailLoading = activeDetailIndex >= 0 && Boolean(detailQueries[activeDetailIndex]?.isLoading);
+
+  // The batch delete reuses the per-dish tombstone endpoint sequentially so
+  // the cascade (visuals, source drafts) keeps its single-dish guarantees;
+  // failures leave the remaining selection intact for a retry.
+  async function onConfirmBatchDelete() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) {
+      return;
+    }
+    setBatchConfirmOpen(false);
+    setBatchError(false);
+    setBatchBusy(true);
+    let failed = 0;
+    for (const dishId of ids) {
+      const { error } = await apiClient.DELETE("/api/v1/cookbook/{dish_id}", {
+        params: { path: { dish_id: dishId } },
+      });
+      if (error) {
+        failed += 1;
+      } else {
+        clearSelectionFor(dishId);
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: ["cookbook"] });
+    setBatchBusy(false);
+    if (failed > 0) {
+      setBatchError(true);
+    }
+  }
 
   return (
     <main className="cookbook-page">
@@ -175,21 +210,74 @@ export function CookbookPage() {
         </aside>
       </div>
 
+      {batchError && (
+        <div className="status-banner status-error" role="alert">
+          {copy.batchDeleteFailed}
+        </div>
+      )}
+
       <div className="pack-bar">
         <div>
           <strong>{copy.packBarCount.replace("{count}", String(selectedIds.size))}</strong>
           <span className="pack-bar__hint">{copy.packBarHint}</span>
         </div>
-        <button
-          className="btn btn-primary"
-          type="button"
-          disabled={selectedIds.size === 0}
-          onClick={() => navigate("/pack-menu")}
-          aria-label={copy.packMenu}
-        >
-          {copy.packMenu} →
-        </button>
+        <div className="pack-bar__actions">
+          {selectedIds.size > 0 && (
+            <button
+              className="btn btn-danger"
+              type="button"
+              disabled={batchBusy}
+              onClick={() => {
+                setBatchError(false);
+                setBatchConfirmOpen(true);
+              }}
+              aria-label={copy.batchDelete}
+            >
+              {copy.batchDelete}
+            </button>
+          )}
+          <button
+            className="btn btn-primary"
+            type="button"
+            disabled={selectedIds.size === 0 || batchBusy}
+            onClick={() => navigate("/pack-menu")}
+            aria-label={copy.packMenu}
+          >
+            {copy.packMenu} →
+          </button>
+        </div>
       </div>
+
+      {batchConfirmOpen && (
+        <PixelModal
+          title={copy.batchDelete}
+          onClose={() => setBatchConfirmOpen(false)}
+          footer={
+            <>
+              <button
+                className="btn btn-danger"
+                type="button"
+                disabled={batchBusy}
+                onClick={() => void onConfirmBatchDelete()}
+              >
+                {copy.deleteDish}
+              </button>
+              <button
+                className="btn"
+                type="button"
+                disabled={batchBusy}
+                onClick={() => setBatchConfirmOpen(false)}
+              >
+                {copy.cancelDelete}
+              </button>
+            </>
+          }
+        >
+          <p>
+            {copy.batchDeleteMessage.replace("{count}", String(selectedIds.size))}
+          </p>
+        </PixelModal>
+      )}
     </main>
   );
 }
