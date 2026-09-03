@@ -885,13 +885,76 @@ async def test_analyze_dish_en_us_uses_english_prompt(
 
     await gateway.analyze_dish(_analysis_request_en())
 
+    assert route.call_count == 1
     outbound = json.loads(route.calls[0].request.content.decode())
     prompt = outbound["messages"][0]["content"][0]["text"]
     assert "Identify this dish from the provided photo" in prompt
     assert "recognizedDish" in prompt
     assert "Return only a single JSON object, with no code blocks or extra text." in prompt
+    assert "Collapse common synonymous names for the same dish to one stable name" in prompt
+    assert "Tomato and Egg Stir-Fry" in prompt
+    assert "Preserve all real distinctions that define dish identity, including main ingredients, sauces" in prompt
+    assert "Tomato Egg Soup" in prompt
+    assert "do not invent or add speculative ingredients to improve recall" in prompt
+    assert "Do not output Chinese dish names in en-US" in prompt
+    assert outbound["response_format"]["type"] == "json_schema"
+    assert "temperature" not in outbound
     assert "菜品识别助手" not in prompt
     assert "只返回一个 JSON 对象" not in prompt
+
+
+@respx.mock
+async def test_analyze_dish_zh_cn_uses_stable_naming_prompt_and_json_schema(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON, ensure_ascii=False))
+    )
+
+    await gateway.analyze_dish(_analysis_request())
+
+    assert route.call_count == 1
+    outbound = json.loads(route.calls[0].request.content.decode())
+    prompt = outbound["messages"][0]["content"][0]["text"]
+    assert "同一道菜的常见同义表达要收敛到一个名称" in prompt
+    assert "番茄炒蛋" in prompt
+    assert "西红柿炒鸡蛋" in prompt
+    assert "不要并列输出别名，也不要添加创作性修饰" in prompt
+    assert "把“西红柿”归一为“番茄”、把“马铃薯”归一为“土豆”" in prompt
+    assert "保留所有会定义菜品身份的真实区别，包括主食材、酱汁、风味和做法" in prompt
+    assert "番茄蛋汤”与“番茄炒蛋”必须区分" in prompt
+    assert "不要为了提高召回而编造或补充推测原料" in prompt
+    assert "cuisine、cookingMethods、flavorProfile、summary 使用简短一致的表达" in prompt
+    assert "response_format" in outbound
+    assert outbound["response_format"]["type"] == "json_schema"
+    assert "temperature" not in outbound
+
+
+@respx.mock
+@pytest.mark.parametrize("language", [Language.ZH_CN, Language.EN_US])
+async def test_analyze_dish_json_only_keeps_bilingual_contract_without_schema(
+    gateway: OpenAICompatibleGateway,
+    language: Language,
+) -> None:
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON, ensure_ascii=False))
+    )
+
+    request = _analysis_request() if language is Language.ZH_CN else _analysis_request_en()
+    await gateway.analyze_dish(request, json_only=True)
+
+    assert route.call_count == 1
+    outbound = json.loads(route.calls[0].request.content.decode())
+    prompt = outbound["messages"][0]["content"][0]["text"]
+    if language is Language.EN_US:
+        assert "Collapse common synonymous names for the same dish to one stable name" in prompt
+        assert "Return only a single JSON object, with no code blocks or extra text." in prompt
+    else:
+        assert "同一道菜的常见同义表达要收敛到一个名称" in prompt
+        assert "只返回一个 JSON 对象，不包含代码块或额外文字。" in prompt
+    assert "response_format" not in outbound
+    assert "temperature" not in outbound
+    assert any(part.get("type") == "image_url" for part in outbound["messages"][0]["content"])
 
 
 @respx.mock

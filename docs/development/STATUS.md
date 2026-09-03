@@ -6,16 +6,23 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_4_released |
-| project_phase | Task 48（收集品批量删除）已随 v1.5.4 正式发布；GitHub Actions 与正式 Release 资产均完成核验 |
+| overall_state | task49_committed_local |
+| project_phase | Task 49 上游分析命名一致性与 Canonical 0.85 阈值已通过独立审阅/验收，本地提交；正式 Release 仍为 v1.5.4 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | released |
+| active_session_state | committed |
 | active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
+| current_task | none；Task 49 已本地完成 |
 | blocker | none |
-| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
+| next_action | 等待用户安排真实命名一致性/召回测试或授权后续工作；未授权 push/tag/Release |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
+
+## 已关闭 Task 49 Session（committed / local only）
+
+- 会话：`docs/development/sessions/2026-09-03-task-49-analysis-consistency.md`；contract `task49-analysis-consistency-20260903-v1`。
+- 双语上游分析 prompt 收敛常见同义菜名/原料，保留不同菜品本体与不确定性；最终 Canonical 阈值 `>=0.85` HIT，`0.849`/`0.80` MISS。本地评分、Top 5、schema、历史记忆和 temperature 省略不变。
+- luna_worker 实施、detector PASS（round 0），主 Agent 全量 `880 passed / 2 skipped`、最终 focused `76 passed`、Ruff/mypy/diff-check 全绿；已自动验收并本地 focused commit，本记录随同一提交收口。
+- 未调用真实 Provider，未验证真实一致性或命中率改善；未 push/发布，正式 v1.5.4 安装包仍使用旧 prompt/0.80。
 
 ## 当前 Git 状态事实
 
@@ -25,8 +32,8 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
-| 最新工作树范围 | Task 48 批量删除与 v1.5.4 版本链已提交；RC 证据随本提交；推送/tag/Release 核验后收口。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
+| v1.5.4 发布提交（历史） | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
+| 最新工作树范围 | Task 49 仅本地提交（本记录所在提交）；无产品 schema/UI/版本链变更。既有 prototype、samples、Claude worktree、发布说明与历史临时目录未跟踪，保持原样。 |
 
 ## 已关闭 v1.5.4 Release Session（released）
 

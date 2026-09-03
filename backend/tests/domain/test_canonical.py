@@ -64,7 +64,7 @@ def test_canonical_contract_constants_are_frozen() -> None:
     assert CANONICAL_REGISTRY_SCHEMA_VERSION == 1
     assert CANONICAL_MIN_VALID_COUNT == 2
     assert CANONICAL_CANDIDATE_LIMIT == 5
-    assert CANONICAL_MATCH_THRESHOLD == 0.80
+    assert CANONICAL_MATCH_THRESHOLD == 0.85
     assert CANONICAL_REUSE_CONTRACT_VERSION == "canonical-reuse-v1"
     assert CANONICAL_MATCH_PROMPT_VERSION == "canonical-match-v1"
 

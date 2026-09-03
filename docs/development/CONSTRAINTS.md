@@ -6,18 +6,18 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.8 | v1.5.0 已发布本地版协议，并链接 Milestone 9/10/11 与 Task 36.1/36.2 编码扩展 |
-| `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.0 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.12 | v1.5.0 已发布本地版协议，并链接 Milestone 9/10/11 与 Task 36.1/36.2 编码扩展 |
+| `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.1 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
 | `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.2 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；已实施、独立审阅并随 v1.4.0 发布 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.1 | 已完成并发布 Task 1–44，记录 Milestone 11 最终顺序、补丁与发布证据 |
-| `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.0 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.5 | 已完成并发布 Task 1–44，记录 Milestone 11 最终顺序、补丁与发布证据 |
+| `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.1 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
 | `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.2 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已实施、验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并推送 |
 | `docs/architecture/TRIAL_EXPERIENCE_TECHNICAL_DESIGN.md` v1.2 | Milestone 11 试用预留/完整成功确认、任意失败不扣、个人服务接管、结果快照及 Task 43/44；已随 v1.5.0 发布 |
 | `docs/plans/2026-08-30-milestone-11-trial-experience.md` v1.2 | Task 40–44 的依赖、Acceptance、测试、统一验收与 v1.5.0 发布结果 |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |
-| `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.2 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
+| `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.3 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
 | `design docs/StarValleyCook_第二期产品体验与品牌化设计_v1.1.docx` | 二期体验、首页/导航与品牌叙事（Git ignored） |
 | `StarValleyCook_项目设计源索引与状态快照.md` | 设计源索引、产品命名、阶段状态和文档同步线索；保持 ignored |
@@ -48,7 +48,7 @@
 - Mod 目标为 Stardew Valley 1.6.15、Content Patcher 2.9.0、纯 JSON/PNG 内容包；本地 Mods 路径只从 `PTS_STARDEW_MODS_DIR` 获取。
 - `AuthorName` 在工作区首次创建时生成并持久化为 `D<YYYYMMDD>`；身份/账号策略后移第四期重新讨论。
 - 第三期只规划并验证问问 Gus 的本地 Canonical 召回：可复用结构化词条与像素图标，但最终专属预览必须使用本次用户原图重新生成。
-- Milestone 9 冻结（2026-08-29 阈值校准）：全局有效 Canonical 至少 N=2；同语言现实原料主导 Top 5；模型只选最高候选且 `>=0.80`（包含边界 `0.80` 命中、`0.799` miss）；仅正式 Ask Gus 存档写入；完整重新生成/Blueprint 不召回；效果只衡量总耗时和真实单次任务成本。此前 `>=90%` 的当前口径已由本次 0.80 校准取代。
+- Milestone 9 冻结（2026-09-03 Task 49 阈值调整）：全局有效 Canonical 至少 N=2；同语言现实原料主导 Top 5；模型只选最高候选且 `>=0.85`（包含边界 `0.85` 命中、`0.849` 与 `0.80` miss）；仅正式 Ask Gus 存档写入；完整重新生成/Blueprint 不召回；效果只衡量总耗时和真实单次任务成本。此前 90% / 2026-08-29 的 0.80 均为历史开发口径；正式 v1.5.4 包仍为 0.80，Task 49 尚未发布。
 - Task 36.1 冻结：Canonical HIT 直接复用历史 icon、零图标生成；Ask Gus INITIAL miss、FULL_REGENERATE 与 Blueprint 必须以当前 Draft 原图作为单图 edit 参考生成新 icon，再沿用现有背景透明化和 16×16 归一化。不得新增图片调用次数、设置项、前端/API/schema 或相似度模型。
 - Task 36.2 冻结：面向官方与非官方 OpenAI-compatible 端点；官方 `gpt-5.6` 文本/视觉调用不得固定发送其不支持的 `temperature=0`，官方 `gpt-image-2` generation/edit 不发送 `response_format`，单图 edit 使用 `image`、多图使用有序重复 `image[]`；默认 `b64_json` 与兼容端点 URL 均继续解析。保持 Base URL/模型 ID 可配置，不新增 Provider SDK、设置项、API/schema、Provider 自动分支、额外调用或模型 fallback；真实 API 验证必须由用户明确授权。
 - 第三期使用 Python 标准库 SQLite 和 Registry 自有图标目录，不要求用户安装数据库；调用/步骤数只用于正确性测试，不作为产品指标。
@@ -88,3 +88,7 @@
 - Session 状态必须遵循 `planned → active → verification → awaiting_user_acceptance → accepted → committed`。
 - 默认必须等待用户验收后提交。纯后台且无功能变化的 Task，只有在自动测试和代码检查完全覆盖目标时才可自动审批；有疑问时升级用户 Review。
 - 提交使用用户配置的 Git 身份，不添加 Agent 署名；推送必须另行获得授权。
+
+## Task 49 上游分析一致性（2026-09-03 用户授权）
+
+双语图片分析 prompt 要求同义菜名优先同一常用名（如西红柿炒鸡蛋→番茄炒蛋），原料 normalizedName 与做法等字段稳定表达，保留本体差异和图像不确定性。schema、既有 Draft/Canonical、Provider 参数/调用数、本地评分与 Top 5 不变；不设置 temperature/seed，不声称真实输出确定性。最终阈值 0.85 是模型置信度门槛，不是本地加权分数。实现及验证遵守 Task 49 Packet，不产生真实模型费用。
