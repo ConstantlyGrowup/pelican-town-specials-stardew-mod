@@ -30,6 +30,11 @@ dev = [
     "PyInstaller>=6.14,<7",
 ]
 
+evaluation = [
+    "sentence-transformers==6.0.1",
+    "psutil>=7.2,<8",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/pelican_town_specials"]
 

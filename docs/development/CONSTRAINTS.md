@@ -109,3 +109,7 @@ M12 v1.1 调序：Task 50 先实现全部必要脚本/记录模板/Current 与�
 - 仅同 draft/source/revision/language/kind/catalog/protocol 兼容时复用。新配置/新 Key 可以继续旧候选；不回放旧凭据。损坏/不兼容时安全回退普通生成。
 - INITIAL 与 FULL_REGENERATE 失败均可继续；显式完整重新生成始终从头，旧成功稿到新稿全部成功才原子替换。成功、主动取消、拒绝/删除使 checkpoint 失效。
 - Blueprint 不扩展；3 槽/单草稿单 owner、失败不扣试用、显式个人服务接管、Canonical 仅正式存档登记均保留。详情和冻结验收见 Task56 Packet。
+
+## 2026-09-04 M12 恢复
+
+用户已重新授权继续 Task50及后续，到实际人工参与处停止；先完成Task50独立审阅，再准备待人审核对的数据。不运行未确认费用的真实Provider，不提前作人审判定，不删除用户记忆。前文暂停为历史状态。
