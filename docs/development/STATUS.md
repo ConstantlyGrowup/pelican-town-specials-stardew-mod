@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | task50_auto_accepted |
-| project_phase | M12 已按用户指令恢复；Task 50 审阅收尾；正式 Release 仍为 v1.5.4 |
+| overall_state | task52_pending_provider_budget |
+| project_phase | M12 Task51人审、冻结、入库与独立验收完成；Task52待模型/费用上限；正式Release仍v1.5.4 |
 | product_implementation_started | true |
-| active_session_id | 2026-09-03-task-50-evaluation-tools |
-| active_session_state | auto_accepted |
-| active_session_type | implementation |
-| current_task | M12 Task 50 已通过独立复审与主 Agent 验收 |
-| blocker | 无；用户已授权主 Agent 直接完成四项修复，仍保留独立 detector 复审 |
-| next_action | Task50 本地 focused commit 后启动 Task51，准备数据及人工核对表，实际需要人工参与时停止。20张E2E输入已验证并登记，尚未执行 |
+| active_session_id | none；最近关闭2026-09-04-task-51-evaluation-data |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | M12 Task52 真实Current评测，待执行授权前置 |
+| blocker | 需确认真实Matcher模型与费用上限；当前配置gpt-5.6-terra，尚无付费调用 |
+| next_action | 用户确认模型及费用上限后启动Task52；frozen-v1为30/60/10数据源，已有30条synthetic入库，原27条保留；Task54前按manifest清理。Task52–55未执行 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 已关闭 Task 56 Session（committed）
