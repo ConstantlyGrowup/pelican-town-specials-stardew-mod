@@ -15,7 +15,7 @@
 
 ## 当前工作模式
 
-2026-09-04 最新状态：Task 56「Gus Provider 故障后持久化续作」已实现、验证并获用户验收及提交推送 MVP 分支授权；合同见 `docs/plans/2026-09-03-task-56-gus-generation-resume.md`。成功阶段保存到现有本地 staging；Provider 故障/重启后手动继续，主动完整重新生成仍从头；不自动收费重放、不扩展 Blueprint。本次不修改 main、不打 tag/发布，正式安装包仍为 v1.5.4。M12 已按用户后续指令恢复：Task 50 正在补完独立审阅与修复，随后按计划推进至实际人工参与处暂停。精确状态以 STATUS.md 为准。
+2026-09-04 最新状态：Milestone 12 量化评测 Task 50–55 已全部完成并获用户整体验收，用户授权提交推送 MVP 分支及更新过时文档。指标稳定入口为 `docs/development/M12_QUANTITATIVE_RESULTS.md`；30 条 synthetic Memory 和 CPU 模型文件已按授权精确清除，原始测量与结果保留。完整冷启动批次时间无原记录，组件重建值不作为完整实测；费用、Token、耗时按用户 A–F 表的完整配对汇总。Task 56 已在 `f5a99aa` 提交并推送。当前无待实施 M12 Task；不自动启动新优化或重跑评测。本里程碑仅开发评测，不触发产品 Release，正式安装包仍为 v1.5.4。精确状态以 STATUS.md 为准。
 
 Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记忆与 Canonical 召回”Task 31–36、Task 36.1“原图参考像素图标生成补丁”和 Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”均已实现、独立审阅并验收；Canonical 当前开发命中阈值为 `0.85`（2026-09-03 用户调整，边界命中、`0.849` 与 `0.80` miss；正式 v1.5.4 包仍为 0.80）。Milestone 10“EXE 无感使用统计”Task 37–39 已在 Codex 全量接管范式下实现并通过 detector/主 Agent 全量验收，focused commits 为 `d198a3e`、`3600d09`、`c4c1bcf`。M10 在配置完整的 Release 后端静默记录最小 personless 人工事件，不改变 UI/API，不采集创作内容、Provider、设备指纹、IP/Geo 或页面行为，采集故障不得影响业务。用户于 2026-08-29 已配置 Repository Variables并接受首次验收数据直接参与匿名聚合；v1.4.0 已正式发布（GitHub Actions run `33228870083` success，setup.exe + portable ZIP + SHA256SUMS 均核验通过）。用户提供的 M9 对照样本仅 `n=2`，只作为正向实测信号，不承诺稳定节省。2026-08-30 用户已验收 Milestone 11“试用体验与可用性保护”规划并授权开发：Task 40–42 已完成；2026-08-31 用户验收确认失败不扣次修复有效，并追加“稍后重试→直接重试”、试用 Key 轮换、Task 43“蓝图分类/标签可直接移除”和 Task 44“试用不可用时放弃草稿并返回主页”。新增 UI Task 均经 `luna_worker` 实施、detector PASS，完整构建与 bundle smoke 全绿；用户已统一验收。v1.5.0 已正式发布（GitHub Actions run `33403142756` success）。Task 45“料理蓝图英文分类/标签显示与搜索”保持中文 canonical 存储不变，已同步 `main` 与 `feat/mvp-implementation` 并随 v1.5.1 正式发布（GitHub Actions run `33464868361` success）。Task 46“生成错误提示英文本地化”已同步两分支并随 v1.5.2 正式发布（GitHub Actions run `33470806371` success，setup.exe + portable ZIP + SHA256SUMS 均独立下载核验通过）。Task 47“公共试用模型/额度热修复”已通过 `luna_worker`、detector 与主 Agent验收：隐藏试用改用 `gpt-image-2`，额度为 5，合法 v1/v2 状态一次性迁移 schema v3 并为所有旧用户重置完整 5 次，个人默认模型不变；已随 v1.5.3 发布；Task 48 收集品批量删除已随 v1.5.4 发布并核验。当前正式版本为 v1.5.4。2026-09-03 用户授权 Task 49：优化上游双语分析命名一致性，将最终匹配阈值调到 0.85；保持 schema、历史记忆、temperature 省略与本地评分不变，已按 luna_worker → detector PASS → 主 Agent 流程完成本地验证与 focused commit（全量 880 passed/2 skipped，focused 76 passed）；已推送 MVP（2026-09-04 fetch 核验 54ffc68）、未发布，真实一致性和命中率效果待实测。后续完整队列、Redis、夜间批处理和多用户在线架构不属于第三期。
 
@@ -111,3 +111,8 @@ Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记
 
 ### 2026-09-04 Task50 收口更新
 Task50 四项修复已由用户授权主 Agent 接续完成，经独立 detector 封闭复审 PASS（36项测试），主 Agent 验收通过并本地提交，不推送。Task51按既有流程准备30/60/10数据与人工身份标签核对表；实际人审前停止。正式Release仍v1.5.4，20张E2E照片已登记。精确状态见STATUS。
+
+
+## 2026-09-04 M12 整体验收收口
+
+用户明确确认里程碑任务完成，并授权提交推送 `feat/mvp-implementation`。Task50/51 已有 focused commits `6042274` / `4edaa64`；Task52–55 的执行证据、指标文档和控制面统一收口。上方暂停、恢复与 Task50 验证记录均为历史，不再作为待办。后续仅按新用户任务继续；不自动删除剩余数据，不发布或修改 main。

@@ -20,6 +20,7 @@ docs/development/CONSTRAINTS.md
 - `STATUS.md`：唯一的当前状态真源，只描述当前 Session、工作树事实、阻塞和下一步。
 - `sessions/`：每个 Session 的追加式记录，说明状态如何变化以及哪些证据支持结论。
 - `CONSTRAINTS.md`：当前项目需要反复遵守的技术、产品、安全和 Git 约束。
+- [M12_QUANTITATIVE_RESULTS.md](M12_QUANTITATIVE_RESULTS.md)：量化评测指标入口，包含命中率、召回对照、计时边界、E2E 人审、用户提供的 Memory 消耗表与清理证据。
 
 ## 串行工作流程
 
@@ -33,7 +34,7 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-Task 1–46、Task 36.1/36.2、Milestone 9、Milestone 10 与 Milestone 11 均已完成审阅和验收。当前正式版本仍为 v1.5.2；Task 47 公共试用模型/额度热修复已通过独立审阅，正在同步 main/MVP 并准备 v1.5.3 Release。精确状态和下一步始终以 `STATUS.md` 为准。
+当前正式版本为 v1.5.4。M12 Task 50–55、追加指标整理及 CPU Embedding 模型文件清理均已完成并获用户整体验收；结果入口见上方指标文档。精确状态和下一步始终以 `STATUS.md` 为准。
 
 ## 分支文档边界
 

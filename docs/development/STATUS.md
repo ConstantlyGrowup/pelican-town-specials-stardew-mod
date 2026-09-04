@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | task52_pending_provider_budget |
-| project_phase | M12 Task51人审、冻结、入库与独立验收完成；Task52待模型/费用上限；正式Release仍v1.5.4 |
+| overall_state | m12_accepted |
+| project_phase | M12 Task50–55及追加指标整理/CPU模型清理已获用户整体验收；本次文档收口并获提交推送MVP授权。正式Release仍v1.5.4 |
 | product_implementation_started | true |
-| active_session_id | none；最近关闭2026-09-04-task-51-evaluation-data |
+| active_session_id | none；最近关闭2026-09-04-task-54-e2e |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | M12 Task52 真实Current评测，待执行授权前置 |
-| blocker | 需确认真实Matcher模型与费用上限；当前配置gpt-5.6-terra，尚无付费调用 |
-| next_action | 用户确认模型及费用上限后启动Task52；frozen-v1为30/60/10数据源，已有30条synthetic入库，原27条保留；Task54前按manifest清理。Task52–55未执行 |
+| current_task | 无；M12已验收关闭 |
+| blocker | 无 |
+| next_action | 按用户新任务继续；指标入口 docs/development/M12_QUANTITATIVE_RESULTS.md。保留本地评测证据，不自动追加评测、清理或发布。此次收口提交随已验收Task50/51提交一并推送MVP。 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 已关闭 Task 56 Session（committed）
@@ -23,7 +23,7 @@
 - Gus 成功阶段本地落盘，Provider 故障/重启后手动继续剩余步骤；显式完整重新生成仍从头，失败不扣试用。Blueprint 不变，不自动收费续跑。
 - 首轮 detector 提出的 Canonical 反序列化与试用错误分类问题均已修复；修复轮按 Session 所记用户授权由主 Agent 自审，不声称 detector 全量 PASS。
 - 验证记录：后端 901 passed / 2 skipped，前端 210 passed，repo 52 passed；提交前专项 19 passed，Ruff/mypy 97 files PASS。
-- 提交仅含 Task 56 产品、契约、测试、必要类型检查修复与控制文档；Task 50 评测实现保留未提交。正式发布包仍为 v1.5.4。
+- 提交仅含 Task 56 产品、契约、测试、必要类型检查修复与控制文档；Task 50 当时保留未提交，后续已在6042274独立提交并随M12统一推送。正式发布包仍为 v1.5.4。
 
 ## 已关闭 Milestone 12 规划 Session
 
@@ -50,7 +50,7 @@
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | v1.5.4 发布提交（历史） | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
-| 最新工作树范围 | Task 56 产品/API/前端/测试与文档随本次 focused commit；Task 50 的 pyproject、canonical_memory、召回测试、评测脚本/测试保留未提交。既有 prototype、samples、Claude worktree、发布说明与历史临时目录保持原样；无版本链改动。 |
+| 最新工作树范围 | Task56已在f5a99aa推送；Task50/51已有6042274/4edaa64，本次新增M12指标与控制面收口文档提交并一并推送。asset_store.py既有无内容diff的状态及prototype、samples、发布说明、历史临时目录保持原样，不纳入；无版本链改动。 |
 
 ## 已关闭 v1.5.4 Release Session（released）
 

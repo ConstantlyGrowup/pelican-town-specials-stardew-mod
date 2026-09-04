@@ -9,7 +9,7 @@
 | `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.15 | 本地版协议，并链接 Milestone 9/10/11、Task 36.1/36.2/49 与 Task 56 故障续作扩展 |
 | `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.1 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
 | `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.2 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；已实施、独立审阅并随 v1.4.0 发布 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.8 | Task 1–48 已发布，Task 49 已推送未发布；M12 Task 50–55 搁置，Task 56 已验收并获提交推送授权 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.8 | Task 1–48 已发布，Task 49 已推送未发布；M12 Task 50–55 已完成并获用户整体验收及提交推送授权，Task 56 已提交推送 |
 | `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.1 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
 | `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.2 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已实施、验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已验收并随 v1.4.0 发布 |
@@ -95,7 +95,7 @@
 
 ## Milestone 12 评测范围（已授权实施，非当前生产机制）
 
-2026-09-03 用户最新指令暂停整条 M12，Task50 保留在验证阶段，不继续执行或清理数据；等待重新授权。
+历史（已由后续恢复及整体验收覆盖）：2026-09-03 用户指令暂停整条 M12，Task50 保留在验证阶段，不继续执行或清理数据；等待重新授权。
 
 用户 2026-09-03 请求依据量化收尾 PDF 建立 Task，随后要求无人工前置工作优先；v1.1 为 Task 50–55。M9 的生产无 Embedding/只展示耗时成本规则保留；M12 单独规划本地开发评测：20 组真实 E2E、约 30 Canonical/60 同菜 Query/10 负例、当前检索与一个 CPU Embedding 的同池对照，汇总已有实验后人工清理。只允许必要评测脚本、开发依赖组及保持默认行为的内部 retriever 注入；无 UI/API/遥测/安装包扩张。Top 5 与 0.85 固定，模型错误保留分母，标签不能泄露给 Matcher；使用当前 workspace，不默认删除或重置用户数据。规划文档不是执行、付费或清理授权。详见 docs/plans/2026-09-03-milestone-12-quant-evaluation.md。
 
@@ -103,7 +103,7 @@ M12 v1.1 调序：Task 50 先实现全部必要脚本/记录模板/Current 与�
 
 ## Task 56 Gus 故障续作（2026-09-03 用户授权）
 
-2026-09-04 已完成实现/验证，用户实测验收并授权提交推送 MVP 分支；不修改 main 或正式 v1.5.4 安装包。M12 仍暂停。
+2026-09-04 已完成实现/验证，用户实测验收并授权提交推送 MVP 分支；不修改 main 或正式 v1.5.4 安装包。当时 M12 暂停，现已恢复并完成整体验收。
 
 - 成功阶段输出写入本地 typed checkpoint，Provider 故障或进程中断后可由用户手动继续同一 Gus 方案；不自动续跑。只保存已校验的数据和受管资产引用，无 Key、Provider 原始正文或临时 URL。
 - 仅同 draft/source/revision/language/kind/catalog/protocol 兼容时复用。新配置/新 Key 可以继续旧候选；不回放旧凭据。损坏/不兼容时安全回退普通生成。
@@ -113,3 +113,8 @@ M12 v1.1 调序：Task 50 先实现全部必要脚本/记录模板/Current 与�
 ## 2026-09-04 M12 恢复
 
 用户已重新授权继续 Task50及后续，到实际人工参与处停止；先完成Task50独立审阅，再准备待人审核对的数据。不运行未确认费用的真实Provider，不提前作人审判定，不删除用户记忆。前文暂停为历史状态。
+
+
+## 2026-09-04 M12 验收完成
+
+Task50–55 全部完成并经用户整体验收，用户授权提交推送 MVP 分支及状态文档更新。此前逐阶段前置和暂停记录保留为历史。当前无需再等照片、人审、Provider 配置或费用数据；已确认沿用用户独立统计的 A–F 消耗表，指标见 [M12_QUANTITATIVE_RESULTS.md](M12_QUANTITATIVE_RESULTS.md)。完整冷启动批次计时缺口如实保留，不因验收而改写实测边界。30条 synthetic 记忆及 CPU 模型文件已按授权清除，真实记忆和结果证据保留；其余数据不自动删除。M12 为评测里程碑，不触发 installer/tag/Release；正式版本仍 v1.5.4。
