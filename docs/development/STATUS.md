@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m13_accepted_pushed |
-| project_phase | M13 Task57–60及用户最终UI已验收并推送`feat/mvp-implementation`至`89a8a09`；Task60最终为8条/页，主页与收集品分页使用统一像素面板样式。未发布，正式Release仍v1.5.4 |
+| overall_state | v1_5_5_release_candidate |
+| project_phase | 试用服务迁移（totokens）与 M13 分页已入 v1.5.5 RC；本地 bundle/installer 门禁全绿，待 push 双分支与 tag |
 | product_implementation_started | true |
-| active_session_id | none；最近关闭2026-09-05-milestone-13-integration-verification |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | 无；M13已验收并推送，未发布 |
+| active_session_id | `2026-09-03-v1-5-5-release` |
+| active_session_state | verification |
+| active_session_type | release |
+| current_task | v1.5.5 发布：push 双分支/tag → 核验 Release 三资产 → 收口 released |
 | blocker | 无 |
-| next_action | 等待用户下一项任务；如需安装包，须另行授权版本提升、tag与Release。 |
+| next_action | 用户在终端 push 双分支与 `v1.5.5` tag → 核验 release.yml 与三资产 → 收口 released |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 已关闭 Task 56 Session（committed）
