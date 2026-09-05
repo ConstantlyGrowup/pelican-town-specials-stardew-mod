@@ -104,3 +104,63 @@ async def test_explicit_restart_ignores_saved_checkpoint_for_full_regeneration(
 
     assert events[-1].type == "attempt.succeeded"
     assert harness.gateway.calls == ["analyze", "design", "image", "image"]
+
+
+def _regen_command(
+    draft, instructions: str | None
+) -> GenerationCommand:
+    from uuid import uuid4
+
+    return GenerationCommand(
+        draftId=draft.draft_id,
+        kind=GenerationAttemptKind.FULL_REGENERATE,
+        requestId=uuid4(),
+        regenerationInstructions=instructions,
+    )
+
+
+async def test_regeneration_instruction_resumes_same_round_on_retry(
+    harness: GenerationHarness,
+    reviewable_draft,
+) -> None:
+    """M13 Task 59: a failed full-regeneration round with an instruction
+    resumes exactly that round (same wording) when the user retries, and the
+    instruction survives in the public attempt snapshot."""
+    instruction = "鱼片切厚一点"
+    harness.gateway.fail_stage = GenerationStage.ICON_GENERATION_AND_NORMALIZATION
+    failed = [
+        event
+        async for event in harness.orchestrator.run(
+            _regen_command(reviewable_draft, instruction)
+        )
+    ]
+    assert failed[-1].type == "attempt.failed"
+
+    # Same instruction -> the saved checkpoint is compatible and the retry
+    # continues from the ICON stage instead of restarting the whole round.
+    harness.gateway.fail_stage = None
+    harness.gateway.calls.clear()
+    restarted = _new_orchestrator(harness)
+    restored = restarted.drafts.get(reviewable_draft.draft_id)
+    retry_events = [
+        event
+        async for event in restarted.run(_regen_command(restored, instruction))
+    ]
+    assert retry_events[-1].type == "attempt.succeeded"
+    # DISH_ANALYSIS and GAMEPLAY_DESIGN are completed by the checkpoint; the
+    # retry re-runs the matcher-free stages before ICON (INGREDIENT_MAPPING is
+    # skipped, VISUAL_BRIEF local) and then icon + preview.
+    succeeded = [
+        event.stage for event in retry_events if event.type == "stage.succeeded"
+    ]
+    assert GenerationStage.DISH_ANALYSIS in succeeded
+    assert GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION in succeeded
+
+    attempt = restarted.attempts.get(retry_events[0].attempt_id)
+    assert attempt.regeneration_instructions == instruction
+    progress = GenerationService(
+        orchestrator=restarted,
+        draft_repository=restarted.drafts,
+    ).get_progress(restored.draft_id)
+    assert progress.attempt is not None
+    assert progress.attempt.regeneration_instructions == instruction

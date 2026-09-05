@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient, assetUrl, getCsrfToken } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
@@ -38,6 +38,10 @@ export function AskGusReviewPage() {
   const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [actionError, setActionError] = useState<ReviewMessageKey | null>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  // M13 Task 59: the optional instruction for the next full regeneration. It
+  // is restored from the latest FAILED attempt (refresh / failed round) and
+  // cleared when a round starts without one.
+  const [regenerationInstructions, setRegenerationInstructions] = useState("");
 
   const query = useQuery({
     queryKey: ["draft", draftId],
@@ -63,6 +67,53 @@ export function AskGusReviewPage() {
     },
   });
 
+  // Restore a failed round's instruction after a refresh or page nav: the
+  // persisted attempt snapshot is the only source that survives a remount.
+  // The restore happens only while the page is idle so a user's in-progress
+  // typing or a running round is never overwritten.
+  const savedInstructions = generation.regenerationInstructions;
+  const restoredRoundRef = useRef(false);
+  const startedRoundDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (restoredRoundRef.current) {
+      return;
+    }
+    if (
+      draftId &&
+      savedInstructions &&
+      (generation.phase === "idle" ||
+        generation.phase === "error" ||
+        generation.phase === "cancelled") &&
+      generation.attemptId
+    ) {
+      setRegenerationInstructions(savedInstructions);
+      restoredRoundRef.current = true;
+    }
+  }, [draftId, savedInstructions, generation.phase, generation.attemptId]);
+
+  useEffect(() => {
+    if (
+      generation.phase === "success" &&
+      startedRoundDraftRef.current === (draftId ?? null)
+    ) {
+      // A completed round has consumed its one-shot instruction. Leaving it
+      // in the controlled textarea would silently reuse it on the next
+      // explicit full regeneration.
+      setRegenerationInstructions("");
+      startedRoundDraftRef.current = null;
+      restoredRoundRef.current = true;
+    }
+  }, [draftId, generation.phase]);
+
+  function onRegenerate() {
+    const instructions = regenerationInstructions.trim();
+    startedRoundDraftRef.current = draftId ?? null;
+    generation.restart(instructions || undefined);
+    // This round owns its instruction from now on: do not re-restore an old
+    // failed attempt's wording when the new round finishes.
+    restoredRoundRef.current = true;
+  }
+
   async function setPersonalPreference(): Promise<boolean> {
     setPreferenceBusy(true);
     setActionError(null);
@@ -78,9 +129,20 @@ export function AskGusReviewPage() {
     return true;
   }
 
+  function retryCurrentRound() {
+    const instructions =
+      regenerationInstructions.trim() ||
+      generation.regenerationInstructions.trim();
+    // Keep the same checkpoint after a recoverable provider failure. The
+    // explicit full-regenerate action below remains the restart=true path.
+    startedRoundDraftRef.current = draftId ?? null;
+    generation.begin(instructions || undefined);
+    restoredRoundRef.current = true;
+  }
+
   async function onTakeoverPersonal() {
     if (await setPersonalPreference()) {
-      generation.begin();
+      retryCurrentRound();
     }
   }
 
@@ -88,6 +150,15 @@ export function AskGusReviewPage() {
     if (await setPersonalPreference()) {
       navigate("/settings");
     }
+  }
+
+  /** Retry a failed round with the same wording (empty keeps old behavior). */
+  function onRetry() {
+    if (generation.phase === "error") {
+      retryCurrentRound();
+      return;
+    }
+    generation.begin();
   }
 
   async function onArchive() {
@@ -209,7 +280,7 @@ export function AskGusReviewPage() {
       {generation.phase === "error" && generation.error && (
         <GenerationError
           error={generation.error}
-          onRetry={canRetry ? generation.begin : undefined}
+          onRetry={canRetry ? onRetry : undefined}
           onTakeover={canRetry ? onTakeoverPersonal : undefined}
           onConfigure={canRetry ? onConfigurePersonal : undefined}
           onDiscard={() => setConfirmingDiscard(true)}
@@ -338,25 +409,46 @@ export function AskGusReviewPage() {
 
       {draft.status === "REVIEWABLE" && (
         <div className="card gus-actions">
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={onArchive}
-            disabled={busy || streaming}
-          >
-            {copy.archiveDish}
-          </button>
-          <button className="btn" type="button" onClick={generation.restart} disabled={streaming}>
-            {copy.fullRegenerate}
-          </button>
-          <button
-            className="btn"
-            type="button"
-            onClick={() => setConfirmingDiscard(true)}
-            disabled={busy || streaming}
-          >
-            {copy.rejectDraft}
-          </button>
+          <div className="gus-regenerate-instructions">
+            <label htmlFor="regeneration-instructions">
+              {copy.regenerationInstructionsLabel}
+            </label>
+            <textarea
+              id="regeneration-instructions"
+              value={regenerationInstructions}
+              maxLength={500}
+              rows={2}
+              placeholder={copy.regenerationInstructionsPlaceholder}
+              onChange={(event) =>
+                setRegenerationInstructions(event.target.value)
+              }
+              disabled={busy || streaming}
+            />
+            <small className="gus-regenerate-instructions__hint">
+              {copy.regenerationInstructionsHint}
+            </small>
+          </div>
+          <div className="gus-actions__row">
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={onArchive}
+              disabled={busy || streaming}
+            >
+              {copy.archiveDish}
+            </button>
+            <button className="btn" type="button" onClick={onRegenerate} disabled={streaming || busy}>
+              {copy.fullRegenerate}
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setConfirmingDiscard(true)}
+              disabled={busy || streaming}
+            >
+              {copy.rejectDraft}
+            </button>
+          </div>
         </div>
       )}
 

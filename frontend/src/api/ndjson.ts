@@ -185,6 +185,12 @@ export type StreamGenerationRequest = {
   draftId: string;
   /** Explicit full regeneration; omitted/false means resume-compatible begin. */
   restart?: boolean;
+  /**
+   * M13 Task 59: the user's requirement for this full-regeneration round.
+   * Sent as an optional JSON body; whitespace-only values are omitted so an
+   * empty input keeps the historical restart behavior.
+   */
+  regenerationInstructions?: string;
   signal?: AbortSignal;
 };
 
@@ -203,6 +209,10 @@ export async function streamGeneration(
   if (csrfToken) {
     headers["X-PTS-CSRF"] = csrfToken;
   }
+  const trimmedInstructions = request.regenerationInstructions?.trim();
+  if (trimmedInstructions) {
+    headers["Content-Type"] = "application/json";
+  }
   const response = await fetch(
     `/api/v1/drafts/${encodeURIComponent(request.draftId)}/generate${
       request.restart === true ? "?restart=true" : ""
@@ -212,6 +222,13 @@ export async function streamGeneration(
       credentials: "same-origin",
       headers,
       signal: request.signal,
+      ...(trimmedInstructions
+        ? {
+            body: JSON.stringify({
+              regenerationInstructions: trimmedInstructions,
+            }),
+          }
+        : {}),
     },
   );
   if (!response.ok || !response.body) {

@@ -12,7 +12,7 @@ from typing import Protocol
 from uuid import UUID, uuid4
 
 from PIL import Image
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from pelican_town_specials.application.canonical_memory import RecallService
 from pelican_town_specials.application.telemetry import (
@@ -45,6 +45,7 @@ from pelican_town_specials.domain.dish import (
     GameIngredient,
     GameplaySpec,
     GenerationSource,
+    IconReuseDecision,
     PresentationSpec,
     Provenance,
     RecipeUnlock,
@@ -100,6 +101,7 @@ from pelican_town_specials.persistence.repositories import (
 )
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalIconComparisonRequest,
     DishAnalysisRequest,
     GeneratedDishCore,
     GeneratedImage,
@@ -108,6 +110,9 @@ from pelican_town_specials.providers.contracts import (
     ImageOperation,
     ModelGateway,
     ProviderImageInput,
+)
+from pelican_town_specials.providers.prompts.analysis_v1 import (
+    regeneration_instruction_section,
 )
 
 from .attempt_registry import MAX_CONCURRENT_GENERATIONS, AttemptRegistry
@@ -139,6 +144,10 @@ _ASK_GUS_PROMPT_VERSION = "ask-gus-v3"
 _ANALYSIS_PROMPT_VERSION = "analysis-v1"
 _VISUAL_PROMPT_VERSION = "visual-v3-multi-image-edit"
 _ICON_SIZE = "1024x1024"
+# M13 Task 58: the recorded canonical icon is reused only when the vision
+# model reports visual similarity at or above this threshold (0.75 passes,
+# 0.749 misses). This is the raw score gate, never the rounded display value.
+_ICON_REUSE_THRESHOLD = 0.75
 
 _CANONICAL_REUSED_AUTHORITY = {
     "presentation.display_name": FieldAuthority.CACHE_REUSED,
@@ -178,8 +187,10 @@ class _RunState:
         "gameplay",
         "gateway",
         "icon_16",
+        "icon_reuse_decision",
         "icon_source",
         "icon_source_asset_id",
+        "icon_visual_similarity",
         "presentation",
         "preview",
         "provider_started",
@@ -213,6 +224,8 @@ class _RunState:
     icon_source_asset_id: UUID | None
     icon_16: AssetRef | None
     preview: AssetRef | None
+    icon_reuse_decision: IconReuseDecision | None
+    icon_visual_similarity: float | None
     recall_confidence: float | None
     recall_decision: MemoryOutcome
     recall_elapsed_ms: int | None
@@ -253,6 +266,8 @@ class _RunState:
         self.icon_source_asset_id = None
         self.icon_16 = None
         self.preview = None
+        self.icon_reuse_decision = None
+        self.icon_visual_similarity = None
         self.recall_confidence = None
         self.recall_elapsed_ms = None
         self.recall_decision = (
@@ -431,10 +446,31 @@ def _icon_prompt(
     core: GeneratedDishCore,
     *,
     language: Language = Language.ZH_CN,
+    regeneration_instructions: str | None = None,
 ) -> str:
+    return _icon_prompt_from_presentation(
+        core.presentation,
+        language=language,
+        regeneration_instructions=regeneration_instructions,
+    )
+
+
+def _icon_prompt_from_presentation(
+    presentation: PresentationSpec,
+    *,
+    language: Language = Language.ZH_CN,
+    regeneration_instructions: str | None = None,
+) -> str:
+    """Pixel-icon prompt built from validated text fields.
+
+    Used for a fresh icon and for a canonical hit whose recorded icon scored
+    below the visual reuse threshold: the matched text fixes the identity,
+    while the current photo is the visual basis for the drawing. M13 Task 59
+    appends this round's regeneration requirement when one was supplied.
+    """
     if language is Language.EN_US:
-        return (
-            f"Stardew Valley-style 16×16 game icon: {core.presentation.display_name}"
+        prompt = (
+            f"Stardew Valley-style 16×16 game icon: {presentation.display_name}"
             ". Use the source photo as the visual reference for the dish. Preserve the "
             "recognizable silhouette, main colors, plating, and key ingredient features; "
             "Do not make the table or photo background the subject. Convert only the "
@@ -442,12 +478,19 @@ def _icon_prompt(
             "use a removable solid magenta background (#FF00FF), no shadows, "
             "no reflections, no text, no borders"
         )
-    return (
-        f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
-        "。参考输入图中的菜品主体，保留可辨识的轮廓、主要配色、摆盘形态和关键食材特征；"
-        "不要把桌面或照片背景作为主体。将菜品转为单个星露谷风格的像素物品图标。"
-        "单个物品居中，使用便于抠图的纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
-    )
+    else:
+        prompt = (
+            f"星露谷风格的 16×16 游戏图标：{presentation.display_name}"
+            "。参考输入图中的菜品主体，保留可辨识的轮廓、主要配色、摆盘形态和关键食材特征；"
+            "不要把桌面或照片背景作为主体。将菜品转为单个星露谷风格的像素物品图标。"
+            "单个物品居中，使用便于抠图的纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
+        )
+    if regeneration_instructions:
+        prompt += regeneration_instruction_section(
+            regeneration_instructions,
+            language=language,
+        )
+    return prompt
 
 
 def _preview_prompt(
@@ -510,6 +553,8 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
             "canonical_dish_signature": None,
             "recall_confidence": None,
             "recall_elapsed_ms": None,
+            "icon_reuse_decision": None,
+            "icon_visual_similarity": None,
         }
     )
 
@@ -529,18 +574,31 @@ def _canonical_reused_provenance(state: _RunState) -> Provenance:
             "visual": f"{_VISUAL_PROMPT_VERSION}-{suffix}",
         }
     )
+    icon_authority = (
+        FieldAuthority.CACHE_REUSED
+        if state.icon_reuse_decision is IconReuseDecision.REUSED
+        else FieldAuthority.SYSTEM_GENERATED
+    )
+    authority = {
+        **base.authority_by_field,
+        **_CANONICAL_REUSED_AUTHORITY,
+        # A semantic hit does not imply that its pixel icon was reused.  The
+        # visual gate can deliberately generate a new icon for the current
+        # photo, so the two asset fields must follow the final icon decision.
+        "visuals.icon_source_asset_id": icon_authority,
+        "visuals.icon_16_asset_id": icon_authority,
+    }
     return base.model_copy(
         update={
-            "authority_by_field": {
-                **base.authority_by_field,
-                **_CANONICAL_REUSED_AUTHORITY,
-            },
+            "authority_by_field": authority,
             "prompt_versions": prompt_versions,
             "generation_source": GenerationSource.CANONICAL_REUSED,
             "canonical_dish_id": state.canonical.canonical_id,
             "canonical_dish_signature": state.canonical.dish_signature,
             "recall_confidence": state.recall_confidence,
             "recall_elapsed_ms": state.recall_elapsed_ms,
+            "icon_reuse_decision": state.icon_reuse_decision,
+            "icon_visual_similarity": state.icon_visual_similarity,
         }
     )
 
@@ -670,6 +728,27 @@ class GenerationCommand(StrictModel):
     kind: GenerationAttemptKind
     request_id: UUID = Field(alias="requestId")
     restart: bool = False
+    # M13 Task 59: this round's user-written regeneration instruction. Only a
+    # FULL_REGENERATE request may carry it; the draft's original contextText
+    # is never overwritten and the two stay separate.
+    regeneration_instructions: str | None = Field(
+        default=None,
+        alias="regenerationInstructions",
+        max_length=500,
+    )
+
+    @model_validator(mode="after")
+    def _instructions_only_for_full_regeneration(
+        self,
+    ) -> GenerationCommand:
+        if (
+            self.regeneration_instructions is not None
+            and self.kind is not GenerationAttemptKind.FULL_REGENERATE
+        ):
+            raise ValueError(
+                "regenerationInstructions is only valid for FULL_REGENERATE"
+            )
+        return self
 
 
 GatewayFactory = Callable[[], ModelGateway]
@@ -971,6 +1050,7 @@ class GenerationOrchestrator:
             original_asset_sha256=source.sha256,
             context_text=draft.source.context_text,
             language=draft.source.language,
+            regeneration_instructions=attempt.regeneration_instructions,
         )
         if checkpoint.input_fingerprint != expected_fingerprint:
             return False
@@ -1032,7 +1112,12 @@ class GenerationOrchestrator:
                 return False
         return True
 
-    def _source_fingerprint(self, draft: DraftRecord) -> str | None:
+    def _source_fingerprint(
+        self,
+        draft: DraftRecord,
+        *,
+        regeneration_instructions: str | None = None,
+    ) -> str | None:
         try:
             source = self._assets.stat(draft.source.original_image_asset_id)
         except (AssetNotFoundError, OSError, ValueError):
@@ -1044,6 +1129,7 @@ class GenerationOrchestrator:
             original_asset_sha256=source.sha256,
             context_text=draft.source.context_text,
             language=draft.source.language,
+            regeneration_instructions=regeneration_instructions,
         )
 
     def _record_telemetry(self, event: TelemetryEvent) -> None:
@@ -1343,6 +1429,8 @@ class GenerationOrchestrator:
         state.canonical = checkpoint.canonical
         state.recall_confidence = checkpoint.recall_confidence
         state.recall_elapsed_ms = checkpoint.recall_elapsed_ms
+        state.icon_reuse_decision = checkpoint.icon_reuse_decision
+        state.icon_visual_similarity = checkpoint.icon_visual_similarity
         if state.canonical is not None:
             state.recall_decision = MemoryOutcome.HIT
 
@@ -1386,7 +1474,10 @@ class GenerationOrchestrator:
             }
         ):
             return
-        fingerprint = self._source_fingerprint(state.draft)
+        fingerprint = self._source_fingerprint(
+            state.draft,
+            regeneration_instructions=state.command.regeneration_instructions,
+        )
         if fingerprint is None:
             return
         completed_stages = [
@@ -1424,6 +1515,8 @@ class GenerationOrchestrator:
             iconSourceAssetId=state.icon_source_asset_id,
             icon16AssetId=(state.icon_16.asset_id if state.icon_16 is not None else None),
             previewAssetId=preview_asset_id,
+            iconReuseDecision=state.icon_reuse_decision,
+            iconVisualSimilarity=state.icon_visual_similarity,
             updatedAt=utc_now(),
         )
         self._attempts.save_checkpoint(checkpoint)
@@ -1615,19 +1708,24 @@ class GenerationOrchestrator:
         self,
         state: _RunState,
         canonical: CanonicalDish,
+        *,
+        source_data: bytes | None = None,
+        icon_16_data: bytes | None = None,
     ) -> tuple[GeneratedImage, AssetRef, AssetRef]:
         repository = self._canonical_repository
         if repository is None:
             raise ValueError("canonical Registry is unavailable")
 
-        source_data = repository.load_owned_icon(
-            canonical.canonical_id,
-            CanonicalIconKind.SOURCE,
-        )
-        icon_16_data = repository.load_owned_icon(
-            canonical.canonical_id,
-            CanonicalIconKind.ICON_16,
-        )
+        if source_data is None:
+            source_data = repository.load_owned_icon(
+                canonical.canonical_id,
+                CanonicalIconKind.SOURCE,
+            )
+        if icon_16_data is None:
+            icon_16_data = repository.load_owned_icon(
+                canonical.canonical_id,
+                CanonicalIconKind.ICON_16,
+            )
         _validate_canonical_icon_data(
             source_data,
             canonical.icon_source,
@@ -1709,10 +1807,10 @@ class GenerationOrchestrator:
             ):
                 state.recall_decision = MemoryOutcome.FALLBACK_ERROR
                 return False
-            icon_source, icon_source_ref, icon_16_ref = self._import_canonical_icons(
-                state,
-                canonical,
-            )
+            # M13 Task 58: only the TEXT identity is fixed now. The pixel icon
+            # is not imported yet — the ICON stage first runs the dual-image
+            # visual comparison and only then reuses the canonical source (or
+            # generates a fresh icon when similarity is below the threshold).
             state.canonical = canonical
             state.recall_confidence = result.trace.confidence
             state.recall_elapsed_ms = result.trace.elapsed_ms
@@ -1726,15 +1824,205 @@ class GenerationOrchestrator:
             )
             state.gameplay = canonical.gameplay
             state.visual_brief = canonical.visual_brief
-            state.icon_source = icon_source
-            state.icon_source_asset_id = icon_source_ref.asset_id
-            state.icon_16 = icon_16_ref
             return True
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001 - memory failures degrade to fresh
             state.recall_decision = MemoryOutcome.FALLBACK_ERROR
             return False
+
+    async def _canonical_hit_icon_step(self, state: _RunState) -> None:
+        """Run the M13 Task 58 visual gate for a semantic canonical hit.
+
+        The matched TEXT is already fixed; this step decides whether the
+        recorded canonical pixel icon may be reused for THIS photo:
+        ``REUSED`` imports the canonical source/16 icons, ``GENERATED`` makes
+        a fresh icon from the current photo using the matched text as the
+        identity constraint, and ``UNAVAILABLE`` (missing/damaged canonical
+        icons) also generates a fresh icon. Provider errors are normal
+        controlled failures: the completed text-hit stages stay in the
+        checkpoint so a manual continuation resumes without re-running the
+        matcher.
+        """
+        assert state.canonical is not None
+        assert state.presentation is not None
+        repository = self._canonical_repository
+        if repository is None:
+            raise ValueError("canonical Registry is unavailable")
+        canonical = state.canonical
+        decision = state.icon_reuse_decision
+        source_data: bytes | None = None
+        icon_16_data: bytes | None = None
+        if decision in {None, IconReuseDecision.REUSED}:
+            try:
+                source_data = repository.load_owned_icon(
+                    canonical.canonical_id,
+                    CanonicalIconKind.SOURCE,
+                )
+                icon_16_data = repository.load_owned_icon(
+                    canonical.canonical_id,
+                    CanonicalIconKind.ICON_16,
+                )
+                _validate_canonical_icon_data(
+                    source_data,
+                    canonical.icon_source,
+                    icon_16=False,
+                )
+                _validate_canonical_icon_data(
+                    icon_16_data,
+                    canonical.icon_16,
+                    icon_16=True,
+                )
+            except Exception:  # noqa: BLE001 - corrupted canonical assets degrade
+                # A damaged icon pair is a local cache miss.  Keep the
+                # semantic hit, but never spend a vision call trying to
+                # compare or import an asset that cannot be used.
+                state.icon_reuse_decision = IconReuseDecision.UNAVAILABLE
+                state.icon_visual_similarity = None
+                decision = state.icon_reuse_decision
+                self._save_checkpoint(state)
+            else:
+                if decision is None:
+                    icon_input = self._icon_for_vision(source_data)
+                    original = _prepare_vision_input(
+                        _read_source_image(self._assets, state.draft)
+                    )
+                    gateway = self._ensure_gateway(state)
+                    state.provider_started = True
+                    result = await gateway.compare_canonical_icon(
+                        CanonicalIconComparisonRequest(
+                            currentOriginal=ProviderImageInput(
+                                data=original[0],
+                                media_type=original[1],
+                            ),
+                            canonicalIconSource=icon_input,
+                            language=state.draft.source.language,
+                            requestId=state.command.request_id,
+                        )
+                    )
+                    state.icon_visual_similarity = result.visual_similarity
+                    state.icon_reuse_decision = (
+                        IconReuseDecision.REUSED
+                        if result.visual_similarity >= _ICON_REUSE_THRESHOLD
+                        else IconReuseDecision.GENERATED
+                    )
+                    decision = state.icon_reuse_decision
+                    # The visual decision is independently resumable from the
+                    # subsequent icon/preview work.  Persist it before the
+                    # first icon generation request so an outage there cannot
+                    # charge the comparison again on manual continuation.
+                    self._save_checkpoint(state)
+        if decision is IconReuseDecision.REUSED:
+            assert state.icon_source_asset_id is None
+            (
+                state.icon_source,
+                source_ref,
+                icon_16_ref,
+            ) = self._import_canonical_icons(
+                state,
+                canonical,
+                source_data=source_data,
+                icon_16_data=icon_16_data,
+            )
+            state.icon_source_asset_id = source_ref.asset_id
+            state.icon_16 = icon_16_ref
+            return
+        # GENERATED / UNAVAILABLE: the canonical icon cannot stand in for this
+        # photo. Reuse the matched text as identity but draw the icon from the
+        # current photo, without invoking the text design model again.
+        icon_prompt = _icon_prompt_from_presentation(
+            state.presentation,
+            language=state.draft.source.language,
+            regeneration_instructions=state.command.regeneration_instructions,
+        )
+        await self._generate_and_store_icon(
+            state,
+            icon_prompt,
+            source_image=_read_source_image(self._assets, state.draft),
+        )
+
+    def _icon_for_vision(self, data: bytes) -> ProviderImageInput:
+        """Flatten a transparent pixel-icon source onto white for the vision
+        comparison, capping the long side like any other vision input."""
+        with Image.open(io.BytesIO(data)) as source:
+            rgba = source.convert("RGBA")
+        background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+        flattened = Image.alpha_composite(background, rgba)
+        output = io.BytesIO()
+        flattened.convert("RGB").save(output, format="JPEG", quality=90)
+        return ProviderImageInput(
+            data=output.getvalue(),
+            media_type=ImageMediaType.JPEG,
+        )
+
+    async def _generate_and_store_icon(
+        self,
+        state: _RunState,
+        icon_prompt: str,
+        *,
+        source_image: bytes,
+    ) -> None:
+        """Generate a pixel icon from ``source_image``, key the backdrop, and
+        persist the icon source plus the normalized 16x16 icon."""
+        draft = state.draft
+        gateway = self._ensure_gateway(state)
+        _ensure_image_edit_capability(gateway)
+        icon_image, icon_media_type = _prepare_vision_input(
+            source_image, min_pixels=EDIT_MIN_PIXELS
+        )
+        state.provider_started = True
+        generated_icon = await gateway.generate_image(
+            ImageGenerationRequest(
+                operation=ImageOperation.EDIT,
+                prompt=icon_prompt,
+                source_images=[
+                    ProviderImageInput(
+                        data=icon_image,
+                        media_type=icon_media_type,
+                    )
+                ],
+                size=_ICON_SIZE,
+                request_id=state.command.request_id,
+            )
+        )
+        # R12: models often return an opaque solid backdrop despite the
+        # transparent-background instruction; key it out deterministically
+        # so the stored icon source and the 16x16 icon are truly
+        # transparent in game.
+        keyed = key_icon_background(generated_icon.data)
+        icon_media_type = (
+            ImageMediaType.PNG if keyed.changed else generated_icon.media_type
+        )
+        state.icon_source = GeneratedImage(
+            data=keyed.data, media_type=icon_media_type
+        )
+        icon_w, icon_h = _image_dimensions(state.icon_source.data)
+        icon_source_ref = self._assets.put(
+            state.icon_source.data,
+            AssetMetadata(
+                kind=AssetKind.ICON_SOURCE,
+                mediaType=_domain_media_type(icon_media_type),
+                fileExtension=_extension_for_media_type(icon_media_type),
+                width=icon_w,
+                height=icon_h,
+                sourceRevision=draft.revision + 1,
+                attemptId=state.attempt_id,
+            ),
+        )
+        state.icon_source_asset_id = icon_source_ref.asset_id
+        icon_bytes = build_icon_16(state.icon_source.data)
+        state.icon_16 = self._assets.put(
+            icon_bytes,
+            AssetMetadata(
+                kind=AssetKind.ICON_16,
+                mediaType=MediaType.PNG,
+                fileExtension=".png",
+                width=16,
+                height=16,
+                sourceRevision=draft.revision + 1,
+                attemptId=state.attempt_id,
+            ),
+        )
 
     async def _execute_stage(self, state: _RunState, stage: GenerationStage) -> None:
         draft = state.draft
@@ -1753,6 +2041,9 @@ class GenerationOrchestrator:
                         media_type=vision_media,
                     ),
                     context_text=draft.source.context_text,
+                    regenerationInstructions=(
+                        state.command.regeneration_instructions
+                    ),
                     language=draft.source.language,
                     request_id=state.command.request_id,
                 )
@@ -1772,6 +2063,9 @@ class GenerationOrchestrator:
                     AskGusDesignRequest(
                         analysis=state.analysis,
                         context_text=draft.source.context_text,
+                        regenerationInstructions=(
+                            state.command.regeneration_instructions
+                        ),
                         language=draft.source.language,
                         request_id=state.command.request_id,
                     )
@@ -1803,78 +2097,31 @@ class GenerationOrchestrator:
                 state.visual_brief = state.core.visual_brief
         elif stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION:
             if state.canonical is not None:
-                assert state.icon_source is not None
-                assert state.icon_source_asset_id is not None
-                assert state.icon_16 is not None
-                return
-            if draft.mode is DraftMode.BLUEPRINT:
+                await self._canonical_hit_icon_step(state)
+            elif draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
                 icon_prompt = blueprint_icon_prompt(
                     draft.presentation, language=draft.source.language
                 )
+                await self._generate_and_store_icon(
+                    state,
+                    icon_prompt,
+                    source_image=_read_source_image(self._assets, draft),
+                )
             else:
                 assert state.core is not None
                 icon_prompt = _icon_prompt(
-                    state.core, language=draft.source.language
+                    state.core,
+                    language=draft.source.language,
+                    regeneration_instructions=(
+                        state.command.regeneration_instructions
+                    ),
                 )
-            gateway = self._ensure_gateway(state)
-            _ensure_image_edit_capability(gateway)
-            icon_image, icon_media_type = _prepare_vision_input(
-                _read_source_image(self._assets, draft), min_pixels=EDIT_MIN_PIXELS
-            )
-            state.provider_started = True
-            generated_icon = await gateway.generate_image(
-                ImageGenerationRequest(
-                    operation=ImageOperation.EDIT,
-                    prompt=icon_prompt,
-                    source_images=[
-                        ProviderImageInput(
-                            data=icon_image,
-                            media_type=icon_media_type,
-                        )
-                    ],
-                    size=_ICON_SIZE,
-                    request_id=state.command.request_id,
+                await self._generate_and_store_icon(
+                    state,
+                    icon_prompt,
+                    source_image=_read_source_image(self._assets, draft),
                 )
-            )
-            # R12: models often return an opaque solid backdrop despite the
-            # transparent-background instruction; key it out deterministically
-            # so the stored icon source and the 16x16 icon are truly
-            # transparent in game.
-            keyed = key_icon_background(generated_icon.data)
-            icon_media_type = (
-                ImageMediaType.PNG if keyed.changed else generated_icon.media_type
-            )
-            state.icon_source = GeneratedImage(
-                data=keyed.data, media_type=icon_media_type
-            )
-            icon_w, icon_h = _image_dimensions(state.icon_source.data)
-            icon_source_ref = self._assets.put(
-                state.icon_source.data,
-                AssetMetadata(
-                    kind=AssetKind.ICON_SOURCE,
-                    mediaType=_domain_media_type(icon_media_type),
-                    fileExtension=_extension_for_media_type(icon_media_type),
-                    width=icon_w,
-                    height=icon_h,
-                    sourceRevision=draft.revision + 1,
-                    attemptId=state.attempt_id,
-                ),
-            )
-            state.icon_source_asset_id = icon_source_ref.asset_id
-            icon_bytes = build_icon_16(state.icon_source.data)
-            state.icon_16 = self._assets.put(
-                icon_bytes,
-                AssetMetadata(
-                    kind=AssetKind.ICON_16,
-                    mediaType=MediaType.PNG,
-                    fileExtension=".png",
-                    width=16,
-                    height=16,
-                    sourceRevision=draft.revision + 1,
-                    attemptId=state.attempt_id,
-                ),
-            )
         elif stage is GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION:
             if draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
@@ -2052,6 +2299,7 @@ class GenerationOrchestrator:
             stages=stages,
             total_stages=total_stages,
             candidate_record_path=None,
+            regenerationInstructions=command.regeneration_instructions,
             started_at=now,
             finished_at=None,
             error=None,

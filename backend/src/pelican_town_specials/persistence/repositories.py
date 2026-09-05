@@ -18,7 +18,11 @@ from pelican_town_specials.domain.common import (
     StrictModel,
     utc_now,
 )
-from pelican_town_specials.domain.dish import FieldAuthority, GenerationSource
+from pelican_town_specials.domain.dish import (
+    FieldAuthority,
+    GenerationSource,
+    IconReuseDecision,
+)
 from pelican_town_specials.domain.draft import (
     AttemptStatus,
     DraftRecord,
@@ -96,6 +100,7 @@ _DATETIME_FIELD_NAMES = {
 }
 _ENUM_FIELD_PARSERS = {
     "generationSource": GenerationSource,
+    "iconReuseDecision": IconReuseDecision,
     "language": Language,
     "mediaType": MediaType,
     "mode": DraftMode,

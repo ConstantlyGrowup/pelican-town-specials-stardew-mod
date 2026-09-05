@@ -36,6 +36,7 @@ const server = setupServer(
           mode: "BLUEPRINT",
           status: "DRAFT",
           revision: 1,
+          createdAt: "2026-08-01T00:00:00Z",
           updatedAt: "2026-08-04T00:00:00Z",
           displayName: "南瓜汤",
           originalImageAssetId: "asset-1",
@@ -45,6 +46,7 @@ const server = setupServer(
           mode: "ASK_GUS",
           status: "REVIEWABLE",
           revision: 3,
+          createdAt: "2026-08-02T00:00:00Z",
           updatedAt: "2026-08-03T00:00:00Z",
           displayName: "",
           originalImageAssetId: "asset-2",
@@ -52,6 +54,10 @@ const server = setupServer(
       ],
       nextCursor: null,
       total: 2,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+      hasRunningGeneration: false,
     }),
   ),
   http.get("/api/v1/drafts/:draft_id", () =>
@@ -120,7 +126,15 @@ describe("router", () => {
   it("resolves the home page empty state when there are no drafts", async () => {
     server.use(
       http.get("/api/v1/drafts", () =>
-        HttpResponse.json({ items: [], nextCursor: null, total: 0 }),
+        HttpResponse.json({
+          items: [],
+          nextCursor: null,
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 0,
+          hasRunningGeneration: false,
+        }),
       ),
     );
     renderAt("/");

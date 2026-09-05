@@ -25,6 +25,7 @@ from pelican_town_specials.providers import (
     ProviderImageInput,
 )
 from pelican_town_specials.providers.contracts import (
+    CanonicalIconComparisonRequest,
     CanonicalMatchCandidate,
     CanonicalMatchRequest,
 )
@@ -42,6 +43,9 @@ _ANALYSIS_JSON = {
     ],
     "confidence": 0.9,
 }
+
+
+_DESIGN_CORE_JSON = '{"presentation": {"displayName": "春日面碗", "internalName": "SpringNoodleBowl", "categoryLabel": "主菜", "description": "一碗带着春天气息的热汤面。", "tags": ["spring"]}, "ingredients": [{"name": "Egg", "normalizedName": "egg", "quantityHint": null}], "recovery": {"edibility": 80}, "sellPrice": 220, "isDrink": false, "visualBrief": "Warm ceramic bowl on a rustic tavern table."}'
 
 
 def _chat_response(content: str) -> httpx.Response:
@@ -141,12 +145,17 @@ def test_generated_dish_core_rejects_echoed_derived_recovery_fields() -> None:
         validate_structured(GeneratedDishCore, payload)
 
 
-def _analysis_request() -> DishAnalysisRequest:
+def _analysis_request(
+    *,
+    context_text: str | None = None,
+    regeneration_instructions: str | None = None,
+) -> DishAnalysisRequest:
     return DishAnalysisRequest(
         image=ProviderImageInput(data=b"png-bytes", media_type=ImageMediaType.PNG),
-        context_text=None,
+        context_text=context_text,
         language=Language.ZH_CN,
         requestId=uuid4(),
+        regenerationInstructions=regeneration_instructions,
     )
 
 
@@ -778,12 +787,17 @@ async def test_sleep_sequence_is_recorded(settings: object) -> None:
     assert all(delay >= 0 for delay in delays)
 
 
-def _ask_gus_design_request() -> AskGusDesignRequest:
+def _ask_gus_design_request(
+    *,
+    context_text: str | None = None,
+    regeneration_instructions: str | None = None,
+) -> AskGusDesignRequest:
     return AskGusDesignRequest(
         analysis=DishAnalysis.model_validate(_ANALYSIS_JSON),
-        context_text=None,
+        context_text=context_text,
         language=Language.ZH_CN,
         requestId=uuid4(),
+        regenerationInstructions=regeneration_instructions,
     )
 
 
@@ -1087,3 +1101,126 @@ async def test_empty_required_model_fails_before_relay(
     assert excinfo.value.details["emptyFields"] == [empty_field]
     assert chat_route.call_count == 0
     assert image_route.call_count == 0
+
+
+def _canonical_icon_comparison_request() -> CanonicalIconComparisonRequest:
+    return CanonicalIconComparisonRequest(
+        currentOriginal=ProviderImageInput(
+            data=b"photo-bytes", media_type=ImageMediaType.JPEG
+        ),
+        canonicalIconSource=ProviderImageInput(
+            data=b"icon-bytes", media_type=ImageMediaType.PNG
+        ),
+        language=Language.ZH_CN,
+        requestId=uuid4(),
+    )
+
+
+@respx.mock
+async def test_compare_canonical_icon_sends_dual_image_vision_request(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """M13 Task 58: the reuse judgment is a dual-image vision-model chat call
+    with both images in role order and a strict single-field JSON schema."""
+    request = _canonical_icon_comparison_request()
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps({"visualSimilarity": 0.88}))
+    )
+
+    result = await gateway.compare_canonical_icon(request)
+
+    assert result.visual_similarity == 0.88
+    body = json.loads(route.calls[0].request.content.decode())
+    assert body["model"] == "vision-model"
+    assert "temperature" not in body
+    content = body["messages"][0]["content"]
+    assert [item["type"] for item in content] == ["text", "image_url", "image_url"]
+    image_urls = [item["image_url"]["url"] for item in content[1:]]
+    assert image_urls[0].startswith("data:image/jpeg;base64,")
+    assert image_urls[1].startswith("data:image/png;base64,")
+    assert "photo-bytes" not in image_urls[0]
+    assert "icon-bytes" not in image_urls[1]
+    prompt_text = content[0]["text"]
+    assert "visualSimilarity" in prompt_text or "visualSimilarity" in body
+    response_format = body["response_format"]
+    assert set(response_format["json_schema"]["schema"]["properties"]) == {
+        "visualSimilarity"
+    }
+
+
+@respx.mock
+async def test_compare_canonical_icon_bounds_check_score(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """A provider that answers outside 0..1 must be rejected by the strict
+    domain response instead of flowing into the 0.75 reuse gate."""
+    from pelican_town_specials.domain.errors import AppError as _AppError
+
+    bad_route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps({"visualSimilarity": 1.4}))
+    )
+
+    with pytest.raises(_AppError) as excinfo:
+        await gateway.compare_canonical_icon(_canonical_icon_comparison_request())
+
+    assert excinfo.value.code == "PTS_PROVIDER_INVALID_STRUCTURED_OUTPUT"
+    assert bad_route.call_count == 3  # original + two bounded repairs
+
+
+@respx.mock
+async def test_design_prompt_renders_regeneration_instruction_section(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """M13 Task 59: the instruction travels inside the design prompt itself,
+    not only in the request DTO."""
+    request = _ask_gus_design_request(
+        context_text="不要放辣椒，保持清淡。",
+        regeneration_instructions="鱼片切厚一点，摆成扇形。",
+    )
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(_DESIGN_CORE_JSON)
+    )
+
+    await gateway.design_ask_gus(request)
+
+    body = json.loads(route.calls[0].request.content.decode())
+    content = body["messages"][0]["content"]
+    prompt_text = content[0]["text"]
+    assert "本轮重新生成要求" in prompt_text
+    assert "鱼片切厚一点，摆成扇形。" in prompt_text
+    assert "原始 contextText" in prompt_text
+    assert "不要放辣椒，保持清淡。" in prompt_text
+    assert prompt_text.index("原始 contextText") < prompt_text.index("本轮重新生成要求")
+    assert "本轮优先级最高" in prompt_text
+    # The original contextText remains independent from the current round.
+    assert "Spring Noodles" in prompt_text  # analysis payload stays present
+
+
+@respx.mock
+async def test_analysis_prompt_renders_regeneration_instruction_section(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """A full regeneration re-runs the photo analysis; the round instruction
+    is rendered into that vision prompt too."""
+    request = _analysis_request_en().model_copy(
+        update={
+            "context_text": "Keep the original mild seasoning.",
+            "regeneration_instructions": "make the slices thicker and spicy",
+        }
+    )
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON))
+    )
+
+    await gateway.analyze_dish(request)
+
+    body = json.loads(route.calls[0].request.content.decode())
+    content = body["messages"][0]["content"]
+    prompt_text = content[0]["text"]
+    assert "Current regeneration requirements" in prompt_text
+    assert "make the slices thicker and spicy" in prompt_text
+    assert "Original contextText" in prompt_text
+    assert "Keep the original mild seasoning." in prompt_text
+    assert prompt_text.index("Original contextText") < prompt_text.index(
+        "Current regeneration requirements"
+    )

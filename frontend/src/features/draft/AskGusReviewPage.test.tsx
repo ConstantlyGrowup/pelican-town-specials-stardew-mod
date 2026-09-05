@@ -833,15 +833,13 @@ describe("ask gus review", () => {
     ).toBeVisible();
   });
 
-  it("persists personal takeover before starting the replacement generation", async () => {
+  it("persists personal takeover before continuing the failed instructed round", async () => {
     const requestOrder: string[] = [];
+    const generateUrls: string[] = [];
+    const generateBodies: unknown[] = [];
     let generateCalls = 0;
     server.use(
-      http.get("/api/v1/drafts/:draft_id", () =>
-        HttpResponse.json(
-          askGusDraft({ status: "DRAFT", revision: 1, presentation: null, gameplay: null }),
-        ),
-      ),
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
       http.put("/api/v1/settings/provider/trial/preference", async ({ request }) => {
         const body = (await request.json()) as { mode?: string };
         requestOrder.push(`preference:${body.mode ?? ""}`);
@@ -854,9 +852,15 @@ describe("ask gus review", () => {
           providerPreference: "PERSONAL",
         });
       }),
-      http.post("/api/v1/drafts/:draft_id/generate", () => {
+      http.post("/api/v1/drafts/:draft_id/generate", async ({ request }) => {
         generateCalls += 1;
         requestOrder.push("generate");
+        generateUrls.push(request.url);
+        try {
+          generateBodies.push(await request.json());
+        } catch {
+          generateBodies.push({});
+        }
         const body =
           generateCalls === 1
             ? JSON.stringify({
@@ -880,7 +884,9 @@ describe("ask gus review", () => {
     );
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: copy.startGeneration }));
+    const input = await screen.findByLabelText(copy.regenerationInstructionsLabel);
+    fireEvent.change(input, { target: { value: "鱼片切厚一点" } });
+    fireEvent.click(await screen.findByRole("button", { name: copy.fullRegenerate }));
     expect(await screen.findByRole("button", { name: copy.usePersonalProvider })).toBeVisible();
     expect(generateCalls).toBe(1);
 
@@ -891,6 +897,12 @@ describe("ask gus review", () => {
       "generate",
       "preference:PERSONAL",
       "generate",
+    ]);
+    expect(new URL(generateUrls[0]).searchParams.get("restart")).toBe("true");
+    expect(new URL(generateUrls[1]).searchParams.get("restart")).toBeNull();
+    expect(generateBodies).toEqual([
+      { regenerationInstructions: "鱼片切厚一点" },
+      { regenerationInstructions: "鱼片切厚一点" },
     ]);
   });
 
@@ -1015,5 +1027,213 @@ describe("ask gus review", () => {
     fireEvent.click(screen.getByRole("button", { name: copy.cancelGeneration }));
 
     await waitFor(() => expect(cancelSpy).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("M13 Task 59 regeneration instructions", () => {
+  it("shows the optional instruction box beside the full regenerate action", async () => {
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+    );
+    renderPage();
+
+    const label = await screen.findByLabelText(
+      copy.regenerationInstructionsLabel,
+    );
+    expect(label).toBeVisible();
+    expect(label).toHaveAttribute("placeholder", copy.regenerationInstructionsPlaceholder);
+    expect(label).toHaveAttribute("maxlength", "500");
+    expect(
+      screen.getByRole("button", { name: copy.fullRegenerate }),
+    ).toBeVisible();
+    expect(screen.getByText(copy.regenerationInstructionsHint)).toBeVisible();
+  });
+
+  it("submits the instruction as the generate body on full regeneration", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.post("/api/v1/drafts/:draft_id/generate", async ({ request }) => {
+        try {
+          bodies.push(await request.json());
+        } catch {
+          bodies.push({});
+        }
+        return new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n' +
+            '{"type":"attempt.failed","attemptId":"a-1","error":{"code":"PTS_PROVIDER_UNAVAILABLE","message":"offline","retryable":true,"requestId":"r","recommendedAction":""}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        );
+      }),
+    );
+    renderPage();
+
+    const input = await screen.findByLabelText(
+      copy.regenerationInstructionsLabel,
+    );
+    fireEvent.change(input, {
+      target: { value: "  鱼片切厚一点，摆成扇形。  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: copy.fullRegenerate }));
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({
+      regenerationInstructions: "鱼片切厚一点，摆成扇形。",
+    });
+    // The instruction stays in the box after the failed round.
+    expect(input).toHaveValue("  鱼片切厚一点，摆成扇形。  ");
+  });
+
+  it("clears a successful instruction before the next full regeneration", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.post("/api/v1/drafts/:draft_id/generate", async ({ request }) => {
+        try {
+          bodies.push(await request.json());
+        } catch {
+          bodies.push({});
+        }
+        return new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n' +
+            '{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":4,"draft":{}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        );
+      }),
+    );
+    renderPage();
+
+    const input = await screen.findByLabelText(copy.regenerationInstructionsLabel);
+    fireEvent.change(input, { target: { value: "鱼片切厚一点" } });
+    fireEvent.click(screen.getByRole("button", { name: copy.fullRegenerate }));
+
+    await waitFor(() => expect(input).toHaveValue(""));
+    fireEvent.click(screen.getByRole("button", { name: copy.fullRegenerate }));
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies).toEqual([{ regenerationInstructions: "鱼片切厚一点" }, {}]);
+  });
+
+  it("keeps new input when historical successful progress arrives later", async () => {
+    let releaseProgress!: () => void;
+    const delayedProgress = new Promise<void>((resolve) => {
+      releaseProgress = resolve;
+    });
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.get("/api/v1/drafts/:draft_id/generation", async () => {
+        await delayedProgress;
+        return HttpResponse.json(
+          successfulProgress({
+            status: "SUCCEEDED",
+            regenerationInstructions: "历史说明",
+          }),
+        );
+      }),
+    );
+    renderPage();
+
+    const input = await screen.findByLabelText(copy.regenerationInstructionsLabel);
+    fireEvent.change(input, { target: { value: "我刚输入的新要求" } });
+    releaseProgress();
+
+    await waitFor(() => expect(input).toHaveValue("我刚输入的新要求"));
+  });
+
+  it("keeps an empty input on the historical no-instruction restart", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.post("/api/v1/drafts/:draft_id/generate", async ({ request }) => {
+        try {
+          bodies.push(await request.json());
+        } catch {
+          bodies.push({});
+        }
+        return new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n' +
+            '{"type":"attempt.succeeded","attemptId":"a-1","draftRevision":4,"draft":{}}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        );
+      }),
+    );
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.fullRegenerate }),
+    );
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({});
+  });
+
+  it("continues a failed instructed round without restart and resends its body", async () => {
+    const urls: string[] = [];
+    const bodies: unknown[] = [];
+    let calls = 0;
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.post("/api/v1/drafts/:draft_id/generate", async ({ request }) => {
+        calls += 1;
+        urls.push(request.url);
+        try {
+          bodies.push(await request.json());
+        } catch {
+          bodies.push({});
+        }
+        if (calls === 1) {
+          return new Response(
+            '{"type":"attempt.failed","attemptId":"a-1","error":{"code":"PTS_PROVIDER_UNAVAILABLE","message":"offline","retryable":true,"requestId":"r","recommendedAction":"RETRY_STAGE","details":{"progressSaved":true}}}\n',
+            { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+          );
+        }
+        return new Response(
+          '{"type":"attempt.started","attemptId":"a-2"}\n{"type":"stage.started","attemptId":"a-2","stage":"ICON_GENERATION_AND_NORMALIZATION","ordinal":7,"total":9}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        );
+      }),
+    );
+    renderPage();
+
+    const input = await screen.findByLabelText(copy.regenerationInstructionsLabel);
+    fireEvent.change(input, { target: { value: "鱼片切厚一点" } });
+    fireEvent.click(screen.getByRole("button", { name: copy.fullRegenerate }));
+    await screen.findByText(copy.generationProgressSaved);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: copy.continueGeneration }),
+    );
+    await screen.findByText(copy.preparingNewResult);
+
+    expect(calls).toBe(2);
+    expect(new URL(urls[0]).searchParams.get("restart")).toBe("true");
+    expect(new URL(urls[1]).searchParams.get("restart")).toBeNull();
+    expect(bodies).toEqual([
+      { regenerationInstructions: "鱼片切厚一点" },
+      { regenerationInstructions: "鱼片切厚一点" },
+    ]);
+    expect(input).toHaveValue("鱼片切厚一点");
+  });
+
+  it("ignores a second full-regeneration click after the round starts", async () => {
+    let calls = 0;
+    server.use(
+      http.get("/api/v1/drafts/:draft_id", () => HttpResponse.json(askGusDraft())),
+      http.post("/api/v1/drafts/:draft_id/generate", () => {
+        calls += 1;
+        return new Response(
+          '{"type":"attempt.started","attemptId":"a-1"}\n{"type":"stage.started","attemptId":"a-1","stage":"DISH_ANALYSIS","ordinal":2,"total":9}\n',
+          { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+        );
+      }),
+    );
+    renderPage();
+
+    const button = await screen.findByRole("button", { name: copy.fullRegenerate });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await screen.findByText(copy.preparingNewResult);
+    expect(calls).toBe(1);
   });
 });

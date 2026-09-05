@@ -66,3 +66,53 @@ def analysis_prompt_for(language: Language) -> tuple[str, str]:
     if language is Language.EN_US:
         return ANALYSIS_PROMPT_V1_EN, ANALYSIS_JSON_INSTRUCTION_EN
     return ANALYSIS_PROMPT_V1, ANALYSIS_JSON_INSTRUCTION
+
+
+def regeneration_instruction_section(
+    instruction: str,
+    *,
+    language: Language,
+) -> str:
+    """Render this round's requirement as a separate, highest-priority block.
+
+    ``contextText`` and this field deliberately stay in separate sections so
+    a new round cannot accidentally replace the original request.  The
+    explicit priority wording also gives the provider a deterministic rule
+    when the two user inputs disagree.
+    """
+    if language is Language.EN_US:
+        return (
+            "\n\nCurrent regeneration requirements (highest priority for this round; "
+            "when these conflict with Original contextText, follow these requirements "
+            "while still obeying the photo evidence and output schema):\n"
+            f"{instruction}"
+        )
+    return (
+        "\n\n本轮重新生成要求（本轮优先级最高；如果与原始 contextText 冲突，"
+        "请遵循本轮要求，同时仍遵守照片证据和输出 schema）：\n"
+        f"{instruction}"
+    )
+
+
+def context_text_section(
+    context_text: str,
+    *,
+    language: Language,
+) -> str:
+    """Render the original request as an independent prompt section.
+
+    This is intentionally separate from ``regeneration_instruction_section``:
+    the original request remains available as background context on every full
+    regeneration, while the current round can override conflicting details.
+    """
+    if language is Language.EN_US:
+        return (
+            "\n\nOriginal contextText (the initial user request; keep it as background "
+            "unless the current regeneration requirements override a detail):\n"
+            f"{context_text}"
+        )
+    return (
+        "\n\n原始 contextText（首次请求中的用户说明；除非本轮重新生成要求覆盖某项，"
+        "否则将其作为背景要求保留）：\n"
+        f"{context_text}"
+    )

@@ -42,6 +42,8 @@ from pelican_town_specials.persistence.secret_store import ApiKeySource
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalIconComparisonRequest,
+    CanonicalIconComparisonResponse,
     DishAnalysisRequest,
     GeneratedDishCore,
     GeneratedImage,
@@ -607,10 +609,16 @@ def test_trial_limit_error_code_and_recommended_action() -> None:
 # successful results and non-AppError exceptions pass through unchanged.
 # ---------------------------------------------------------------------------
 
-_METHODS = ("analyze_dish", "design_ask_gus", "generate_image")
+_METHODS = (
+    "analyze_dish",
+    "design_ask_gus",
+    "compare_canonical_icon",
+    "generate_image",
+)
 _RESULT_ATTR = {
     "analyze_dish": "analyze_result",
     "design_ask_gus": "design_result",
+    "compare_canonical_icon": "comparison_result",
     "generate_image": "image_result",
 }
 
@@ -621,6 +629,9 @@ class _StubGateway:
     def __init__(self) -> None:
         self.analyze_result: DishAnalysis | BaseException = analysis_fixture()
         self.design_result: GeneratedDishCore | BaseException = core_fixture()
+        self.comparison_result: CanonicalIconComparisonResponse | BaseException = (
+            CanonicalIconComparisonResponse(visualSimilarity=0.88)
+        )
         self.image_result: GeneratedImage | BaseException = GeneratedImage(
             data=_png_bytes(), media_type=ImageMediaType.PNG
         )
@@ -638,6 +649,13 @@ class _StubGateway:
         if isinstance(self.design_result, BaseException):
             raise self.design_result
         return self.design_result
+
+    async def compare_canonical_icon(
+        self, request, *, json_only: bool = False
+    ) -> CanonicalIconComparisonResponse:
+        if isinstance(self.comparison_result, BaseException):
+            raise self.comparison_result
+        return self.comparison_result
 
     async def generate_image(self, request) -> GeneratedImage:
         if isinstance(self.image_result, BaseException):
@@ -680,6 +698,19 @@ async def _invoke(gateway: TrialSafeGateway, method: str) -> object:
                 analysis=analysis_fixture(),
                 language=Language.ZH_CN,
                 request_id=uuid4(),
+            )
+        )
+    if method == "compare_canonical_icon":
+        return await gateway.compare_canonical_icon(
+            CanonicalIconComparisonRequest(
+                currentOriginal=ProviderImageInput(
+                    data=_png_bytes(), media_type=ImageMediaType.PNG
+                ),
+                canonicalIconSource=ProviderImageInput(
+                    data=_png_bytes(), media_type=ImageMediaType.PNG
+                ),
+                language=Language.ZH_CN,
+                requestId=uuid4(),
             )
         )
     return await gateway.generate_image(

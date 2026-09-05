@@ -133,4 +133,44 @@ describe("streamGeneration", () => {
       `/api/v1/drafts/draft-1/generate${expected}`,
     );
   });
+
+  it("sends a JSON body and content type only for a non-empty instruction", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"type":"attempt.started","attemptId":"a-1"}\n', {
+        status: 200,
+        headers: { "Content-Type": "application/x-ndjson" },
+      }),
+    );
+
+    await streamGeneration(
+      {
+        draftId: "draft-1",
+        regenerationInstructions: "  鱼片切厚一点  ",
+      },
+      vi.fn(),
+    );
+
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(new Headers(init?.headers).get("Content-Type")).toBe(
+      "application/json",
+    );
+    expect(init?.body).toBe(
+      JSON.stringify({ regenerationInstructions: "鱼片切厚一点" }),
+    );
+  });
+
+  it("keeps historical no-body calls without a content type", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"type":"attempt.started","attemptId":"a-1"}\n', {
+        status: 200,
+        headers: { "Content-Type": "application/x-ndjson" },
+      }),
+    );
+
+    await streamGeneration({ draftId: "draft-1" }, vi.fn());
+
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(new Headers(init?.headers).get("Content-Type")).toBeNull();
+    expect(init?.body).toBeUndefined();
+  });
 });

@@ -40,6 +40,8 @@ from pelican_town_specials.persistence.secret_store import ApiKeySource
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalIconComparisonRequest,
+    CanonicalIconComparisonResponse,
     CanonicalMatchRequest,
     CanonicalMatchResponse,
     DishAnalysisRequest,
@@ -186,6 +188,19 @@ class TrialSafeGateway:
     ) -> CanonicalMatchResponse:
         try:
             return await self._inner.match_canonical(request, json_only=json_only)
+        except AppError as exc:
+            raise _trial_safe_error(exc) from exc
+
+    async def compare_canonical_icon(
+        self,
+        request: CanonicalIconComparisonRequest,
+        *,
+        json_only: bool = False,
+    ) -> CanonicalIconComparisonResponse:
+        try:
+            return await self._inner.compare_canonical_icon(
+                request, json_only=json_only
+            )
         except AppError as exc:
             raise _trial_safe_error(exc) from exc
 

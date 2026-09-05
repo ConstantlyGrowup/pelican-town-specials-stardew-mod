@@ -42,6 +42,12 @@ export type GenerationState = {
   timing: GenerationTiming | null;
   /** Confirmed trial usage from the latest persisted successful attempt. */
   trialUsage: TrialUsageFact | null;
+  /**
+   * M13 Task 59: the current/failed round's regeneration instruction so the
+   * review page can restore the input after a refresh or a failed attempt.
+   * Empty when no instruction was submitted this round.
+   */
+  regenerationInstructions: string;
 };
 
 type InternalState = GenerationState & {
@@ -85,6 +91,7 @@ function getState(draftId: string): InternalState {
       error: null,
       timing: null,
       trialUsage: null,
+      regenerationInstructions: "",
     };
     state = { ...idle, controller: null, _snapshot: idle };
     states.set(draftId, state);
@@ -107,6 +114,10 @@ function setState(draftId: string, patch: Partial<GenerationState>) {
     timing: patch.timing !== undefined ? patch.timing : state.timing,
     trialUsage:
       patch.trialUsage !== undefined ? patch.trialUsage : state.trialUsage,
+    regenerationInstructions:
+      patch.regenerationInstructions !== undefined
+        ? patch.regenerationInstructions
+        : state.regenerationInstructions,
   };
   states.set(draftId, { ...next, controller: state.controller, _snapshot: next });
   emit();
@@ -213,6 +224,7 @@ export function hydrateGeneration(
       timing: null,
       // Active progress never carries a confirmed result fact.
       trialUsage: null,
+      regenerationInstructions: attempt.regenerationInstructions ?? "",
     };
     states.set(draftId, { ...streaming, controller: null, _snapshot: streaming });
     emit();
@@ -245,6 +257,7 @@ export function hydrateGeneration(
       error: null,
       timing: null,
       trialUsage: null,
+      regenerationInstructions: "",
     });
   }
 }
@@ -318,6 +331,12 @@ export function applyTerminalSnapshot(
       phase = "cancelled";
       break;
   }
+  // M13 Task 59: a FAILED/INTERRUPTED round keeps its instruction so the
+  // retry entry restores the same round; terminal success clears the input.
+  const instructionsFromAttempt =
+    phase === "error" || phase === "cancelled"
+      ? (attempt.regenerationInstructions ?? "")
+      : "";
   const terminal: GenerationState = {
     phase,
     attemptId: attempt.attemptId,
@@ -327,6 +346,7 @@ export function applyTerminalSnapshot(
     error,
     timing: timingFromAttempt(attempt),
     trialUsage: trialUsageFromAttempt(attempt),
+    regenerationInstructions: instructionsFromAttempt,
   };
   states.set(draftId, { ...terminal, controller: null, _snapshot: terminal });
   emit();
@@ -352,6 +372,8 @@ type GenerationSuccessHandler = (attemptId?: string) => void | Promise<void>;
 export type GenerationStartOptions = {
   /** Set only for an explicit full regeneration from the REVIEWABLE page. */
   restart?: boolean;
+  /** M13 Task 59: this round's regeneration instruction (optional). */
+  regenerationInstructions?: string;
 };
 
 export function beginGeneration(
@@ -363,6 +385,7 @@ export function beginGeneration(
   const state = getState(draftId);
   state.controller?.abort();
   const controller = new AbortController();
+  const trimmedInstructions = options.regenerationInstructions?.trim() ?? "";
   const streaming: GenerationState = {
     phase: "streaming",
     attemptId: null,
@@ -372,6 +395,7 @@ export function beginGeneration(
     error: null,
     timing: null,
     trialUsage: null,
+    regenerationInstructions: trimmedInstructions,
   };
   states.set(draftId, {
     ...streaming,
@@ -383,7 +407,12 @@ export function beginGeneration(
   void (async () => {
     try {
       await streamGeneration(
-        { draftId, signal: controller.signal, restart: options.restart === true },
+        {
+          draftId,
+          signal: controller.signal,
+          restart: options.restart === true,
+          regenerationInstructions: trimmedInstructions || undefined,
+        },
         (event) => {
           handleEvent(draftId, controller, event, onSuccess);
         },
@@ -477,6 +506,7 @@ function handleEvent(
         // GET generation progress to obtain the authoritative timing.
         timing: null,
         trialUsage: null,
+        regenerationInstructions: "",
       });
       void onSuccess?.(event.attemptId);
       break;

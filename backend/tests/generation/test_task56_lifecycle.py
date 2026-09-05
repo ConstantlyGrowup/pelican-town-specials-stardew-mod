@@ -398,7 +398,7 @@ async def test_canonical_hit_preview_failure_resumes_owned_icon_without_recall(
     local = _reopen(harness, canonical_repository=registry)
     failed = [event async for event in local.run(initial_command(ready_draft))]
     assert failed[-1].type == "attempt.failed"
-    assert harness.gateway.calls == ["analyze", "match", "image"]
+    assert harness.gateway.calls == ["analyze", "match", "compare_icon", "image"]
     checkpoint = local.attempts.get_checkpoint(failed[-1].attempt_id)
     assert checkpoint is not None
     assert checkpoint.canonical == canonical

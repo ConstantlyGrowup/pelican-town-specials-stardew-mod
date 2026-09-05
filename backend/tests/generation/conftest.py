@@ -46,6 +46,7 @@ from pelican_town_specials.persistence.repositories import (
 )
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import (
+    CanonicalIconComparisonResponse,
     CanonicalMatchResponse,
     GeneratedDishCore,
     GeneratedImage,
@@ -149,7 +150,12 @@ class FakeGateway:
         self.hold = hold
         self.calls: list[str] = []
         self.image_requests: list[ImageGenerationRequest] = []
+        self.comparison_requests: list[object] = []
+        self.design_requests: list[object] = []
         self.canonical_match_response: CanonicalMatchResponse | None = None
+        # M13 Task 58: visual similarity reported by compare_canonical_icon;
+        # set to None to simulate a provider failure in that step.
+        self.visual_similarity: float | None = 0.9
 
     async def analyze_dish(
         self, request, *, json_only: bool = False
@@ -169,6 +175,7 @@ class FakeGateway:
         self, request, *, json_only: bool = False
     ) -> GeneratedDishCore:
         self.calls.append("design")
+        self.design_requests.append(request)
         if self.delay:
             await asyncio.sleep(self.delay)
         if self.fail_stage is GenerationStage.GAMEPLAY_DESIGN:
@@ -182,6 +189,19 @@ class FakeGateway:
         return self.canonical_match_response or CanonicalMatchResponse(
             candidateId=None,
             confidence=0.0,
+        )
+
+    async def compare_canonical_icon(
+        self, request, *, json_only: bool = False
+    ) -> CanonicalIconComparisonResponse:
+        self.calls.append("compare_icon")
+        self.comparison_requests.append(request)
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if self.visual_similarity is None:
+            raise RuntimeError("fake icon comparison failure")
+        return CanonicalIconComparisonResponse(
+            visualSimilarity=self.visual_similarity
         )
 
     async def generate_image(self, request) -> GeneratedImage:

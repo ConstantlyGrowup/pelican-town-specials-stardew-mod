@@ -180,6 +180,13 @@ class GenerationAttempt(StrictModel):
     stages: list[StageAttempt] = Field(min_length=1)
     total_stages: int = Field(default=1, ge=1)
     candidate_record_path: str | None = None
+    # M13 Task 59: the current round's regeneration instruction, so a refresh
+    # can rehydrate the user's wording. Old attempts default to null.
+    regeneration_instructions: str | None = Field(
+        default=None,
+        alias="regenerationInstructions",
+        max_length=500,
+    )
     started_at: datetime
     finished_at: datetime | None = None
     error: ErrorSummary | None = None
@@ -211,11 +218,17 @@ class GenerationAttemptPublic(StrictModel):
     started_at: datetime
     finished_at: datetime | None = None
     error: ErrorSummary | None = None
-    # This is derived at the application read boundary from a validated
-    # compatible private checkpoint. It intentionally is not persisted on the
-    # internal attempt record so stale/corrupt staging can never advertise
-    # resumable progress.
+    # Derived at the application read boundary from a validated compatible
+    # private checkpoint. Intentionally not persisted on the internal attempt
+    # record so stale/corrupt staging can never advertise resumable progress.
     progress_saved: bool = Field(default_factory=lambda: False, alias="progressSaved")
+    # M13 Task 59: the current round's regeneration instruction so a refreshed
+    # review page can restore the input box. Only user-authored local text.
+    regeneration_instructions: str | None = Field(
+        default=None,
+        alias="regenerationInstructions",
+        max_length=500,
+    )
     trial_used: bool = Field(default_factory=lambda: False)
     trial_remaining: int | None = Field(default=None, ge=0)
 

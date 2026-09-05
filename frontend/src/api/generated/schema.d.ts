@@ -210,7 +210,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Drafts */
+        /**
+         * List Drafts
+         * @description List the visible drafts, one page at a time.
+         *
+         *     Page metadata lets the homepage keep the full visible set consistent while
+         *     the generation flag covers drafts on every page.
+         */
         get: operations["list_drafts_api_v1_drafts_get"];
         put?: never;
         /** Create Draft */
@@ -311,6 +317,11 @@ export interface paths {
         /**
          * Generate Draft
          * @description Start Ask Gus generation and stream NDJSON GenerationEvent lines.
+         *
+         *     The optional JSON body carries the user's regeneration instruction for an
+         *     explicit full regeneration (M13 Task 59); an absent or empty body keeps
+         *     the historical behavior. The instruction is trimmed, capped at 500
+         *     characters, and never written into the draft's original contextText.
          */
         post: operations["generate_draft_api_v1_drafts__draft_id__generate_post"];
         delete?: never;
@@ -883,6 +894,36 @@ export interface components {
          * @enum {string}
          */
         DraftMode: "ASK_GUS" | "BLUEPRINT";
+        /**
+         * DraftPage
+         * @description Paged draft listing response (M13 Task 57).
+         *
+         *     The shared ``Page`` contract keeps its existing semantics for the other
+         *     list endpoints; the draft homepage needs page metadata plus a global
+         *     ``hasRunningGeneration`` flag so the client keeps refreshing while any
+         *     generation (including one on an off-page draft) is still in flight.
+         *     ``nextCursor`` remains null for backward compatibility with the previous
+         *     single-page shape.
+         */
+        DraftPage: {
+            /** Items */
+            items: components["schemas"]["DraftSummary"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Pagesize */
+            pageSize: number;
+            /** Totalpages */
+            totalPages: number;
+            /**
+             * Hasrunninggeneration
+             * @default false
+             */
+            hasRunningGeneration: boolean;
+        };
         /** DraftPatchRequest */
         DraftPatchRequest: {
             /** Expectedrevision */
@@ -890,6 +931,16 @@ export interface components {
             presentation?: components["schemas"]["BlueprintPresentationInput"] | null;
             gameplay?: components["schemas"]["BlueprintGameplayInput"] | null;
         };
+        /**
+         * DraftSortBy
+         * @enum {string}
+         */
+        DraftSortBy: "updatedAt" | "createdAt";
+        /**
+         * DraftSortOrder
+         * @enum {string}
+         */
+        DraftSortOrder: "desc" | "asc";
         /**
          * DraftStatus
          * @enum {string}
@@ -906,6 +957,11 @@ export interface components {
             status: components["schemas"]["DraftStatus"];
             /** Revision */
             revision: number;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
             /**
              * Updatedat
              * Format: date-time
@@ -1099,6 +1155,8 @@ export interface components {
             error?: components["schemas"]["ErrorSummary"] | null;
             /** Progresssaved */
             progressSaved?: boolean;
+            /** Regenerationinstructions */
+            regenerationInstructions?: string | null;
             /** Trialused */
             trialUsed?: boolean;
             /** Trialremaining */
@@ -1159,6 +1217,18 @@ export interface components {
              */
             apiVersion: "v1";
         };
+        /**
+         * IconReuseDecision
+         * @description M13 Task 58: how a canonical-hit attempt obtained its pixel icon.
+         *
+         *     A canonical hit always reuses the matched text; the ICON step may either
+         *     reuse the canonical shared icon source (REUSED), generate a fresh icon
+         *     from the current photo (GENERATED), or be skipped because the canonical
+         *     icon assets are missing or damaged (UNAVAILABLE). Records written before
+         *     M13 carry no decision (None).
+         * @enum {string}
+         */
+        IconReuseDecision: "REUSED" | "GENERATED" | "UNAVAILABLE";
         /** IngredientCatalogItemView */
         IngredientCatalogItemView: {
             /** Itemid */
@@ -1201,15 +1271,6 @@ export interface components {
         Page_CookbookDishSummary_: {
             /** Items */
             items: components["schemas"]["CookbookDishSummary"][];
-            /** Nextcursor */
-            nextCursor?: string | null;
-            /** Total */
-            total: number;
-        };
-        /** Page[DraftSummary] */
-        Page_DraftSummary_: {
-            /** Items */
-            items: components["schemas"]["DraftSummary"][];
             /** Nextcursor */
             nextCursor?: string | null;
             /** Total */
@@ -1265,6 +1326,9 @@ export interface components {
             recallConfidence?: number | null;
             /** Recallelapsedms */
             recallElapsedMs?: number | null;
+            iconReuseDecision?: components["schemas"]["IconReuseDecision"] | null;
+            /** Iconvisualsimilarity */
+            iconVisualSimilarity?: number | null;
             /** Cacheeligibility */
             cacheEligibility: boolean;
         };
@@ -1388,6 +1452,20 @@ export interface components {
              * @default stardew-1.6
              */
             calculationVersion: string;
+        };
+        /**
+         * RegenerationInstructionsRequest
+         * @description Optional body of the full-regeneration request (M13 Task 59).
+         *
+         *     ``regenerationInstructions`` is the user's free-text requirement for the
+         *     next complete regeneration round. It is capped at 500 characters after
+         *     trimming and never replaces the draft's original ``contextText``; an
+         *     empty body (or one with only whitespace) means "no instruction", keeping
+         *     historical clients' restart behavior unchanged.
+         */
+        RegenerationInstructionsRequest: {
+            /** Regenerationinstructions */
+            regenerationInstructions?: string | null;
         };
         /** SemanticIngredient */
         SemanticIngredient: {
@@ -1902,7 +1980,12 @@ export interface operations {
     };
     list_drafts_api_v1_drafts_get: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                pageSize?: number;
+                sortBy?: components["schemas"]["DraftSortBy"];
+                sortOrder?: components["schemas"]["DraftSortOrder"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1915,7 +1998,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Page_DraftSummary_"];
+                    "application/json": components["schemas"]["DraftPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2123,7 +2215,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RegenerationInstructionsRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

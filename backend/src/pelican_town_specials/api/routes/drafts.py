@@ -5,15 +5,16 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Header, Request, Response
+from fastapi import APIRouter, Header, Query, Request, Response
 
 from pelican_town_specials.api.dependencies import draft_service
-from pelican_town_specials.application.common import Page
 from pelican_town_specials.application.drafts import (
     DraftCreateRequest,
+    DraftPage,
     DraftPatchRequest,
     DraftService,
-    DraftSummary,
+    DraftSortBy,
+    DraftSortOrder,
     DraftView,
 )
 from pelican_town_specials.domain.archive import CookbookDishDetail
@@ -33,11 +34,29 @@ def create_draft(request: Request, body: DraftCreateRequest) -> DraftView:
 
 @router.get(
     "/drafts",
-    response_model=Page[DraftSummary],
+    response_model=DraftPage,
     response_model_by_alias=True,
 )
-def list_drafts(request: Request) -> Page[DraftSummary]:
-    return _service(request).list_drafts()
+def list_drafts(
+    request: Request,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 10,
+    sort_by: Annotated[DraftSortBy, Query(alias="sortBy")] = DraftSortBy.UPDATED_AT,
+    sort_order: Annotated[DraftSortOrder, Query(alias="sortOrder")] = (
+        DraftSortOrder.DESC
+    ),
+) -> DraftPage:
+    """List the visible drafts, one page at a time.
+
+    Page metadata lets the homepage keep the full visible set consistent while
+    the generation flag covers drafts on every page.
+    """
+    return _service(request).list_drafts(
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
 
 
 @router.get(

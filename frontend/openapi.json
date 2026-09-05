@@ -371,34 +371,18 @@
       }
     },
     "/api/v1/drafts": {
-      "get": {
-        "summary": "List Drafts",
-        "operationId": "list_drafts_api_v1_drafts_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Page_DraftSummary_"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "summary": "Create Draft",
         "operationId": "create_draft_api_v1_drafts_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DraftCreateRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -407,6 +391,76 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Drafts",
+        "description": "List the visible drafts, one page at a time.\n\nPage metadata lets the homepage keep the full visible set consistent while\nthe generation flag covers drafts on every page.",
+        "operationId": "list_drafts_api_v1_drafts_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 10,
+              "title": "Pagesize"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DraftSortBy",
+              "default": "updatedAt"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DraftSortOrder",
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftPage"
                 }
               }
             }
@@ -638,7 +692,7 @@
     "/api/v1/drafts/{draft_id}/generate": {
       "post": {
         "summary": "Generate Draft",
-        "description": "Start Ask Gus generation and stream NDJSON GenerationEvent lines.",
+        "description": "Start Ask Gus generation and stream NDJSON GenerationEvent lines.\n\nThe optional JSON body carries the user's regeneration instruction for an\nexplicit full regeneration (M13 Task 59); an absent or empty body keeps\nthe historical behavior. The instruction is trimmed, capped at 500\ncharacters, and never written into the draft's original contextText.",
         "operationId": "generate_draft_api_v1_drafts__draft_id__generate_post",
         "parameters": [
           {
@@ -662,6 +716,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RegenerationInstructionsRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2081,6 +2152,65 @@
         ],
         "title": "DraftMode"
       },
+      "DraftPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DraftSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page"
+          },
+          "pageSize": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Pagesize"
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Totalpages"
+          },
+          "hasRunningGeneration": {
+            "type": "boolean",
+            "title": "Hasrunninggeneration",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ],
+        "title": "DraftPage",
+        "description": "Paged draft listing response (M13 Task 57).\n\nThe shared ``Page`` contract keeps its existing semantics for the other\nlist endpoints; the draft homepage needs page metadata plus a global\n``hasRunningGeneration`` flag so the client keeps refreshing while any\ngeneration (including one on an off-page draft) is still in flight.\n``nextCursor`` remains null for backward compatibility with the previous\nsingle-page shape."
+      },
       "DraftPatchRequest": {
         "properties": {
           "expectedRevision": {
@@ -2116,6 +2246,22 @@
         ],
         "title": "DraftPatchRequest"
       },
+      "DraftSortBy": {
+        "type": "string",
+        "enum": [
+          "updatedAt",
+          "createdAt"
+        ],
+        "title": "DraftSortBy"
+      },
+      "DraftSortOrder": {
+        "type": "string",
+        "enum": [
+          "desc",
+          "asc"
+        ],
+        "title": "DraftSortOrder"
+      },
       "DraftStatus": {
         "type": "string",
         "enum": [
@@ -2149,6 +2295,11 @@
             "minimum": 1.0,
             "title": "Revision"
           },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
@@ -2172,6 +2323,7 @@
           "mode",
           "status",
           "revision",
+          "createdAt",
           "updatedAt",
           "displayName",
           "originalImageAssetId"
@@ -2704,6 +2856,18 @@
             "type": "boolean",
             "title": "Progresssaved"
           },
+          "regenerationInstructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regenerationinstructions"
+          },
           "trialUsed": {
             "type": "boolean",
             "title": "Trialused"
@@ -2825,6 +2989,16 @@
         },
         "type": "object",
         "title": "HealthResponse"
+      },
+      "IconReuseDecision": {
+        "type": "string",
+        "enum": [
+          "REUSED",
+          "GENERATED",
+          "UNAVAILABLE"
+        ],
+        "title": "IconReuseDecision",
+        "description": "M13 Task 58: how a canonical-hit attempt obtained its pixel icon.\n\nA canonical hit always reuses the matched text; the ICON step may either\nreuse the canonical shared icon source (REUSED), generate a fresh icon\nfrom the current photo (GENERATED), or be skipped because the canonical\nicon assets are missing or damaged (UNAVAILABLE). Records written before\nM13 carry no decision (None)."
       },
       "IngredientCatalogItemView": {
         "properties": {
@@ -2967,40 +3141,6 @@
           "total"
         ],
         "title": "Page[CookbookDishSummary]"
-      },
-      "Page_DraftSummary_": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/DraftSummary"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "nextCursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Nextcursor"
-          },
-          "total": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Total"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "items",
-          "total"
-        ],
-        "title": "Page[DraftSummary]"
       },
       "Page_MetaOption_": {
         "properties": {
@@ -3205,6 +3345,29 @@
               }
             ],
             "title": "Recallelapsedms"
+          },
+          "iconReuseDecision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IconReuseDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "iconVisualSimilarity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iconvisualsimilarity"
           },
           "cacheEligibility": {
             "type": "boolean",
@@ -3427,6 +3590,26 @@
           "edibility"
         ],
         "title": "RecoverySpec"
+      },
+      "RegenerationInstructionsRequest": {
+        "properties": {
+          "regenerationInstructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regenerationinstructions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RegenerationInstructionsRequest",
+        "description": "Optional body of the full-regeneration request (M13 Task 59).\n\n``regenerationInstructions`` is the user's free-text requirement for the\nnext complete regeneration round. It is capped at 500 characters after\ntrimming and never replaces the draft's original ``contextText``; an\nempty body (or one with only whitespace) means \"no instruction\", keeping\nhistorical clients' restart behavior unchanged."
       },
       "SemanticIngredient": {
         "properties": {

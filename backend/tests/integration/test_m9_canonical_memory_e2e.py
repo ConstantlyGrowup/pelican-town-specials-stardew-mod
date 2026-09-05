@@ -235,7 +235,8 @@ async def test_production_canonical_memory_survives_restart_and_reuses_current_p
 
     # The third generation is an INITIAL Ask Gus attempt after restart. The
     # fake gateway supplies only the matcher response; all images still pass
-    # through the production asset/orchestrator path.
+    # through the production asset/orchestrator path. M13 Task 58 adds the
+    # dual-image visual reuse gate before the preview edit.
     restarted_gateway.canonical_match_response = CanonicalMatchResponse(
         candidateId=first_canonical.canonical_id,
         confidence=0.97,
@@ -243,7 +244,7 @@ async def test_production_canonical_memory_survives_restart_and_reuses_current_p
     third_draft = await _generate_initial(
         restarted, _new_ready_draft(restarted, color="gold")
     )
-    assert restarted_gateway.calls == ["analyze", "match", "image"]
+    assert restarted_gateway.calls == ["analyze", "match", "compare_icon", "image"]
     assert third_draft.provenance.generation_source is GenerationSource.CANONICAL_REUSED
     assert third_draft.provenance.canonical_dish_id == first_canonical.canonical_id
     assert third_draft.provenance.recall_confidence == 0.97

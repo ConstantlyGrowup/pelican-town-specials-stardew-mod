@@ -23,6 +23,8 @@ from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.errors import AppError
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalIconComparisonRequest,
+    CanonicalIconComparisonResponse,
     CanonicalMatchRequest,
     CanonicalMatchResponse,
     DishAnalysisRequest,
@@ -32,10 +34,17 @@ from pelican_town_specials.providers.contracts import (
     ImageMediaType,
     ImageOperation,
 )
-from pelican_town_specials.providers.prompts.analysis_v1 import analysis_prompt_for
+from pelican_town_specials.providers.prompts.analysis_v1 import (
+    analysis_prompt_for,
+    context_text_section,
+    regeneration_instruction_section,
+)
 from pelican_town_specials.providers.prompts.ask_gus_v3 import ask_gus_prompt_for
 from pelican_town_specials.providers.prompts.canonical_match_v1 import (
     canonical_match_prompt_for,
+)
+from pelican_town_specials.providers.prompts.icon_similarity_v1 import (
+    icon_similarity_prompt_for,
 )
 from pelican_town_specials.providers.retry import RetryPolicy
 from pelican_town_specials.providers.safe_download import (
@@ -93,8 +102,20 @@ class OpenAICompatibleGateway:
         json_only: bool = False,
     ) -> DishAnalysis:
         self._require_model(self._settings.vision_model, "vision_model")
-        image_data_url = self._data_url(request.image.data, request.image.media_type)
         prompt, json_instruction = analysis_prompt_for(request.language)
+        if request.context_text:
+            prompt += context_text_section(
+                request.context_text,
+                language=request.language,
+            )
+        if request.regeneration_instructions:
+            prompt = (
+                prompt
+                + regeneration_instruction_section(
+                    request.regeneration_instructions,
+                    language=request.language,
+                )
+            )
         content = await self._chat_structured(
             model=self._settings.vision_model,
             request_id=request.request_id,
@@ -102,7 +123,9 @@ class OpenAICompatibleGateway:
             prompt=prompt,
             json_instruction=json_instruction,
             target_type=DishAnalysis,
-            image_data_url=image_data_url,
+            image_data_urls=(
+                self._data_url(request.image.data, request.image.media_type),
+            ),
             json_only=json_only,
             language=request.language,
         )
@@ -123,6 +146,19 @@ class OpenAICompatibleGateway:
             f"{prompt}\n\n{analysis_prefix}\n"
             f"{request.analysis.model_dump_json(by_alias=True)}"
         )
+        if request.context_text:
+            prompt += context_text_section(
+                request.context_text,
+                language=request.language,
+            )
+        if request.regeneration_instructions:
+            prompt = (
+                prompt
+                + regeneration_instruction_section(
+                    request.regeneration_instructions,
+                    language=request.language,
+                )
+            )
         content = await self._chat_structured(
             model=self._settings.text_model,
             request_id=request.request_id,
@@ -130,7 +166,7 @@ class OpenAICompatibleGateway:
             prompt=prompt,
             json_instruction=json_instruction,
             target_type=GeneratedDishCore,
-            image_data_url=None,
+            image_data_urls=None,
             json_only=json_only,
             language=request.language,
         )
@@ -173,7 +209,49 @@ class OpenAICompatibleGateway:
             prompt=prompt,
             json_instruction=json_instruction,
             target_type=CanonicalMatchResponse,
-            image_data_url=None,
+            image_data_urls=None,
+            json_only=json_only,
+            language=request.language,
+        )
+
+    async def compare_canonical_icon(
+        self,
+        request: CanonicalIconComparisonRequest,
+        *,
+        json_only: bool = False,
+    ) -> CanonicalIconComparisonResponse:
+        """Judge whether the current dish photo matches the recorded canonical
+        icon source closely enough to reuse it (M13 Task 58).
+
+        The comparison is a dual-image vision call through the configured
+        ``vision_model`` (the same route that analyzes the original photo), so
+        personal and trial configurations behave like the rest of the pipeline.
+        """
+        self._require_model(self._settings.vision_model, "vision_model")
+        prompt, json_instruction = icon_similarity_prompt_for(request.language)
+        current_label = (
+            "Current dish photo:" if request.language is Language.EN_US else "本次菜品照片："
+        )
+        canonical_label = (
+            "Archived dish icon source:" if request.language is Language.EN_US else "已归档菜品图标源图："
+        )
+        prompt = f"{prompt}\n\n{current_label}\n{canonical_label}"
+        return await self._chat_structured(
+            model=self._settings.vision_model,
+            request_id=request.request_id,
+            timeout=self._settings.chat_timeout_seconds,
+            prompt=prompt,
+            json_instruction=json_instruction,
+            target_type=CanonicalIconComparisonResponse,
+            image_data_urls=(
+                self._data_url(
+                    request.current_original.data, request.current_original.media_type
+                ),
+                self._data_url(
+                    request.canonical_icon_source.data,
+                    request.canonical_icon_source.media_type,
+                ),
+            ),
             json_only=json_only,
             language=request.language,
         )
@@ -195,7 +273,7 @@ class OpenAICompatibleGateway:
         prompt: str,
         json_instruction: str,
         target_type: type[TModel],
-        image_data_url: str | None,
+        image_data_urls: tuple[str, ...] | None,
         json_only: bool = False,
         language: Language = Language.ZH_CN,
     ) -> TModel:
@@ -207,7 +285,7 @@ class OpenAICompatibleGateway:
                 model=model,
                 prompt=current_prompt,
                 json_instruction=json_instruction,
-                image_data_url=image_data_url,
+                image_data_urls=image_data_urls,
                 use_json_schema=use_json_schema,
                 target_type=target_type,
             )
@@ -336,14 +414,14 @@ class OpenAICompatibleGateway:
         model: str,
         prompt: str,
         json_instruction: str,
-        image_data_url: str | None,
+        image_data_urls: tuple[str, ...] | None,
         use_json_schema: bool,
         target_type: type[TModel],
     ) -> dict[str, object]:
         content: list[dict[str, object]] = [
             {"type": "text", "text": f"{prompt}\n{json_instruction}"}
         ]
-        if image_data_url:
+        for image_data_url in image_data_urls or ():
             content.append(
                 {"type": "image_url", "image_url": {"url": image_data_url}}
             )

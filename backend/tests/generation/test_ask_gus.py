@@ -19,7 +19,10 @@ from pelican_town_specials.domain.canonical import (
     CanonicalRecallCandidate,
 )
 from pelican_town_specials.domain.common import DraftMode, GenerationStage
-from pelican_town_specials.domain.dish import GenerationSource
+from pelican_town_specials.domain.dish import (
+    GenerationSource,
+    IconReuseDecision,
+)
 from pelican_town_specials.domain.draft import (
     AttemptStatus,
     DraftStatus,
@@ -236,7 +239,7 @@ async def test_canonical_hit_uses_one_trial_reservation_for_analysis_match_and_p
     assert trial.reserved_attempts == [attempt_id]
     assert trial.committed_attempts == [attempt_id]
     assert trial.released_attempts == []
-    assert harness.gateway.calls == ["analyze", "match", "image"]
+    assert harness.gateway.calls == ["analyze", "match", "compare_icon", "image"]
 
 
 async def test_ask_gus_stage_order(
@@ -364,8 +367,20 @@ async def test_initial_ask_gus_hit_reuses_canonical_fields_icons_and_current_pre
     events = [event async for event in local.run(initial_command(saved))]
 
     assert events[-1].type == "attempt.succeeded"
-    assert harness.gateway.calls == ["analyze", "match", "image"]
+    assert harness.gateway.calls == ["analyze", "match", "compare_icon", "image"]
     assert len(harness.gateway.image_requests) == 1
+    comparison_request = harness.gateway.comparison_requests[0]
+    original_data = _read_asset(
+        harness.asset_store,
+        harness.asset_store.stat(saved.source.original_image_asset_id),
+    )
+    downscaled_original, original_media_type = downscale_for_vision(
+        original_data
+    )
+    assert comparison_request.current_original.data == downscaled_original
+    assert comparison_request.current_original.media_type is original_media_type
+    assert comparison_request.canonical_icon_source.data != source_icon
+    assert comparison_request.canonical_icon_source.media_type is ImageMediaType.JPEG
     preview_request = harness.gateway.image_requests[0]
     assert preview_request.operation is ImageOperation.EDIT
     assert len(preview_request.source_images) == 2
@@ -519,10 +534,58 @@ async def test_canonical_icon_integrity_failure_falls_back_before_hit_promotion(
     events = [event async for event in local.run(initial_command(saved))]
 
     assert events[-1].type == "attempt.succeeded"
-    assert harness.gateway.calls == ["analyze", "match", "design", "image", "image"]
+    # The corrupted canonical source cannot even be decoded for the visual
+    # comparison, so the gate is skipped and a fresh icon is generated; the
+    # already matched text is still promoted with the unavailable decision.
+    assert harness.gateway.calls == ["analyze", "match", "image", "image"]
     restored = local.drafts.get(saved.draft_id)
-    assert restored.provenance.generation_source is GenerationSource.FRESH_GENERATION
-    assert restored.provenance.canonical_dish_id is None
+    assert restored.provenance.generation_source is GenerationSource.CANONICAL_REUSED
+    assert restored.provenance.canonical_dish_id == canonical.canonical_id
+    assert (
+        restored.provenance.icon_reuse_decision is IconReuseDecision.UNAVAILABLE
+    )
+    assert restored.provenance.icon_visual_similarity is None
+
+
+async def test_canonical_icon16_integrity_failure_downgrades_without_vision_call(
+    harness: GenerationHarness,
+) -> None:
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    registry = _RecallRegistry(canonical, source_icon, icon_16)
+    registry.icon_16 = b"damaged-icon16"
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.99,
+    )
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness)
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert harness.gateway.calls == ["analyze", "match", "image", "image"]
+    restored = local.drafts.get(saved.draft_id)
+    assert restored.provenance.icon_reuse_decision is IconReuseDecision.UNAVAILABLE
+    assert restored.provenance.icon_visual_similarity is None
+    assert (
+        restored.provenance.authority_by_field["visuals.icon_source_asset_id"].value
+        == "SYSTEM_GENERATED"
+    )
+    assert (
+        restored.provenance.authority_by_field["visuals.icon_16_asset_id"].value
+        == "SYSTEM_GENERATED"
+    )
 
 
 async def test_full_regenerate_and_blueprint_never_touch_canonical_registry(
@@ -1079,3 +1142,223 @@ async def test_client_disconnect_detaches_regeneration(
     attempt = harness.orchestrator.attempts.get(attempt_id)
     assert attempt.status is AttemptStatus.SUCCEEDED
     assert harness.orchestrator._registry.owner() is None
+
+
+async def test_canonical_hit_icon_gate_reuses_at_exactly_0_75(
+    harness: GenerationHarness,
+) -> None:
+    """M13 Task 58: 0.75 passes the visual reuse gate (inclusive boundary)."""
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    registry = _RecallRegistry(canonical, source_icon, icon_16)
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.97,
+    )
+    harness.gateway.visual_similarity = 0.75
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness)
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert harness.gateway.calls == ["analyze", "match", "compare_icon", "image"]
+    assert len(harness.gateway.image_requests) == 1  # preview only
+    restored = local.drafts.get(saved.draft_id)
+    assert (
+        restored.provenance.icon_reuse_decision is IconReuseDecision.REUSED
+    )
+    assert restored.provenance.icon_visual_similarity == 0.75
+
+
+async def test_canonical_hit_icon_gate_generates_below_0_75_and_keeps_text(
+    harness: GenerationHarness,
+) -> None:
+    """0.749 misses the gate: a new icon is drawn from the current photo while
+    every matched text/field value stays canonical and design is not called."""
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    registry = _RecallRegistry(canonical, source_icon, icon_16)
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.97,
+    )
+    harness.gateway.visual_similarity = 0.749
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness, color="goldenrod")
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.succeeded"
+    # compare_icon -> fresh icon EDIT -> preview EDIT; no design call.
+    assert harness.gateway.calls == [
+        "analyze",
+        "match",
+        "compare_icon",
+        "image",
+        "image",
+    ]
+    icon_request = harness.gateway.image_requests[0]
+    assert icon_request.operation is ImageOperation.EDIT
+    assert len(icon_request.source_images) == 1
+    assert icon_request.source_images[0].data != source_icon
+    restored = local.drafts.get(saved.draft_id)
+    assert (
+        restored.provenance.icon_reuse_decision is IconReuseDecision.GENERATED
+    )
+    assert restored.provenance.icon_visual_similarity == 0.749
+    assert restored.provenance.generation_source is GenerationSource.CANONICAL_REUSED
+    assert restored.provenance.canonical_dish_id == canonical.canonical_id
+    assert restored.presentation == restored.presentation  # text reused via state
+    assert restored.presentation.display_name == canonical.presentation.display_name
+    assert (
+        restored.provenance.authority_by_field[
+            "visuals.icon_source_asset_id"
+        ].value
+        == "SYSTEM_GENERATED"
+    )
+    assert (
+        restored.provenance.authority_by_field["visuals.icon_16_asset_id"].value
+        == "SYSTEM_GENERATED"
+    )
+    # The fresh icon is a different asset than the canonical recorded source.
+    assert restored.visuals is not None
+    fresh_source = harness.asset_store.stat(restored.visuals.icon_source_asset_id)
+    assert harness.asset_store.stat(restored.visuals.icon_source_asset_id) is not None
+    assert fresh_source.attempt_id == restored.last_attempt_id
+
+
+async def test_visual_decision_checkpoint_prevents_repeat_compare_after_icon_failure(
+    harness: GenerationHarness,
+) -> None:
+    """A saved visual decision is enough to resume the next paid icon step."""
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    registry = _RecallRegistry(canonical, source_icon, icon_16)
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.97,
+    )
+    harness.gateway.visual_similarity = 0.749
+    harness.gateway.fail_stage = GenerationStage.ICON_GENERATION_AND_NORMALIZATION
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness)
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    failed = [event async for event in local.run(initial_command(saved))]
+
+    assert failed[-1].type == "attempt.failed"
+    assert harness.gateway.calls == ["analyze", "match", "compare_icon", "image"]
+    checkpoint = local.attempts.get_checkpoint(failed[-1].attempt_id)
+    assert checkpoint is not None
+    assert checkpoint.icon_reuse_decision is IconReuseDecision.GENERATED
+    assert checkpoint.icon_visual_similarity == 0.749
+    assert GenerationStage.ICON_GENERATION_AND_NORMALIZATION not in (
+        checkpoint.completed_stages
+    )
+
+    harness.gateway.fail_stage = None
+    harness.gateway.calls.clear()
+    resumed = _canonical_orchestrator(harness, registry)
+    events = [
+        event
+        async for event in resumed.run(
+            initial_command(resumed.drafts.get(saved.draft_id))
+        )
+    ]
+
+    assert events[-1].type == "attempt.succeeded"
+    assert harness.gateway.calls == ["image", "image"]
+
+
+async def test_canonical_icon_gate_failure_keeps_text_hit_checkpoint(
+    harness: GenerationHarness,
+) -> None:
+    """A vision-provider outage at the comparison step fails the attempt with
+    a resumable checkpoint: the completed text stages are preserved and the
+    resume path does not re-run the matcher."""
+    canonical, source_icon, icon_16 = _canonical_dish(uuid4())
+    second, _, _ = _canonical_dish(uuid4())
+    registry = _RecallRegistry(canonical, source_icon, icon_16, second=second)
+    harness.gateway.canonical_match_response = CanonicalMatchResponse(
+        candidateId=canonical.canonical_id,
+        confidence=0.94,
+    )
+    harness.gateway.visual_similarity = None  # comparison step raises
+    local = _canonical_orchestrator(harness, registry)
+    original = put_original_image(harness)
+    draft = make_domain_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
+    saved = local.drafts.save(
+        draft.model_copy(
+            update={
+                "source": draft.source.model_copy(
+                    update={"original_image_asset_id": original.asset_id}
+                )
+            }
+        ),
+        expected_revision=None,
+    )
+
+    events = [event async for event in local.run(initial_command(saved))]
+
+    assert events[-1].type == "attempt.failed"
+    assert harness.gateway.calls == ["analyze", "match", "compare_icon"]
+    assert events[-1].error.code == "PTS_GEN_UNEXPECTED"
+    assert events[-1].error.details.get("progressSaved") is True
+    checkpoint = local.attempts.get_checkpoint(events[-1].attempt_id)
+    assert checkpoint is not None
+    assert checkpoint.canonical == canonical
+    assert GenerationStage.GAMEPLAY_DESIGN in checkpoint.completed_stages
+    assert (
+        GenerationStage.ICON_GENERATION_AND_NORMALIZATION
+        not in checkpoint.completed_stages
+    )
+
+    # Resume after "provider recovery" regenerates a fresh icon and succeeds
+    # without calling the matcher again.
+    harness.gateway.visual_similarity = 0.9
+    resumed = _canonical_orchestrator(harness, registry)
+    harness.gateway.calls.clear()
+    events = [
+        event
+        async for event in resumed.run(
+            initial_command(resumed.drafts.get(saved.draft_id))
+        )
+    ]
+    assert events[-1].type == "attempt.succeeded"
+    assert "match" not in harness.gateway.calls
+    assert harness.gateway.calls[0] == "compare_icon"
+    restored = resumed.drafts.get(saved.draft_id)
+    assert restored.provenance.canonical_dish_id == canonical.canonical_id
+    assert (
+        restored.provenance.icon_reuse_decision is IconReuseDecision.REUSED
+    )

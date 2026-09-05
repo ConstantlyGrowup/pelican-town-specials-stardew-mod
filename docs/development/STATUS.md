@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m12_accepted |
-| project_phase | M12 Task50–55及追加指标整理/CPU模型清理已获用户整体验收；本次文档收口并获提交推送MVP授权。正式Release仍v1.5.4 |
+| overall_state | m13_awaiting_human_provider_validation |
+| project_phase | M13 Task57–59及390px集成修复均经独立审阅PASS；全量931/2 skip、前端229、静态/契约/仓库门禁及桌面/窄屏UI自动验收通过。等待真实Provider与人工视觉判断；M13不push/不发布，正式Release仍v1.5.4 |
 | product_implementation_started | true |
-| active_session_id | none；最近关闭2026-09-04-task-54-e2e |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | 无；M12已验收关闭 |
-| blocker | 无 |
-| next_action | 按用户新任务继续；指标入口 docs/development/M12_QUANTITATIVE_RESULTS.md。保留本地评测证据，不自动追加评测、清理或发布。此次收口提交随已验收Task50/51提交一并推送MVP。 |
+| active_session_id | 2026-09-05-milestone-13-integration-verification |
+| active_session_state | awaiting_user_acceptance |
+| active_session_type | verification |
+| current_task | M13 Task57–59集成验证：全量测试、OpenAPI/静态门禁与本地UI视觉检查 |
+| blocker | 按用户要求在需人工参与处停止：需要真实照片和Provider输出，由人工判断同外观复用、同名不同外观重画及定向重生成是否符合意图 |
+| next_action | 人工执行三条最小验收：同菜同外观应复用图标；同名不同外观应保留文字但重画图标；输入明确外观说明后完整重新生成应体现要求。通过后统一M13里程碑验收并另行决定push/release。 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 已关闭 Task 56 Session（committed）
@@ -50,7 +50,7 @@
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | v1.5.4 发布提交（历史） | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
-| 最新工作树范围 | Task56已在f5a99aa推送；Task50/51已有6042274/4edaa64，本次新增M12指标与控制面收口文档提交并一并推送。asset_store.py既有无内容diff的状态及prototype、samples、发布说明、历史临时目录保持原样，不纳入；无版本链改动。 |
+| 最新工作树范围 | Task57–59 产品代码、测试、生成契约与M13控制面已完成验证，等待本地原子提交；`asset_store.py` 既有无内容 diff 状态，以及 prototype、samples、发布说明和历史临时目录保持原样且不纳入。当前无 push、tag、Release 或版本链改动。 |
 
 ## 已关闭 v1.5.4 Release Session（released）
 

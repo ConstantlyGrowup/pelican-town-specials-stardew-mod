@@ -28,13 +28,18 @@ from pelican_town_specials.domain.common import (
 from pelican_town_specials.domain.dish import (
     DishAnalysis,
     GameplaySpec,
+    IconReuseDecision,
     PresentationSpec,
 )
 from pelican_town_specials.domain.draft import DraftRecord, GenerationAttemptKind
 from pelican_town_specials.providers.contracts import GeneratedDishCore
 
 CHECKPOINT_SCHEMA_VERSION: Literal[1] = 1
-CHECKPOINT_PROTOCOL_VERSION = "task56-gus-generation-resume-v1"
+# M13 Task 58 raised the resume protocol: the checkpoint now records how a
+# canonical-hit attempt obtained its icon (visual reuse decision + score) and
+# generation must re-run the visual gate after older protocol checkpoints are
+# safely rebuilt as ordinary cache misses.
+CHECKPOINT_PROTOCOL_VERSION = "task58-icon-visual-reuse-v1"
 
 
 class GenerationCheckpoint(StrictModel):
@@ -89,6 +94,20 @@ class GenerationCheckpoint(StrictModel):
     )
     icon_16_asset_id: UUID | None = Field(default=None, alias="icon16AssetId")
     preview_asset_id: UUID | None = Field(default=None, alias="previewAssetId")
+    # M13 Task 58: how the canonical-hit icon step resolved, plus the raw
+    # visual similarity score that drove it. None means the decision had not
+    # been recorded yet (either the visual comparison never ran, or the
+    # attempt interrupted before the ICON step finished).
+    icon_reuse_decision: IconReuseDecision | None = Field(
+        default=None,
+        alias="iconReuseDecision",
+    )
+    icon_visual_similarity: float | None = Field(
+        default=None,
+        alias="iconVisualSimilarity",
+        ge=0.0,
+        le=1.0,
+    )
     updated_at: datetime = Field(alias="updatedAt")
 
     @field_validator("attempt_id", "draft_id", mode="before")
@@ -136,8 +155,15 @@ def input_fingerprint(
     original_asset_sha256: str,
     context_text: str | None,
     language: Language,
+    regeneration_instructions: str | None = None,
 ) -> str:
-    """Return a stable identity for the user input used by a checkpoint."""
+    """Return a stable identity for the user input used by a checkpoint.
+
+    ``regeneration_instructions`` (M13 Task 59) is part of this round's user
+    input: changing the wording makes any older checkpoint a cache miss and
+    forces a fresh full regeneration instead of silently reusing a result
+    generated under different requirements.
+    """
 
     payload = {
         "draftId": str(draft_id),
@@ -146,6 +172,7 @@ def input_fingerprint(
         "originalAssetSha256": original_asset_sha256,
         "contextText": context_text,
         "language": language.value,
+        "regenerationInstructions": regeneration_instructions,
     }
     encoded = json.dumps(
         payload,
