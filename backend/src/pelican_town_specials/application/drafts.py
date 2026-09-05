@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime
+from enum import Enum
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
@@ -55,7 +56,6 @@ from pelican_town_specials.persistence.repositories import (
 )
 
 from .canonical_memory import CanonicalRegistrationService
-from .common import Page
 from .telemetry import NoopTelemetryRecorder, TelemetryRecorder
 
 
@@ -324,11 +324,22 @@ class DraftView(StrictModel):
         )
 
 
+class DraftSortBy(str, Enum):
+    UPDATED_AT = "updatedAt"
+    CREATED_AT = "createdAt"
+
+
+class DraftSortOrder(str, Enum):
+    DESC = "desc"
+    ASC = "asc"
+
+
 class DraftSummary(StrictModel):
     draft_id: UUID = Field(alias="draftId")
     mode: DraftMode
     status: DraftStatus
     revision: int = Field(ge=1)
+    created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
     display_name: str = Field(alias="displayName", max_length=60)
     original_image_asset_id: UUID = Field(alias="originalImageAssetId")
@@ -340,9 +351,9 @@ class DraftSummary(StrictModel):
             return ensure_uuid4(value)
         return value
 
-    @field_validator("updated_at", mode="before")
+    @field_validator("created_at", "updated_at", mode="before")
     @classmethod
-    def _validate_updated_at(cls, value: datetime) -> datetime:
+    def _validate_timestamp(cls, value: datetime) -> datetime:
         return ensure_utc(value)
 
     @classmethod
@@ -353,6 +364,7 @@ class DraftSummary(StrictModel):
                 "mode": draft.mode,
                 "status": draft.status,
                 "revision": draft.revision,
+                "createdAt": draft.created_at,
                 "updatedAt": draft.updated_at,
                 "displayName": (
                     draft.presentation.display_name
@@ -362,6 +374,29 @@ class DraftSummary(StrictModel):
                 "originalImageAssetId": draft.source.original_image_asset_id,
             }
         )
+
+
+class DraftPage(StrictModel):
+    """Paged draft listing response (M13 Task 57).
+
+    The shared ``Page`` contract keeps its existing semantics for the other
+    list endpoints; the draft homepage needs page metadata plus a global
+    ``hasRunningGeneration`` flag so the client keeps refreshing while any
+    generation (including one on an off-page draft) is still in flight.
+    ``nextCursor`` remains null for backward compatibility with the previous
+    single-page shape.
+    """
+
+    items: list[DraftSummary]
+    next_cursor: str | None = Field(default=None, alias="nextCursor")
+    total: int = Field(ge=0)
+    page: int = Field(ge=1)
+    page_size: int = Field(alias="pageSize", ge=1, le=100)
+    total_pages: int = Field(alias="totalPages", ge=0)
+    has_running_generation: bool = Field(
+        alias="hasRunningGeneration",
+        default=False,
+    )
 
 
 def _blueprint_provenance() -> Provenance:
@@ -460,19 +495,95 @@ class DraftService:
             )
         return self._drafts.save(record, expected_revision=None)
 
-    def list_drafts(self) -> Page[DraftSummary]:
+    def list_drafts(
+        self,
+        *,
+        page: int = 1,
+        page_size: int = 10,
+        sort_by: DraftSortBy = DraftSortBy.UPDATED_AT,
+        sort_order: DraftSortOrder = DraftSortOrder.DESC,
+    ) -> DraftPage:
+        """Return one sorted page of the visible draft listing.
+
+        Filtering keeps the historical homepage visibility rules (orphaned
+        ARCHIVED drafts are hidden); sorting and pagination happen over the
+        complete filtered set, never over a single page. ``page`` values above
+        the last valid page normalize to the last page so deleting the final
+        item of a page never strands the client on an empty page.
+        """
+        visible = self._visible_draft_records()
+        items = [DraftSummary.from_draft(record) for record in visible]
+        # Keep the UUID tiebreaker ascending in both directions.  A single
+        # tuple sort with ``reverse=True`` would reverse the UUID as well,
+        # making equal timestamps unstable across a direction toggle.  Python's
+        # stable sort lets the timestamp direction change while preserving the
+        # already-established ascending draftId order for ties.
+        items.sort(key=lambda item: item.draft_id)
+        timestamp = (
+            (lambda item: item.created_at)
+            if sort_by is DraftSortBy.CREATED_AT
+            else (lambda item: item.updated_at)
+        )
+        items.sort(
+            key=timestamp,
+            reverse=sort_order is DraftSortOrder.DESC,
+        )
+        total = len(items)
+        total_pages = max((total + page_size - 1) // page_size, 0)
+        requested_page = max(page, 1)
+        effective_page = (
+            min(requested_page, total_pages) if total_pages >= 1 else 1
+        )
+        start = (effective_page - 1) * page_size
+        page_items = items[start : start + page_size]
+        return DraftPage(
+            items=page_items,
+            nextCursor=None,
+            total=total,
+            page=effective_page,
+            pageSize=page_size,
+            totalPages=total_pages,
+            hasRunningGeneration=self._has_running_generation(visible),
+        )
+
+    def _visible_draft_records(self) -> list[DraftRecord]:
         records = self._drafts.list()
         active_dish_ids = {
             archive.dish_id for archive in self._archives.list_active()
         }
-        visible = [
+        return [
             record
             for record in records
             if record.status is not DraftStatus.ARCHIVED
             or record.archived_dish_id in active_dish_ids
         ]
-        items = [DraftSummary.from_draft(record) for record in visible]
-        return Page(items=items, nextCursor=None, total=len(items))
+
+    def _has_running_generation(self, visible: list[DraftRecord]) -> bool:
+        """True when any visible draft currently holds a tracked active attempt.
+
+        The homepage flag covers every visible draft, including ones on other
+        pages, so the client keeps polling while an off-page generation runs
+        and refreshes once it terminates. The in-process registry is the live
+        source of truth; when it is absent (test doubles) the persisted
+        generating state is used instead.
+        """
+        active_attempt_ids = {
+            record.active_attempt_id
+            for record in visible
+            if record.active_attempt_id is not None
+        }
+        if not active_attempt_ids:
+            return False
+        registry = self._registry
+        if registry is not None:
+            running = {
+                owner.attempt_id for owner in getattr(registry, "owners", lambda: ())()
+            }
+            return any(attempt_id in running for attempt_id in active_attempt_ids)
+        return any(
+            record.status in (DraftStatus.GENERATING, DraftStatus.REGENERATING)
+            for record in visible
+        )
 
     def get_draft(self, draft_id: UUID) -> DraftRecord:
         try:
@@ -736,6 +847,13 @@ class DraftService:
             referenced.update(self._draft_asset_ids(other))
         for archive in self._archives.list_active():
             referenced.update(self._visual_asset_ids(archive.visuals))
+        # A failed generation retains its checkpoint assets until the existing
+        # orphan-GC policy reclaims them.  Include checkpoints from other
+        # drafts so deduplicated icons are never removed while still eligible
+        # for continuation.
+        referenced.update(
+            self._attempts.list_checkpoint_asset_ids(excluding=excluding)
+        )
         return referenced
 
     @staticmethod

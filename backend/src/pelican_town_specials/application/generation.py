@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from pelican_town_specials.domain.common import DraftMode
 from pelican_town_specials.domain.draft import (
+    AttemptStatus,
     DraftRecord,
     DraftStatus,
     GenerationAttemptKind,
@@ -40,12 +41,21 @@ class GenerationService:
             telemetry if telemetry is not None else NoopTelemetryRecorder()
         )
 
-    def begin_generation(self, draft_id: UUID) -> AsyncIterator[str]:
+    def begin_generation(
+        self,
+        draft_id: UUID,
+        *,
+        restart: bool = False,
+        regeneration_instructions: str | None = None,
+    ) -> AsyncIterator[str]:
         """Validate the draft and start a generation attempt.
 
-        Returns an iterator over NDJSON lines. AppError (404 draft missing,
-        409 illegal state or busy) is raised before the stream begins so the
-        route can return a structured HTTP error instead of a broken stream.
+        ``regeneration_instructions`` (M13 Task 59) is accepted only for a
+        full regeneration of a REVIEWABLE draft; other kinds reject it in the
+        command validation. Returns an iterator over NDJSON lines. AppError
+        (404 draft missing, 409 illegal state or busy) is raised before the
+        stream begins so the route can return a structured HTTP error instead
+        of a broken stream.
         """
         try:
             kind = self._resolve_kind(draft_id)
@@ -58,9 +68,16 @@ class GenerationService:
                 )
             )
             raise
-        command = GenerationCommand(
-            draftId=draft_id, kind=kind, requestId=uuid4()
-        )
+        try:
+            command = GenerationCommand(
+                draftId=draft_id,
+                kind=kind,
+                requestId=uuid4(),
+                restart=restart,
+                regenerationInstructions=regeneration_instructions,
+            )
+        except (TypeError, ValueError) as exc:
+            raise _invalid_regeneration_request_error() from exc
         if kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
             events = run_blueprint_preview(self._orchestrator, command)
         else:
@@ -85,7 +102,10 @@ class GenerationService:
         if tracked:
             await self._orchestrator.await_cancelled(attempt_id)
             return True
-        return self._orchestrator.recover_interrupted(draft_id)
+        return self._orchestrator.recover_interrupted(
+            draft_id,
+            invalidate_checkpoint=True,
+        )
 
     def recover_interrupted(self, draft_id: UUID) -> bool:
         """Roll a previously-generating draft back to a recoverable status.
@@ -110,10 +130,24 @@ class GenerationService:
                 draft_id=draft_id, active=False, attempt=None
             )
         attempt = self._orchestrator.attempts.get(attempt_id)
+        public_attempt = GenerationAttemptPublic.from_attempt(attempt)
+        if attempt.status in {
+            AttemptStatus.FAILED,
+            AttemptStatus.INTERRUPTED,
+        }:
+            public_attempt = public_attempt.model_copy(
+                update={
+                    "progress_saved": self._orchestrator.compatible_checkpoint(
+                        draft,
+                        attempt,
+                    )
+                    is not None
+                }
+            )
         return GenerationProgressPublic(
             draft_id=draft_id,
             active=draft.active_attempt_id is not None,
-            attempt=GenerationAttemptPublic.from_attempt(attempt),
+            attempt=public_attempt,
         )
 
     def _resolve_kind(self, draft_id: UUID) -> GenerationAttemptKind:
@@ -163,6 +197,16 @@ def _draft_not_found_error() -> AppError:
         code="PTS_DRAFT_NOT_FOUND",
         message="草稿不存在或已删除。",
         http_status=404,
+        details={},
+        retryable=False,
+    )
+
+
+def _invalid_regeneration_request_error() -> AppError:
+    return AppError(
+        code="PTS_INPUT_VALIDATION_FAILED",
+        message="重新生成说明只适用于完整重新生成。",
+        http_status=422,
         details={},
         retryable=False,
     )

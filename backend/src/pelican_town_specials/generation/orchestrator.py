@@ -12,7 +12,7 @@ from typing import Protocol
 from uuid import UUID, uuid4
 
 from PIL import Image
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from pelican_town_specials.application.canonical_memory import RecallService
 from pelican_town_specials.application.telemetry import (
@@ -45,6 +45,7 @@ from pelican_town_specials.domain.dish import (
     GameIngredient,
     GameplaySpec,
     GenerationSource,
+    IconReuseDecision,
     PresentationSpec,
     Provenance,
     RecipeUnlock,
@@ -87,7 +88,11 @@ from pelican_town_specials.images.vision_input import (
     EDIT_MIN_PIXELS,
     VISION_MIN_PIXELS,
 )
-from pelican_town_specials.persistence.asset_store import AssetMetadata, FileAssetStore
+from pelican_town_specials.persistence.asset_store import (
+    AssetMetadata,
+    AssetNotFoundError,
+    FileAssetStore,
+)
 from pelican_town_specials.persistence.repositories import (
     AttemptMismatchError,
     DraftRepository,
@@ -96,6 +101,7 @@ from pelican_town_specials.persistence.repositories import (
 )
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalIconComparisonRequest,
     DishAnalysisRequest,
     GeneratedDishCore,
     GeneratedImage,
@@ -104,6 +110,9 @@ from pelican_town_specials.providers.contracts import (
     ImageOperation,
     ModelGateway,
     ProviderImageInput,
+)
+from pelican_town_specials.providers.prompts.analysis_v1 import (
+    regeneration_instruction_section,
 )
 
 from .attempt_registry import MAX_CONCURRENT_GENERATIONS, AttemptRegistry
@@ -114,6 +123,11 @@ from .blueprint import (
     build_blueprint_visual_brief,
     build_full_tooltip_prompt,
     enforce_preview_prompt_budget,
+)
+from .checkpoints import (
+    CHECKPOINT_PROTOCOL_VERSION,
+    GenerationCheckpoint,
+    input_fingerprint,
 )
 from .events import (
     GenerationEvent,
@@ -130,6 +144,10 @@ _ASK_GUS_PROMPT_VERSION = "ask-gus-v3"
 _ANALYSIS_PROMPT_VERSION = "analysis-v1"
 _VISUAL_PROMPT_VERSION = "visual-v3-multi-image-edit"
 _ICON_SIZE = "1024x1024"
+# M13 Task 58: the recorded canonical icon is reused only when the vision
+# model reports visual similarity at or above this threshold (0.75 passes,
+# 0.749 misses). This is the raw score gate, never the rounded display value.
+_ICON_REUSE_THRESHOLD = 0.75
 
 _CANONICAL_REUSED_AUTHORITY = {
     "presentation.display_name": FieldAuthority.CACHE_REUSED,
@@ -169,8 +187,10 @@ class _RunState:
         "gameplay",
         "gateway",
         "icon_16",
+        "icon_reuse_decision",
         "icon_source",
         "icon_source_asset_id",
+        "icon_visual_similarity",
         "presentation",
         "preview",
         "provider_started",
@@ -204,6 +224,8 @@ class _RunState:
     icon_source_asset_id: UUID | None
     icon_16: AssetRef | None
     preview: AssetRef | None
+    icon_reuse_decision: IconReuseDecision | None
+    icon_visual_similarity: float | None
     recall_confidence: float | None
     recall_decision: MemoryOutcome
     recall_elapsed_ms: int | None
@@ -244,6 +266,8 @@ class _RunState:
         self.icon_source_asset_id = None
         self.icon_16 = None
         self.preview = None
+        self.icon_reuse_decision = None
+        self.icon_visual_similarity = None
         self.recall_confidence = None
         self.recall_elapsed_ms = None
         self.recall_decision = (
@@ -422,10 +446,31 @@ def _icon_prompt(
     core: GeneratedDishCore,
     *,
     language: Language = Language.ZH_CN,
+    regeneration_instructions: str | None = None,
 ) -> str:
+    return _icon_prompt_from_presentation(
+        core.presentation,
+        language=language,
+        regeneration_instructions=regeneration_instructions,
+    )
+
+
+def _icon_prompt_from_presentation(
+    presentation: PresentationSpec,
+    *,
+    language: Language = Language.ZH_CN,
+    regeneration_instructions: str | None = None,
+) -> str:
+    """Pixel-icon prompt built from validated text fields.
+
+    Used for a fresh icon and for a canonical hit whose recorded icon scored
+    below the visual reuse threshold: the matched text fixes the identity,
+    while the current photo is the visual basis for the drawing. M13 Task 59
+    appends this round's regeneration requirement when one was supplied.
+    """
     if language is Language.EN_US:
-        return (
-            f"Stardew Valley-style 16×16 game icon: {core.presentation.display_name}"
+        prompt = (
+            f"Stardew Valley-style 16×16 game icon: {presentation.display_name}"
             ". Use the source photo as the visual reference for the dish. Preserve the "
             "recognizable silhouette, main colors, plating, and key ingredient features; "
             "Do not make the table or photo background the subject. Convert only the "
@@ -433,12 +478,19 @@ def _icon_prompt(
             "use a removable solid magenta background (#FF00FF), no shadows, "
             "no reflections, no text, no borders"
         )
-    return (
-        f"星露谷风格的 16×16 游戏图标：{core.presentation.display_name}"
-        "。参考输入图中的菜品主体，保留可辨识的轮廓、主要配色、摆盘形态和关键食材特征；"
-        "不要把桌面或照片背景作为主体。将菜品转为单个星露谷风格的像素物品图标。"
-        "单个物品居中，使用便于抠图的纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
-    )
+    else:
+        prompt = (
+            f"星露谷风格的 16×16 游戏图标：{presentation.display_name}"
+            "。参考输入图中的菜品主体，保留可辨识的轮廓、主要配色、摆盘形态和关键食材特征；"
+            "不要把桌面或照片背景作为主体。将菜品转为单个星露谷风格的像素物品图标。"
+            "单个物品居中，使用便于抠图的纯洋红色背景（#FF00FF），无阴影、无反光、无文字、无边框"
+        )
+    if regeneration_instructions:
+        prompt += regeneration_instruction_section(
+            regeneration_instructions,
+            language=language,
+        )
+    return prompt
 
 
 def _preview_prompt(
@@ -501,6 +553,8 @@ def _generated_provenance(draft: DraftRecord) -> Provenance:
             "canonical_dish_signature": None,
             "recall_confidence": None,
             "recall_elapsed_ms": None,
+            "icon_reuse_decision": None,
+            "icon_visual_similarity": None,
         }
     )
 
@@ -520,18 +574,31 @@ def _canonical_reused_provenance(state: _RunState) -> Provenance:
             "visual": f"{_VISUAL_PROMPT_VERSION}-{suffix}",
         }
     )
+    icon_authority = (
+        FieldAuthority.CACHE_REUSED
+        if state.icon_reuse_decision is IconReuseDecision.REUSED
+        else FieldAuthority.SYSTEM_GENERATED
+    )
+    authority = {
+        **base.authority_by_field,
+        **_CANONICAL_REUSED_AUTHORITY,
+        # A semantic hit does not imply that its pixel icon was reused.  The
+        # visual gate can deliberately generate a new icon for the current
+        # photo, so the two asset fields must follow the final icon decision.
+        "visuals.icon_source_asset_id": icon_authority,
+        "visuals.icon_16_asset_id": icon_authority,
+    }
     return base.model_copy(
         update={
-            "authority_by_field": {
-                **base.authority_by_field,
-                **_CANONICAL_REUSED_AUTHORITY,
-            },
+            "authority_by_field": authority,
             "prompt_versions": prompt_versions,
             "generation_source": GenerationSource.CANONICAL_REUSED,
             "canonical_dish_id": state.canonical.canonical_id,
             "canonical_dish_signature": state.canonical.dish_signature,
             "recall_confidence": state.recall_confidence,
             "recall_elapsed_ms": state.recall_elapsed_ms,
+            "icon_reuse_decision": state.icon_reuse_decision,
+            "icon_visual_similarity": state.icon_visual_similarity,
         }
     )
 
@@ -660,6 +727,28 @@ class GenerationCommand(StrictModel):
     draft_id: UUID = Field(alias="draftId")
     kind: GenerationAttemptKind
     request_id: UUID = Field(alias="requestId")
+    restart: bool = False
+    # M13 Task 59: this round's user-written regeneration instruction. Only a
+    # FULL_REGENERATE request may carry it; the draft's original contextText
+    # is never overwritten and the two stay separate.
+    regeneration_instructions: str | None = Field(
+        default=None,
+        alias="regenerationInstructions",
+        max_length=500,
+    )
+
+    @model_validator(mode="after")
+    def _instructions_only_for_full_regeneration(
+        self,
+    ) -> GenerationCommand:
+        if (
+            self.regeneration_instructions is not None
+            and self.kind is not GenerationAttemptKind.FULL_REGENERATE
+        ):
+            raise ValueError(
+                "regenerationInstructions is only valid for FULL_REGENERATE"
+            )
+        return self
 
 
 GatewayFactory = Callable[[], ModelGateway]
@@ -816,9 +905,16 @@ class GenerationOrchestrator:
         """
         await self._registry.await_task(attempt_id)
 
-    def recover_interrupted(self, draft_id: UUID) -> bool:
+    def recover_interrupted(
+        self,
+        draft_id: UUID,
+        *,
+        invalidate_checkpoint: bool = False,
+    ) -> bool:
         """Roll a draft back out of a generating state whose attempt is no
-        longer tracked in this process.
+        longer tracked in this process. ``invalidate_checkpoint`` is used only
+        by an explicit user cancellation; startup recovery keeps a compatible
+        checkpoint available for a later manual continuation.
 
         Applies when the client disconnected and the stream task was dropped,
         or when the process restarted over a previously generating draft. The
@@ -848,7 +944,9 @@ class GenerationOrchestrator:
         rolled = rolled.model_copy(
             update={
                 "last_attempt_id": attempt_id,
-                "last_error": _to_summary(_interrupted_error()),
+                "last_error": _to_summary(
+                    _cancelled_error() if invalidate_checkpoint else _interrupted_error()
+                ),
                 "active_attempt_id": None,
                 "updated_at": utc_now(),
             }
@@ -865,11 +963,20 @@ class GenerationOrchestrator:
         try:
             attempt = self._attempts.get(attempt_id)
         except (FileNotFoundError, OSError):
+            if invalidate_checkpoint:
+                with suppress(OSError):
+                    self._attempts.delete_checkpoint(attempt_id)
             return True
+        terminal_status = (
+            AttemptStatus.CANCELLED if invalidate_checkpoint else AttemptStatus.INTERRUPTED
+        )
         interrupted = attempt.model_copy(
-            update={"status": AttemptStatus.INTERRUPTED, "finished_at": utc_now()}
+            update={"status": terminal_status, "finished_at": utc_now()}
         )
         self._attempts.save(interrupted)
+        if invalidate_checkpoint:
+            with suppress(OSError):
+                self._attempts.delete_checkpoint(attempt_id)
         return True
 
     @property
@@ -883,6 +990,147 @@ class GenerationOrchestrator:
     @property
     def assets(self) -> FileAssetStore:
         return self._assets
+
+    def compatible_checkpoint(
+        self,
+        draft: DraftRecord,
+        attempt: GenerationAttempt,
+    ) -> GenerationCheckpoint | None:
+        """Return a validated checkpoint only when it still matches the draft."""
+        if (
+            draft.mode is not DraftMode.ASK_GUS
+            or attempt.draft_id != draft.draft_id
+            or attempt.kind
+            not in {
+                GenerationAttemptKind.INITIAL,
+                GenerationAttemptKind.FULL_REGENERATE,
+            }
+            or attempt.status
+            not in {AttemptStatus.FAILED, AttemptStatus.INTERRUPTED}
+        ):
+            return None
+        checkpoint = self._attempts.get_checkpoint(attempt.attempt_id)
+        if checkpoint is None:
+            return None
+        if not self._checkpoint_matches(draft, attempt, checkpoint):
+            return None
+        # A checkpoint containing only input validation has no paid Provider
+        # output to continue from.  Keep that metadata private at most, but do
+        # not advertise it as resumable progress or restore it on retry.
+        if GenerationStage.DISH_ANALYSIS not in checkpoint.completed_stages:
+            return None
+        if not self._checkpoint_assets_available(checkpoint):
+            return None
+        return checkpoint
+
+    def _checkpoint_matches(
+        self,
+        draft: DraftRecord,
+        attempt: GenerationAttempt,
+        checkpoint: GenerationCheckpoint,
+    ) -> bool:
+        if (
+            checkpoint.attempt_id != attempt.attempt_id
+            or checkpoint.draft_id != draft.draft_id
+            or checkpoint.kind is not attempt.kind
+            or checkpoint.source_revision != draft.revision
+            or checkpoint.language is not draft.source.language
+            or checkpoint.catalog_version != self._catalog.version
+            or checkpoint.protocol_version != CHECKPOINT_PROTOCOL_VERSION
+        ):
+            return False
+        try:
+            source = self._assets.stat(draft.source.original_image_asset_id)
+        except (AssetNotFoundError, OSError, ValueError):
+            return False
+        expected_fingerprint = input_fingerprint(
+            draft_id=draft.draft_id,
+            mode=draft.mode,
+            original_asset_id=draft.source.original_image_asset_id,
+            original_asset_sha256=source.sha256,
+            context_text=draft.source.context_text,
+            language=draft.source.language,
+            regeneration_instructions=attempt.regeneration_instructions,
+        )
+        if checkpoint.input_fingerprint != expected_fingerprint:
+            return False
+        stage_order = STAGE_ORDER
+        try:
+            positions = [
+                stage_order.index(stage) for stage in checkpoint.completed_stages
+            ]
+        except ValueError:
+            return False
+        if positions != list(range(len(positions))):
+            return False
+        if not checkpoint.completed_stages:
+            return False
+        if checkpoint.candidate.draft_id != draft.draft_id:
+            return False
+        if GenerationStage.DISH_ANALYSIS in checkpoint.completed_stages and (
+            checkpoint.analysis is None
+        ):
+            return False
+        if GenerationStage.GAMEPLAY_DESIGN in checkpoint.completed_stages and (
+            checkpoint.presentation is None
+            or (checkpoint.canonical is None and checkpoint.core is None)
+        ):
+            return False
+        if GenerationStage.INGREDIENT_MAPPING in checkpoint.completed_stages and (
+            checkpoint.gameplay is None
+        ):
+            return False
+        if GenerationStage.VISUAL_BRIEF in checkpoint.completed_stages and (
+            checkpoint.visual_brief is None
+        ):
+            return False
+        if GenerationStage.ICON_GENERATION_AND_NORMALIZATION in checkpoint.completed_stages and (
+            checkpoint.icon_source_asset_id is None
+            or checkpoint.icon_16_asset_id is None
+        ):
+            return False
+        return not (
+            GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION
+            in checkpoint.completed_stages
+            and (
+                checkpoint.preview_asset_id is None
+                or checkpoint.candidate.visuals is None
+            )
+        )
+
+    def _checkpoint_assets_available(self, checkpoint: GenerationCheckpoint) -> bool:
+        for asset_id in (
+            checkpoint.icon_source_asset_id,
+            checkpoint.icon_16_asset_id,
+            checkpoint.preview_asset_id,
+        ):
+            if asset_id is None:
+                continue
+            try:
+                self._assets.stat(asset_id)
+            except (AssetNotFoundError, OSError, ValueError):
+                return False
+        return True
+
+    def _source_fingerprint(
+        self,
+        draft: DraftRecord,
+        *,
+        regeneration_instructions: str | None = None,
+    ) -> str | None:
+        try:
+            source = self._assets.stat(draft.source.original_image_asset_id)
+        except (AssetNotFoundError, OSError, ValueError):
+            return None
+        return input_fingerprint(
+            draft_id=draft.draft_id,
+            mode=draft.mode,
+            original_asset_id=draft.source.original_image_asset_id,
+            original_asset_sha256=source.sha256,
+            context_text=draft.source.context_text,
+            language=draft.source.language,
+            regeneration_instructions=regeneration_instructions,
+        )
 
     def _record_telemetry(self, event: TelemetryEvent) -> None:
         try:
@@ -1013,6 +1261,24 @@ class GenerationOrchestrator:
             if draft.mode is DraftMode.BLUEPRINT
             else STAGE_ORDER
         )
+        checkpoint: GenerationCheckpoint | None = None
+        if command.restart:
+            # An explicit full-regenerate request starts a fresh candidate and
+            # retires any prior continuation metadata.  Assets remain subject
+            # to the normal orphan-GC/shared-reference policy.
+            self._invalidate_checkpoints(draft.draft_id)
+        elif draft.mode is DraftMode.ASK_GUS and draft.last_attempt_id is not None:
+            try:
+                previous = self._attempts.get(draft.last_attempt_id)
+            except (FileNotFoundError, OSError, ValueError, TypeError):
+                previous = None
+            if previous is not None:
+                checkpoint = self.compatible_checkpoint(draft, previous)
+                if checkpoint is None:
+                    # A stale/corrupt/incompatible checkpoint is a safe cache
+                    # miss. Clear only its metadata; never guess at assets.
+                    self._attempts.delete_checkpoint(previous.attempt_id)
+
         staged = staged.model_copy(update={"active_attempt_id": attempt_id})
         self._drafts.control_write(
             staged, expected_revision=draft.revision, expected_attempt_id=None
@@ -1022,6 +1288,8 @@ class GenerationOrchestrator:
             attempt_id,
             draft.revision,
             total_stages=len(stage_order),
+            stage_order=stage_order,
+            completed_stages=(checkpoint.completed_stages if checkpoint else []),
         )
         self._attempts.save(attempt)
         started_monotonic = self._capture_monotonic()
@@ -1030,17 +1298,47 @@ class GenerationOrchestrator:
             attempt_id=attempt_id,
             command=command,
             draft=draft,
-            candidate=draft.model_copy(),
+            candidate=(checkpoint.candidate if checkpoint else draft.model_copy()),
             attempt=attempt,
             staged=staged,
             started_monotonic=started_monotonic,
         )
+        if checkpoint is not None:
+            previous_checkpoint_attempt = checkpoint.attempt_id
+            checkpoint = checkpoint.model_copy(
+                update={"attempt_id": attempt_id, "updated_at": utc_now()}
+            )
+            self._attempts.save_checkpoint(checkpoint)
+            if previous_checkpoint_attempt != attempt_id:
+                self._attempts.delete_checkpoint(previous_checkpoint_attempt)
+            self._restore_checkpoint_state(state, checkpoint)
         try:
+            try:
+                self._reserve_for_cached_resume(state, checkpoint)
+            except AppError as exc:
+                yield await self._finish_failed(state, staged, exc, attempt_id)
+                return
             for ordinal, stage in enumerate(stage_order, start=1):
                 if self._registry.is_cancelled(attempt_id):
                     yield await self._finish_cancelled(state, staged)
                     return
                 yield stage_started(attempt_id, stage, ordinal, len(stage_order))
+                if (
+                    checkpoint is not None
+                    and stage in checkpoint.completed_stages
+                    and stage
+                    not in {
+                        GenerationStage.INPUT_VALIDATION,
+                        GenerationStage.RESULT_VALIDATION,
+                        GenerationStage.ATOMIC_PROMOTION,
+                    }
+                ):
+                    # Replayed stage events let a refreshed client hydrate the
+                    # saved progress without implying another Provider call.
+                    yield stage_succeeded(
+                        attempt_id, stage, ordinal, len(stage_order)
+                    )
+                    continue
                 try:
                     await self._execute_stage(state, stage)
                 except AppError as exc:
@@ -1054,7 +1352,14 @@ class GenerationOrchestrator:
                         state, staged, _unexpected_error(exc), attempt_id
                     )
                     return
-                self._attempts.save(self._advance_stage(state, stage))
+                try:
+                    self._attempts.save(self._advance_stage(state, stage))
+                    self._save_checkpoint(state)
+                except Exception as exc:  # noqa: BLE001 - checkpoint persistence is terminal
+                    yield await self._finish_failed(
+                        state, staged, _unexpected_error(exc), attempt_id
+                    )
+                    return
                 yield stage_succeeded(attempt_id, stage, ordinal, len(stage_order))
         except asyncio.CancelledError:
             # Explicit /cancel (task.cancel) or a cancellation landing at a
@@ -1096,6 +1401,7 @@ class GenerationOrchestrator:
             return
         finished = self._finish_success(state, promoted)
         self._attempts.save(finished)
+        self._invalidate_checkpoints(draft.draft_id)
         self._record_generation_finished(
             state,
             outcome=GenerationOutcome.SUCCEEDED,
@@ -1106,6 +1412,133 @@ class GenerationOrchestrator:
             promoted.revision,
             promoted.model_dump(by_alias=True, mode="json"),
         )
+
+    def _restore_checkpoint_state(
+        self,
+        state: _RunState,
+        checkpoint: GenerationCheckpoint,
+    ) -> None:
+        """Hydrate transient orchestration values from validated checkpoint data."""
+        state.analysis = checkpoint.analysis or state.candidate.analysis
+        state.core = checkpoint.core
+        state.presentation = checkpoint.presentation or state.candidate.presentation
+        state.gameplay = checkpoint.gameplay or state.candidate.gameplay
+        state.visual_brief = checkpoint.visual_brief
+        if state.visual_brief is None and state.candidate.visuals is not None:
+            state.visual_brief = state.candidate.visuals.visual_brief
+        state.canonical = checkpoint.canonical
+        state.recall_confidence = checkpoint.recall_confidence
+        state.recall_elapsed_ms = checkpoint.recall_elapsed_ms
+        state.icon_reuse_decision = checkpoint.icon_reuse_decision
+        state.icon_visual_similarity = checkpoint.icon_visual_similarity
+        if state.canonical is not None:
+            state.recall_decision = MemoryOutcome.HIT
+
+        icon_source_asset_id = checkpoint.icon_source_asset_id
+        icon_16_asset_id = checkpoint.icon_16_asset_id
+        preview_asset_id = checkpoint.preview_asset_id
+        if (
+            GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION
+            in checkpoint.completed_stages
+            and state.candidate.visuals is not None
+        ):
+            visuals = state.candidate.visuals
+            preview_asset_id = preview_asset_id or visuals.preview_asset_id
+        if icon_source_asset_id is not None:
+            icon_source_ref = self._assets.stat(icon_source_asset_id)
+            with self._assets.open(icon_source_ref) as handle:
+                icon_source_data = handle.read()
+            state.icon_source_asset_id = icon_source_asset_id
+            state.icon_source = GeneratedImage(
+                data=icon_source_data,
+                media_type=ImageMediaType(icon_source_ref.media_type.value),
+            )
+        if icon_16_asset_id is not None:
+            state.icon_16 = self._assets.stat(icon_16_asset_id)
+        if preview_asset_id is not None:
+            state.preview = self._assets.stat(preview_asset_id)
+
+    def _invalidate_checkpoints(self, draft_id: UUID) -> None:
+        """Best-effort metadata cleanup; asset bytes remain orphan-GC managed."""
+        with suppress(OSError):
+            self._attempts.delete_checkpoints_for_draft(draft_id)
+
+    def _save_checkpoint(self, state: _RunState) -> None:
+        """Persist the current validated stage prefix and generated outputs."""
+        if (
+            state.draft.mode is not DraftMode.ASK_GUS
+            or state.command.kind
+            not in {
+                GenerationAttemptKind.INITIAL,
+                GenerationAttemptKind.FULL_REGENERATE,
+            }
+        ):
+            return
+        fingerprint = self._source_fingerprint(
+            state.draft,
+            regeneration_instructions=state.command.regeneration_instructions,
+        )
+        if fingerprint is None:
+            return
+        completed_stages = [
+            item.stage
+            for item in state.attempt.stages
+            if item.status is StageStatus.SUCCEEDED
+        ]
+        preview_asset_id = state.preview.asset_id if state.preview is not None else None
+        if (
+            preview_asset_id is None
+            and GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION
+            in completed_stages
+            and state.candidate.visuals is not None
+        ):
+            preview_asset_id = state.candidate.visuals.preview_asset_id
+        checkpoint = GenerationCheckpoint(
+            attemptId=state.attempt_id,
+            draftId=state.draft.draft_id,
+            kind=state.command.kind,
+            sourceRevision=state.draft.revision,
+            inputFingerprint=fingerprint,
+            language=state.draft.source.language,
+            catalogVersion=self._catalog.version,
+            protocolVersion=CHECKPOINT_PROTOCOL_VERSION,
+            completedStages=completed_stages,
+            candidate=state.candidate,
+            analysis=state.analysis,
+            core=state.core,
+            gameplay=state.gameplay,
+            presentation=state.presentation,
+            visualBrief=state.visual_brief,
+            canonical=state.canonical,
+            recallConfidence=state.recall_confidence,
+            recallElapsedMs=state.recall_elapsed_ms,
+            iconSourceAssetId=state.icon_source_asset_id,
+            icon16AssetId=(state.icon_16.asset_id if state.icon_16 is not None else None),
+            previewAssetId=preview_asset_id,
+            iconReuseDecision=state.icon_reuse_decision,
+            iconVisualSimilarity=state.icon_visual_similarity,
+            updatedAt=utc_now(),
+        )
+        self._attempts.save_checkpoint(checkpoint)
+
+    def _reserve_for_cached_resume(
+        self,
+        state: _RunState,
+        checkpoint: GenerationCheckpoint | None,
+    ) -> None:
+        """Account a new trial attempt even when all Provider stages are cached."""
+        if checkpoint is None:
+            return
+        network_stages = {
+            GenerationStage.DISH_ANALYSIS,
+            GenerationStage.GAMEPLAY_DESIGN,
+            GenerationStage.ICON_GENERATION_AND_NORMALIZATION,
+            GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION,
+        }
+        if network_stages.issubset(set(checkpoint.completed_stages)):
+            # Gateway selection is local and side-effect free apart from the
+            # intended trial reservation; no Provider request is made here.
+            self._ensure_gateway(state)
 
     def _ensure_gateway(self, state: _RunState) -> ModelGateway:
         """Build the per-attempt gateway lazily at the first provider call.
@@ -1229,6 +1662,41 @@ class GenerationOrchestrator:
             )
         return error
 
+    def _checkpoint_can_resume(self, state: _RunState, error: AppError) -> bool:
+        """Keep checkpoints only for provider/config/trial interruptions."""
+        if (
+            state.draft.mode is not DraftMode.ASK_GUS
+            or state.command.kind
+            not in {
+                GenerationAttemptKind.INITIAL,
+                GenerationAttemptKind.FULL_REGENERATE,
+            }
+        ):
+            return False
+        if error.code in {
+            "PTS_GEN_CANCELLED",
+            "PTS_GEN_LOW_CONFIDENCE",
+            "PTS_GEN_VALIDATION_FAILED",
+            "PTS_IMAGE_INPUT_UNSUPPORTED",
+            "PTS_PREVIEW_PROMPT_TOO_LONG",
+        }:
+            return False
+        return error.code.startswith(
+            ("PTS_PROVIDER_", "PTS_TRIAL_", "PTS_WORKSPACE_")
+        ) or error.code in {
+            "PTS_GEN_UNEXPECTED",
+            "PTS_GEN_INTERRUPTED",
+        }
+
+    def _with_progress_saved(self, error: AppError) -> AppError:
+        return AppError(
+            code=error.code,
+            message=error.message,
+            http_status=error.http_status,
+            details={**error.details, "progressSaved": True},
+            retryable=error.retryable,
+        )
+
     def _safe_personal_configured(self) -> bool:
         """Evaluate the local provider predicate without leaking read failures."""
         try:
@@ -1240,19 +1708,24 @@ class GenerationOrchestrator:
         self,
         state: _RunState,
         canonical: CanonicalDish,
+        *,
+        source_data: bytes | None = None,
+        icon_16_data: bytes | None = None,
     ) -> tuple[GeneratedImage, AssetRef, AssetRef]:
         repository = self._canonical_repository
         if repository is None:
             raise ValueError("canonical Registry is unavailable")
 
-        source_data = repository.load_owned_icon(
-            canonical.canonical_id,
-            CanonicalIconKind.SOURCE,
-        )
-        icon_16_data = repository.load_owned_icon(
-            canonical.canonical_id,
-            CanonicalIconKind.ICON_16,
-        )
+        if source_data is None:
+            source_data = repository.load_owned_icon(
+                canonical.canonical_id,
+                CanonicalIconKind.SOURCE,
+            )
+        if icon_16_data is None:
+            icon_16_data = repository.load_owned_icon(
+                canonical.canonical_id,
+                CanonicalIconKind.ICON_16,
+            )
         _validate_canonical_icon_data(
             source_data,
             canonical.icon_source,
@@ -1334,10 +1807,10 @@ class GenerationOrchestrator:
             ):
                 state.recall_decision = MemoryOutcome.FALLBACK_ERROR
                 return False
-            icon_source, icon_source_ref, icon_16_ref = self._import_canonical_icons(
-                state,
-                canonical,
-            )
+            # M13 Task 58: only the TEXT identity is fixed now. The pixel icon
+            # is not imported yet — the ICON stage first runs the dual-image
+            # visual comparison and only then reuses the canonical source (or
+            # generates a fresh icon when similarity is below the threshold).
             state.canonical = canonical
             state.recall_confidence = result.trace.confidence
             state.recall_elapsed_ms = result.trace.elapsed_ms
@@ -1351,15 +1824,205 @@ class GenerationOrchestrator:
             )
             state.gameplay = canonical.gameplay
             state.visual_brief = canonical.visual_brief
-            state.icon_source = icon_source
-            state.icon_source_asset_id = icon_source_ref.asset_id
-            state.icon_16 = icon_16_ref
             return True
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001 - memory failures degrade to fresh
             state.recall_decision = MemoryOutcome.FALLBACK_ERROR
             return False
+
+    async def _canonical_hit_icon_step(self, state: _RunState) -> None:
+        """Run the M13 Task 58 visual gate for a semantic canonical hit.
+
+        The matched TEXT is already fixed; this step decides whether the
+        recorded canonical pixel icon may be reused for THIS photo:
+        ``REUSED`` imports the canonical source/16 icons, ``GENERATED`` makes
+        a fresh icon from the current photo using the matched text as the
+        identity constraint, and ``UNAVAILABLE`` (missing/damaged canonical
+        icons) also generates a fresh icon. Provider errors are normal
+        controlled failures: the completed text-hit stages stay in the
+        checkpoint so a manual continuation resumes without re-running the
+        matcher.
+        """
+        assert state.canonical is not None
+        assert state.presentation is not None
+        repository = self._canonical_repository
+        if repository is None:
+            raise ValueError("canonical Registry is unavailable")
+        canonical = state.canonical
+        decision = state.icon_reuse_decision
+        source_data: bytes | None = None
+        icon_16_data: bytes | None = None
+        if decision in {None, IconReuseDecision.REUSED}:
+            try:
+                source_data = repository.load_owned_icon(
+                    canonical.canonical_id,
+                    CanonicalIconKind.SOURCE,
+                )
+                icon_16_data = repository.load_owned_icon(
+                    canonical.canonical_id,
+                    CanonicalIconKind.ICON_16,
+                )
+                _validate_canonical_icon_data(
+                    source_data,
+                    canonical.icon_source,
+                    icon_16=False,
+                )
+                _validate_canonical_icon_data(
+                    icon_16_data,
+                    canonical.icon_16,
+                    icon_16=True,
+                )
+            except Exception:  # noqa: BLE001 - corrupted canonical assets degrade
+                # A damaged icon pair is a local cache miss.  Keep the
+                # semantic hit, but never spend a vision call trying to
+                # compare or import an asset that cannot be used.
+                state.icon_reuse_decision = IconReuseDecision.UNAVAILABLE
+                state.icon_visual_similarity = None
+                decision = state.icon_reuse_decision
+                self._save_checkpoint(state)
+            else:
+                if decision is None:
+                    icon_input = self._icon_for_vision(source_data)
+                    original = _prepare_vision_input(
+                        _read_source_image(self._assets, state.draft)
+                    )
+                    gateway = self._ensure_gateway(state)
+                    state.provider_started = True
+                    result = await gateway.compare_canonical_icon(
+                        CanonicalIconComparisonRequest(
+                            currentOriginal=ProviderImageInput(
+                                data=original[0],
+                                media_type=original[1],
+                            ),
+                            canonicalIconSource=icon_input,
+                            language=state.draft.source.language,
+                            requestId=state.command.request_id,
+                        )
+                    )
+                    state.icon_visual_similarity = result.visual_similarity
+                    state.icon_reuse_decision = (
+                        IconReuseDecision.REUSED
+                        if result.visual_similarity >= _ICON_REUSE_THRESHOLD
+                        else IconReuseDecision.GENERATED
+                    )
+                    decision = state.icon_reuse_decision
+                    # The visual decision is independently resumable from the
+                    # subsequent icon/preview work.  Persist it before the
+                    # first icon generation request so an outage there cannot
+                    # charge the comparison again on manual continuation.
+                    self._save_checkpoint(state)
+        if decision is IconReuseDecision.REUSED:
+            assert state.icon_source_asset_id is None
+            (
+                state.icon_source,
+                source_ref,
+                icon_16_ref,
+            ) = self._import_canonical_icons(
+                state,
+                canonical,
+                source_data=source_data,
+                icon_16_data=icon_16_data,
+            )
+            state.icon_source_asset_id = source_ref.asset_id
+            state.icon_16 = icon_16_ref
+            return
+        # GENERATED / UNAVAILABLE: the canonical icon cannot stand in for this
+        # photo. Reuse the matched text as identity but draw the icon from the
+        # current photo, without invoking the text design model again.
+        icon_prompt = _icon_prompt_from_presentation(
+            state.presentation,
+            language=state.draft.source.language,
+            regeneration_instructions=state.command.regeneration_instructions,
+        )
+        await self._generate_and_store_icon(
+            state,
+            icon_prompt,
+            source_image=_read_source_image(self._assets, state.draft),
+        )
+
+    def _icon_for_vision(self, data: bytes) -> ProviderImageInput:
+        """Flatten a transparent pixel-icon source onto white for the vision
+        comparison, capping the long side like any other vision input."""
+        with Image.open(io.BytesIO(data)) as source:
+            rgba = source.convert("RGBA")
+        background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+        flattened = Image.alpha_composite(background, rgba)
+        output = io.BytesIO()
+        flattened.convert("RGB").save(output, format="JPEG", quality=90)
+        return ProviderImageInput(
+            data=output.getvalue(),
+            media_type=ImageMediaType.JPEG,
+        )
+
+    async def _generate_and_store_icon(
+        self,
+        state: _RunState,
+        icon_prompt: str,
+        *,
+        source_image: bytes,
+    ) -> None:
+        """Generate a pixel icon from ``source_image``, key the backdrop, and
+        persist the icon source plus the normalized 16x16 icon."""
+        draft = state.draft
+        gateway = self._ensure_gateway(state)
+        _ensure_image_edit_capability(gateway)
+        icon_image, icon_media_type = _prepare_vision_input(
+            source_image, min_pixels=EDIT_MIN_PIXELS
+        )
+        state.provider_started = True
+        generated_icon = await gateway.generate_image(
+            ImageGenerationRequest(
+                operation=ImageOperation.EDIT,
+                prompt=icon_prompt,
+                source_images=[
+                    ProviderImageInput(
+                        data=icon_image,
+                        media_type=icon_media_type,
+                    )
+                ],
+                size=_ICON_SIZE,
+                request_id=state.command.request_id,
+            )
+        )
+        # R12: models often return an opaque solid backdrop despite the
+        # transparent-background instruction; key it out deterministically
+        # so the stored icon source and the 16x16 icon are truly
+        # transparent in game.
+        keyed = key_icon_background(generated_icon.data)
+        icon_media_type = (
+            ImageMediaType.PNG if keyed.changed else generated_icon.media_type
+        )
+        state.icon_source = GeneratedImage(
+            data=keyed.data, media_type=icon_media_type
+        )
+        icon_w, icon_h = _image_dimensions(state.icon_source.data)
+        icon_source_ref = self._assets.put(
+            state.icon_source.data,
+            AssetMetadata(
+                kind=AssetKind.ICON_SOURCE,
+                mediaType=_domain_media_type(icon_media_type),
+                fileExtension=_extension_for_media_type(icon_media_type),
+                width=icon_w,
+                height=icon_h,
+                sourceRevision=draft.revision + 1,
+                attemptId=state.attempt_id,
+            ),
+        )
+        state.icon_source_asset_id = icon_source_ref.asset_id
+        icon_bytes = build_icon_16(state.icon_source.data)
+        state.icon_16 = self._assets.put(
+            icon_bytes,
+            AssetMetadata(
+                kind=AssetKind.ICON_16,
+                mediaType=MediaType.PNG,
+                fileExtension=".png",
+                width=16,
+                height=16,
+                sourceRevision=draft.revision + 1,
+                attemptId=state.attempt_id,
+            ),
+        )
 
     async def _execute_stage(self, state: _RunState, stage: GenerationStage) -> None:
         draft = state.draft
@@ -1378,6 +2041,9 @@ class GenerationOrchestrator:
                         media_type=vision_media,
                     ),
                     context_text=draft.source.context_text,
+                    regenerationInstructions=(
+                        state.command.regeneration_instructions
+                    ),
                     language=draft.source.language,
                     request_id=state.command.request_id,
                 )
@@ -1397,6 +2063,9 @@ class GenerationOrchestrator:
                     AskGusDesignRequest(
                         analysis=state.analysis,
                         context_text=draft.source.context_text,
+                        regenerationInstructions=(
+                            state.command.regeneration_instructions
+                        ),
                         language=draft.source.language,
                         request_id=state.command.request_id,
                     )
@@ -1428,74 +2097,31 @@ class GenerationOrchestrator:
                 state.visual_brief = state.core.visual_brief
         elif stage is GenerationStage.ICON_GENERATION_AND_NORMALIZATION:
             if state.canonical is not None:
-                assert state.icon_source is not None
-                assert state.icon_source_asset_id is not None
-                assert state.icon_16 is not None
-                return
-            if draft.mode is DraftMode.BLUEPRINT:
+                await self._canonical_hit_icon_step(state)
+            elif draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
                 icon_prompt = blueprint_icon_prompt(
                     draft.presentation, language=draft.source.language
                 )
+                await self._generate_and_store_icon(
+                    state,
+                    icon_prompt,
+                    source_image=_read_source_image(self._assets, draft),
+                )
             else:
                 assert state.core is not None
                 icon_prompt = _icon_prompt(
-                    state.core, language=draft.source.language
+                    state.core,
+                    language=draft.source.language,
+                    regeneration_instructions=(
+                        state.command.regeneration_instructions
+                    ),
                 )
-            gateway = self._ensure_gateway(state)
-            _ensure_image_edit_capability(gateway)
-            icon_image, icon_media_type = _prepare_vision_input(
-                _read_source_image(self._assets, draft), min_pixels=EDIT_MIN_PIXELS
-            )
-            state.provider_started = True
-            generated_icon = await gateway.generate_image(
-                ImageGenerationRequest(
-                    operation=ImageOperation.EDIT,
-                    prompt=icon_prompt,
-                    source_images=[
-                        ProviderImageInput(
-                            data=icon_image,
-                            media_type=icon_media_type,
-                        )
-                    ],
-                    size=_ICON_SIZE,
-                    request_id=state.command.request_id,
+                await self._generate_and_store_icon(
+                    state,
+                    icon_prompt,
+                    source_image=_read_source_image(self._assets, draft),
                 )
-            )
-            # R12: models often return an opaque solid backdrop despite the
-            # transparent-background instruction; key it out deterministically
-            # so the stored icon source and the 16x16 icon are truly
-            # transparent in game.
-            keyed = key_icon_background(generated_icon.data)
-            icon_media_type = (
-                ImageMediaType.PNG if keyed.changed else generated_icon.media_type
-            )
-            state.icon_source = GeneratedImage(
-                data=keyed.data, media_type=icon_media_type
-            )
-            icon_w, icon_h = _image_dimensions(state.icon_source.data)
-            icon_source_ref = self._assets.put(
-                state.icon_source.data,
-                AssetMetadata(
-                    kind=AssetKind.ICON_SOURCE,
-                    mediaType=_domain_media_type(icon_media_type),
-                    fileExtension=_extension_for_media_type(icon_media_type),
-                    width=icon_w,
-                    height=icon_h,
-                ),
-            )
-            state.icon_source_asset_id = icon_source_ref.asset_id
-            icon_bytes = build_icon_16(state.icon_source.data)
-            state.icon_16 = self._assets.put(
-                icon_bytes,
-                AssetMetadata(
-                    kind=AssetKind.ICON_16,
-                    mediaType=MediaType.PNG,
-                    fileExtension=".png",
-                    width=16,
-                    height=16,
-                ),
-            )
         elif stage is GenerationStage.PREVIEW_ART_GENERATION_AND_COMPOSITION:
             if draft.mode is DraftMode.BLUEPRINT:
                 assert draft.presentation is not None
@@ -1573,6 +2199,8 @@ class GenerationOrchestrator:
                     ),
                     width=preview_w,
                     height=preview_h,
+                    sourceRevision=draft.revision + 1,
+                    attemptId=state.attempt_id,
                 ),
             )
             next_revision = draft.revision + 1
@@ -1624,26 +2252,54 @@ class GenerationOrchestrator:
         source_revision: int,
         *,
         total_stages: int,
+        stage_order: tuple[GenerationStage, ...],
+        completed_stages: list[GenerationStage],
     ) -> GenerationAttempt:
         now = utc_now()
+        completed = set(completed_stages)
+        stages: list[StageAttempt] = []
+        first_pending_seen = False
+        current_stage: GenerationStage | None = None
+        for stage in stage_order:
+            if stage in completed:
+                stages.append(
+                    StageAttempt(
+                        stage=stage,
+                        status=StageStatus.SUCCEEDED,
+                        retry_count=0,
+                        started_at=now,
+                        finished_at=now,
+                    )
+                )
+                continue
+            if not first_pending_seen:
+                status = StageStatus.RUNNING
+                first_pending_seen = True
+                current_stage = stage
+                started_at = now
+            else:
+                status = StageStatus.PENDING
+                started_at = None
+            stages.append(
+                StageAttempt(
+                    stage=stage,
+                    status=status,
+                    retry_count=0,
+                    started_at=started_at,
+                    finished_at=None,
+                )
+            )
         return GenerationAttempt(
             attempt_id=attempt_id,
             draft_id=command.draft_id,
             kind=command.kind,
             source_revision=source_revision,
             status=AttemptStatus.RUNNING,
-            current_stage=None,
-            stages=[
-                StageAttempt(
-                    stage=GenerationStage.INPUT_VALIDATION,
-                    status=StageStatus.RUNNING,
-                    retry_count=0,
-                    started_at=now,
-                    finished_at=None,
-                )
-            ],
+            current_stage=current_stage,
+            stages=stages,
             total_stages=total_stages,
             candidate_record_path=None,
+            regenerationInstructions=command.regeneration_instructions,
             started_at=now,
             finished_at=None,
             error=None,
@@ -1708,7 +2364,25 @@ class GenerationOrchestrator:
         *,
         promoted: DraftRecord | None = None,
     ) -> GenerationEvent:
+        original_error = error
         error = self._trial_failure_error(state, error)
+        checkpoint = self._attempts.get_checkpoint(attempt_id)
+        checkpoint_saved = (
+            promoted is None
+            and checkpoint is not None
+            and self._checkpoint_matches(state.draft, state.attempt, checkpoint)
+            and GenerationStage.DISH_ANALYSIS in checkpoint.completed_stages
+        )
+        # Resumability is classified from the real pre-redaction local error;
+        # the generic trial envelope must never widen a non-resumable failure
+        # (e.g. semantic validation) into advertised saved progress.
+        if checkpoint_saved and self._checkpoint_can_resume(state, original_error):
+            error = self._with_progress_saved(error)
+        else:
+            # Clearing metadata is deliberately conservative: checkpoint
+            # assets may be deduplicated with another draft and are left for
+            # the existing orphan-GC/shared-reference policy.
+            self._attempts.delete_checkpoint(attempt_id)
         # Trial accounting is committed only after Draft promotion. If that
         # final accounting step fails, the persisted Draft already owns the
         # promoted revision and has no active attempt. Reuse the normal
@@ -1806,6 +2480,7 @@ class GenerationOrchestrator:
         yielding an event.
         """
         self._release_trial_reservation(state)
+        self._invalidate_checkpoints(state.draft.draft_id)
         if state.command.kind is GenerationAttemptKind.BLUEPRINT_PREVIEW:
             # A cancelled preview keeps the draft in STALE_PREVIEW.
             rolled = staged.model_copy(

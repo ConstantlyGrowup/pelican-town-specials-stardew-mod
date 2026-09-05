@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncExternalStore, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useSyncExternalStore, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiClient, assetUrl } from "../../api/client";
 import { DownloadableImage } from "../../components/DownloadableImage";
 import { DishSlot } from "../../components/ui/DishSlot";
@@ -17,6 +17,16 @@ import {
 
 type CookbookDishSummary = components["schemas"]["CookbookDishSummary"];
 type CookbookDishDetail = components["schemas"]["CookbookDishDetail"];
+
+const COOKBOOK_PAGE_SIZE = 8;
+
+function parsePage(value: string | null): number {
+  if (value === null || !/^\d+$/.test(value)) {
+    return 1;
+  }
+  const page = Number(value);
+  return Number.isSafeInteger(page) && page >= 1 ? page : 1;
+}
 
 async function loadCookbook(): Promise<CookbookDishSummary[]> {
   const { data, error } = await apiClient.GET("/api/v1/cookbook");
@@ -39,6 +49,7 @@ async function loadCookbookDish(dishId: string): Promise<CookbookDishDetail> {
 export function CookbookPage() {
   const copy = useCopy();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [activeDishId, setActiveDishId] = useState<string | null>(null);
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
@@ -49,25 +60,62 @@ export function CookbookPage() {
     queryKey: ["cookbook"],
     queryFn: loadCookbook,
   });
+  const allDishes = query.data ?? [];
+  const totalPages = Math.ceil(allDishes.length / COOKBOOK_PAGE_SIZE);
+  const requestedPage = parsePage(searchParams.get("page"));
+  const currentPage = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages);
+  const pageStart = (currentPage - 1) * COOKBOOK_PAGE_SIZE;
+  const pageDishes = allDishes.slice(pageStart, pageStart + COOKBOOK_PAGE_SIZE);
+
+  function setPage(page: number, replace = false) {
+    const next = new URLSearchParams(searchParams);
+    if (page <= 1) {
+      next.delete("page");
+    } else {
+      next.set("page", String(page));
+    }
+    setSearchParams(next, { replace });
+  }
+
+  useEffect(() => {
+    if (!query.data) {
+      return;
+    }
+    const rawPage = searchParams.get("page");
+    if (rawPage === null && currentPage === 1) {
+      return;
+    }
+    const canonicalPage = currentPage === 1 ? null : String(currentPage);
+    if (rawPage !== canonicalPage) {
+      const next = new URLSearchParams(searchParams);
+      if (canonicalPage === null) {
+        next.delete("page");
+      } else {
+        next.set("page", canonicalPage);
+      }
+      setSearchParams(next, { replace: true });
+    }
+  }, [currentPage, query.data, searchParams, setSearchParams]);
+
   const detailQueries = useQueries({
-    queries: (query.data ?? []).map((dish) => ({
+    queries: pageDishes.map((dish) => ({
       queryKey: ["cookbook", dish.dishId],
       queryFn: () => loadCookbookDish(dish.dishId),
       staleTime: 5 * 60 * 1000,
     })),
   });
   const detailById = new Map<string, CookbookDishDetail>();
-  (query.data ?? []).forEach((dish, index) => {
+  pageDishes.forEach((dish, index) => {
     const detail = detailQueries[index]?.data;
     if (detail) {
       detailById.set(dish.dishId, detail);
     }
   });
   const activeDish =
-    query.data?.find((dish) => dish.dishId === activeDishId) ?? query.data?.[0];
+    pageDishes.find((dish) => dish.dishId === activeDishId) ?? pageDishes[0];
   const activeDetail = activeDish ? detailById.get(activeDish.dishId) : undefined;
   const activeDetailIndex = activeDish
-    ? query.data?.findIndex((dish) => dish.dishId === activeDish.dishId) ?? -1
+    ? pageDishes.findIndex((dish) => dish.dishId === activeDish.dishId)
     : -1;
   const activeDetailLoading = activeDetailIndex >= 0 && Boolean(detailQueries[activeDetailIndex]?.isLoading);
 
@@ -112,7 +160,7 @@ export function CookbookPage() {
           <p>{copy.cookbookDescription}</p>
         </div>
         <div className="collection-count" aria-label={copy.collectionStatsLabel}>
-          <span>{copy.collectedCount.replace("{count}", String(query.data?.length ?? 0))}</span>
+          <span>{copy.collectedCount.replace("{count}", String(allDishes.length))}</span>
           <span>{copy.selectedCount.replace("{count}", String(selectedIds.size))}</span>
         </div>
       </section>
@@ -137,7 +185,7 @@ export function CookbookPage() {
             </div>
           </div>
           <ul className="slot-grid" style={{ listStyle: "none", padding: 0 }}>
-            {query.data?.map((dish) => (
+            {pageDishes.map((dish) => (
               <li key={dish.dishId} className="cookbook-slot-item">
                 <DishSlot
                   label={dish.displayName}
@@ -157,12 +205,40 @@ export function CookbookPage() {
                 </label>
               </li>
             ))}
-            {Array.from({ length: Math.max(0, 8 - (query.data?.length ?? 0)) }).map((_, index) => (
+            {Array.from({ length: Math.max(0, 8 - pageDishes.length) }).map((_, index) => (
               <li key={`empty-${index}`}>
                 <DishSlot label="" empty />
               </li>
             ))}
           </ul>
+          {allDishes.length > 0 && (
+            <nav className="draft-pagination cookbook-pagination" aria-label={copy.collectionPaginationLabel}>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                {copy.previousPage}
+              </button>
+              <div className="draft-pagination__meta" aria-live="polite">
+                <span>
+                  {copy.pageIndicator
+                    .replace("{current}", String(currentPage))
+                    .replace("{total}", String(totalPages))}
+                </span>
+                <span>{copy.collectionItemsCount.replace("{count}", String(allDishes.length))}</span>
+              </div>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                {copy.nextPage}
+              </button>
+            </nav>
+          )}
         </section>
 
         <aside className="paper-panel detail-panel cookbook-feature" aria-label={copy.previewLabel}>

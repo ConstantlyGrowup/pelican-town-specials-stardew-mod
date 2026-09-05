@@ -42,6 +42,12 @@ export type GenerationState = {
   timing: GenerationTiming | null;
   /** Confirmed trial usage from the latest persisted successful attempt. */
   trialUsage: TrialUsageFact | null;
+  /**
+   * M13 Task 59: the current/failed round's regeneration instruction so the
+   * review page can restore the input after a refresh or a failed attempt.
+   * Empty when no instruction was submitted this round.
+   */
+  regenerationInstructions: string;
 };
 
 type InternalState = GenerationState & {
@@ -85,6 +91,7 @@ function getState(draftId: string): InternalState {
       error: null,
       timing: null,
       trialUsage: null,
+      regenerationInstructions: "",
     };
     state = { ...idle, controller: null, _snapshot: idle };
     states.set(draftId, state);
@@ -107,6 +114,10 @@ function setState(draftId: string, patch: Partial<GenerationState>) {
     timing: patch.timing !== undefined ? patch.timing : state.timing,
     trialUsage:
       patch.trialUsage !== undefined ? patch.trialUsage : state.trialUsage,
+    regenerationInstructions:
+      patch.regenerationInstructions !== undefined
+        ? patch.regenerationInstructions
+        : state.regenerationInstructions,
   };
   states.set(draftId, { ...next, controller: state.controller, _snapshot: next });
   emit();
@@ -162,6 +173,11 @@ function trialUsageFromAttempt(
   return { remaining };
 }
 
+/** Only a validated server checkpoint can enable continuation after reload. */
+function attemptProgressSaved(attempt: GenerationAttemptPublic): boolean {
+  return attempt.progressSaved === true;
+}
+
 /**
  * Hydrate a draft's generation state from a read-only server snapshot.
  *
@@ -208,6 +224,7 @@ export function hydrateGeneration(
       timing: null,
       // Active progress never carries a confirmed result fact.
       trialUsage: null,
+      regenerationInstructions: attempt.regenerationInstructions ?? "",
     };
     states.set(draftId, { ...streaming, controller: null, _snapshot: streaming });
     emit();
@@ -240,6 +257,7 @@ export function hydrateGeneration(
       error: null,
       timing: null,
       trialUsage: null,
+      regenerationInstructions: "",
     });
   }
 }
@@ -264,22 +282,61 @@ export function applyTerminalSnapshot(
       phase = "success";
       break;
     case "FAILED":
-      phase = "error";
-      error = attempt.error
-        ? {
-            code: attempt.error.code,
-            message: attempt.error.message,
-            retryable: attempt.error.retryable,
-            requestId: attempt.error.requestId,
-            recommendedAction: "",
-          }
-        : null;
+      {
+        const details =
+          attemptProgressSaved(attempt) ? { progressSaved: true } : undefined;
+        phase = "error";
+        error = attempt.error
+          ? {
+              code: attempt.error.code,
+              message: attempt.error.message,
+              retryable: attempt.error.retryable,
+              requestId: attempt.error.requestId,
+              recommendedAction: "",
+              ...(details ? { details } : {}),
+            }
+          : null;
+        break;
+      }
+    case "INTERRUPTED":
+      if (attemptProgressSaved(attempt)) {
+        const details = { progressSaved: true };
+        phase = "error";
+        error = attempt.error
+          ? {
+              code: attempt.error.code,
+              message: attempt.error.message,
+              retryable: attempt.error.retryable,
+              requestId: attempt.error.requestId,
+              recommendedAction: "",
+              details,
+            }
+          : {
+              code: "PTS_GEN_INTERRUPTED",
+              message: "",
+              retryable: true,
+              requestId: "",
+              recommendedAction: "",
+              details,
+            };
+      } else {
+        // An interrupted attempt without a valid checkpoint has no resumable
+        // output and keeps the historical terminal/cancelled presentation.
+        phase = "cancelled";
+      }
       break;
     default:
-      // CANCELLED / INTERRUPTED
+      // CANCELLED remains non-resumable even if a malformed response claims
+      // that progress was saved.
       phase = "cancelled";
       break;
   }
+  // M13 Task 59: a FAILED/INTERRUPTED round keeps its instruction so the
+  // retry entry restores the same round; terminal success clears the input.
+  const instructionsFromAttempt =
+    phase === "error" || phase === "cancelled"
+      ? (attempt.regenerationInstructions ?? "")
+      : "";
   const terminal: GenerationState = {
     phase,
     attemptId: attempt.attemptId,
@@ -289,6 +346,7 @@ export function applyTerminalSnapshot(
     error,
     timing: timingFromAttempt(attempt),
     trialUsage: trialUsageFromAttempt(attempt),
+    regenerationInstructions: instructionsFromAttempt,
   };
   states.set(draftId, { ...terminal, controller: null, _snapshot: terminal });
   emit();
@@ -311,14 +369,23 @@ export type GenerationFallbackMessages = {
 
 type GenerationSuccessHandler = (attemptId?: string) => void | Promise<void>;
 
+export type GenerationStartOptions = {
+  /** Set only for an explicit full regeneration from the REVIEWABLE page. */
+  restart?: boolean;
+  /** M13 Task 59: this round's regeneration instruction (optional). */
+  regenerationInstructions?: string;
+};
+
 export function beginGeneration(
   draftId: string,
   onSuccess?: GenerationSuccessHandler,
   fallback?: GenerationFallbackMessages,
+  options: GenerationStartOptions = {},
 ): void {
   const state = getState(draftId);
   state.controller?.abort();
   const controller = new AbortController();
+  const trimmedInstructions = options.regenerationInstructions?.trim() ?? "";
   const streaming: GenerationState = {
     phase: "streaming",
     attemptId: null,
@@ -328,6 +395,7 @@ export function beginGeneration(
     error: null,
     timing: null,
     trialUsage: null,
+    regenerationInstructions: trimmedInstructions,
   };
   states.set(draftId, {
     ...streaming,
@@ -338,9 +406,17 @@ export function beginGeneration(
 
   void (async () => {
     try {
-      await streamGeneration({ draftId, signal: controller.signal }, (event) => {
-        handleEvent(draftId, controller, event, onSuccess);
-      });
+      await streamGeneration(
+        {
+          draftId,
+          signal: controller.signal,
+          restart: options.restart === true,
+          regenerationInstructions: trimmedInstructions || undefined,
+        },
+        (event) => {
+          handleEvent(draftId, controller, event, onSuccess);
+        },
+      );
     } catch (cause) {
       const current = getState(draftId);
       if (current.controller !== controller) {
@@ -430,6 +506,7 @@ function handleEvent(
         // GET generation progress to obtain the authoritative timing.
         timing: null,
         trialUsage: null,
+        regenerationInstructions: "",
       });
       void onSuccess?.(event.attemptId);
       break;

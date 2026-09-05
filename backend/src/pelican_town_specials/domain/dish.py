@@ -28,6 +28,21 @@ class GenerationSource(str, Enum):
     CANONICAL_REUSED = "CANONICAL_REUSED"
 
 
+class IconReuseDecision(str, Enum):
+    """M13 Task 58: how a canonical-hit attempt obtained its pixel icon.
+
+    A canonical hit always reuses the matched text; the ICON step may either
+    reuse the canonical shared icon source (REUSED), generate a fresh icon
+    from the current photo (GENERATED), or be skipped because the canonical
+    icon assets are missing or damaged (UNAVAILABLE). Records written before
+    M13 carry no decision (None).
+    """
+
+    REUSED = "REUSED"
+    GENERATED = "GENERATED"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
 class RecipeUnlock(str, Enum):
     DEFAULT = "DEFAULT"
 
@@ -266,6 +281,16 @@ class Provenance(_FrozenStrictModel):
         alias="recallElapsedMs",
         ge=0,
     )
+    icon_reuse_decision: IconReuseDecision | None = Field(
+        default=None,
+        alias="iconReuseDecision",
+    )
+    icon_visual_similarity: float | None = Field(
+        default=None,
+        alias="iconVisualSimilarity",
+        ge=0.0,
+        le=1.0,
+    )
     cache_eligibility: bool = Field(alias="cacheEligibility")
 
     @model_validator(mode="before")
@@ -278,6 +303,14 @@ class Provenance(_FrozenStrictModel):
             mutable["mode"] = DraftMode(mutable["mode"])
         if "generationSource" in mutable and not isinstance(mutable["generationSource"], GenerationSource):
             mutable["generationSource"] = GenerationSource(mutable["generationSource"])
+        if (
+            "iconReuseDecision" in mutable
+            and mutable["iconReuseDecision"] is not None
+            and not isinstance(mutable["iconReuseDecision"], IconReuseDecision)
+        ):
+            mutable["iconReuseDecision"] = IconReuseDecision(
+                mutable["iconReuseDecision"]
+            )
         if "authorityByField" in mutable and isinstance(mutable["authorityByField"], Mapping):
             mutable["authorityByField"] = {
                 key: value if isinstance(value, FieldAuthority) else FieldAuthority(value)
@@ -297,11 +330,13 @@ class Provenance(_FrozenStrictModel):
         except (TypeError, ValueError) as exc:
             raise ValueError("canonical_dish_id must be a UUID v4") from exc
 
-    @field_validator("recall_confidence")
+    @field_validator("recall_confidence", "icon_visual_similarity")
     @classmethod
-    def _validate_finite_recall_confidence(cls, value: float | None) -> float | None:
+    def _validate_finite_fraction(
+        cls, value: float | None
+    ) -> float | None:
         if value is not None and not isfinite(value):
-            raise ValueError("recall_confidence must be finite")
+            raise ValueError("score must be finite")
         return value
 
     @model_validator(mode="after")

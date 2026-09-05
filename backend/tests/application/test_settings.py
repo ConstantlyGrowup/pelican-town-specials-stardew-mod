@@ -58,9 +58,9 @@ def test_new_workspace_returns_safe_defaults_and_dynamic_key_state(
     result = service.get_provider_settings()
 
     assert result.provider_kind is ProviderKind.OPENAI_COMPATIBLE
-    assert result.base_url == "https://yibuapi.com/v1"
-    assert result.vision_model == "gpt-5.6-luna"
-    assert result.text_model == "gpt-5.6-luna"
+    assert result.base_url == "https://totokens.cc/v1"
+    assert result.vision_model == "gpt-5.6-terra"
+    assert result.text_model == "gpt-5.6-terra"
     assert result.image_model == "gpt-image-2-max"
     assert result.chat_timeout_seconds == 120
     assert result.image_timeout_seconds == 300
@@ -77,9 +77,9 @@ def test_new_workspace_returns_safe_defaults_and_dynamic_key_state(
 def test_provider_settings_default_to_sample_model_configuration() -> None:
     defaults = ProviderSettings()
 
-    assert defaults.base_url == "https://yibuapi.com/v1"
-    assert defaults.vision_model == "gpt-5.6-luna"
-    assert defaults.text_model == "gpt-5.6-luna"
+    assert defaults.base_url == "https://totokens.cc/v1"
+    assert defaults.vision_model == "gpt-5.6-terra"
+    assert defaults.text_model == "gpt-5.6-terra"
     assert defaults.image_model == "gpt-image-2-max"
 
 

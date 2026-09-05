@@ -53,9 +53,9 @@ def test_version_info_identity_is_frozen() -> None:
     text = vinfo_path.read_text(encoding="utf-8")
     assert "Pelican Town Specials" in text
     assert "PelicanTownSpecials" in text
-    assert "filevers=(1, 5, 4, 0)" in text
-    assert "prodvers=(1, 5, 4, 0)" in text
-    assert "'1.5.4'" in text or "1.5.4" in text
+    assert "filevers=(1, 5, 5, 0)" in text
+    assert "prodvers=(1, 5, 5, 0)" in text
+    assert "'1.5.5'" in text or "1.5.5" in text
     assert "FileVersion" in text and "ProductVersion" in text
 
 

@@ -91,6 +91,7 @@ export function GenerationError({
   const locale = useLocale();
   const trialServiceUnavailable = error.code === TRIAL_SERVICE_UNAVAILABLE_CODE;
   const trialLimitReached = error.code === TRIAL_LIMIT_CODE;
+  const progressSaved = error.details?.progressSaved === true;
   const personalProviderConfigured =
     error.details?.personalProviderConfigured === true;
   const copyKey =
@@ -100,6 +101,7 @@ export function GenerationError({
   return (
     <div className="status-banner status-error" role="alert">
       <p>{message}</p>
+      {progressSaved && <p>{copy.generationProgressSaved}</p>}
       {trialServiceUnavailable && personalProviderConfigured && onTakeover && (
         <button
           className="btn"
@@ -139,7 +141,11 @@ export function GenerationError({
           onClick={() => void onRetry()}
           disabled={actionPending}
         >
-          {trialServiceUnavailable ? copy.retryNow : copy.retryGeneration}
+          {progressSaved
+            ? copy.continueGeneration
+            : trialServiceUnavailable
+              ? copy.retryNow
+              : copy.retryGeneration}
         </button>
       )}
     </div>

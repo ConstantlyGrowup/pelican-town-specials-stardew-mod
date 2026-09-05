@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { parseChunks } from "./ndjson";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { parseChunks, streamGeneration } from "./ndjson";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("parseChunks", () => {
   it("parses JSON lines split across network chunks", async () => {
@@ -77,5 +81,96 @@ describe("parseChunks", () => {
       expect(JSON.stringify(failed.error)).not.toContain("hidden.example");
       expect(JSON.stringify(failed.error)).not.toContain("sk-secret");
     }
+  });
+
+  it("keeps the redacted saved-progress boolean from an error envelope", async () => {
+    const events = await parseChunks([
+      JSON.stringify({
+        type: "attempt.failed",
+        attemptId: "a-1",
+        error: {
+          code: "PTS_PROVIDER_UNAVAILABLE",
+          message: "服务暂时不可用。",
+          retryable: true,
+          requestId: "req-1",
+          recommendedAction: "RETRY_STAGE",
+          details: {
+            progressSaved: true,
+            provider: "https://hidden.example/v1",
+          },
+        },
+      }) + "\n",
+    ]);
+
+    const failed = events[0];
+    expect(failed.type).toBe("attempt.failed");
+    if (failed.type === "attempt.failed") {
+      expect(failed.error.details).toEqual({ progressSaved: true });
+      expect(JSON.stringify(failed.error)).not.toContain("hidden.example");
+    }
+  });
+});
+
+describe("streamGeneration", () => {
+  it.each([
+    { label: "by default", request: {}, expected: "" },
+    { label: "when restart is false", request: { restart: false }, expected: "" },
+    { label: "when restart is true", request: { restart: true }, expected: "?restart=true" },
+  ])("adds the restart query only $label", async ({ request, expected }) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"type":"attempt.started","attemptId":"a-1"}\n', {
+        status: 200,
+        headers: { "Content-Type": "application/x-ndjson" },
+      }),
+    );
+
+    await streamGeneration(
+      { draftId: "draft-1", ...request },
+      vi.fn(),
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `/api/v1/drafts/draft-1/generate${expected}`,
+    );
+  });
+
+  it("sends a JSON body and content type only for a non-empty instruction", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"type":"attempt.started","attemptId":"a-1"}\n', {
+        status: 200,
+        headers: { "Content-Type": "application/x-ndjson" },
+      }),
+    );
+
+    await streamGeneration(
+      {
+        draftId: "draft-1",
+        regenerationInstructions: "  鱼片切厚一点  ",
+      },
+      vi.fn(),
+    );
+
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(new Headers(init?.headers).get("Content-Type")).toBe(
+      "application/json",
+    );
+    expect(init?.body).toBe(
+      JSON.stringify({ regenerationInstructions: "鱼片切厚一点" }),
+    );
+  });
+
+  it("keeps historical no-body calls without a content type", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"type":"attempt.started","attemptId":"a-1"}\n', {
+        status: 200,
+        headers: { "Content-Type": "application/x-ndjson" },
+      }),
+    );
+
+    await streamGeneration({ draftId: "draft-1" }, vi.fn());
+
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(new Headers(init?.headers).get("Content-Type")).toBeNull();
+    expect(init?.body).toBeUndefined();
   });
 });

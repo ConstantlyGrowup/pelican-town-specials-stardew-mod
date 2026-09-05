@@ -47,8 +47,10 @@ type UseGenerationOptions = {
  *   tab), the persisted attempt hydrates the store and the progress endpoint is
  *   polled until the attempt terminates. The module store is a cache; the
  *   server snapshot wins on conflict.
- * - `begin` starts a fresh NDJSON stream; `cancel` awaits the backend `/cancel`
- *   (server rolls the draft back) before clearing local stream state.
+ * - `begin` starts the default NDJSON stream (the backend resumes a compatible
+ *   checkpoint or starts a new attempt); `restart` starts explicitly from
+ *   scratch. `cancel` awaits the backend `/cancel` (server rolls the draft
+ *   back) before clearing local stream state.
  */
 export function useGeneration({
   draftId,
@@ -231,14 +233,47 @@ export function useGeneration({
     };
   }, [running, draftId, queryClient, pollIntervalMs, readLatestProgress]);
 
-  const begin = useCallback(() => {
-    progressReadSequenceRef.current += 1;
-    notifiedAttemptRef.current = null;
-    beginGeneration(draftId, onLocalSuccess, {
-      streamError: copy.generationStreamError,
-      cancelError: copy.cancelStreamError,
-    });
-  }, [draftId, onLocalSuccess, copy.generationStreamError, copy.cancelStreamError]);
+  const start = useCallback(
+    (restart: boolean, regenerationInstructions?: string) => {
+      progressReadSequenceRef.current += 1;
+      notifiedAttemptRef.current = null;
+      beginGeneration(draftId, onLocalSuccess, {
+        streamError: copy.generationStreamError,
+        cancelError: copy.cancelStreamError,
+      }, {
+        restart,
+        regenerationInstructions,
+      });
+    },
+    [draftId, onLocalSuccess, copy.generationStreamError, copy.cancelStreamError],
+  );
+
+  const begin = useCallback(
+    (regenerationInstructions?: unknown) => {
+      // The callback is also passed directly to legacy button onClick props;
+      // React supplies a MouseEvent in that case. Only a string is a valid
+      // Task59 instruction.
+      start(
+        false,
+        typeof regenerationInstructions === "string"
+          ? regenerationInstructions
+          : undefined,
+      );
+    },
+    [start],
+  );
+
+  const restart = useCallback(
+    (regenerationInstructions?: unknown) => {
+      start(
+        true,
+        typeof regenerationInstructions === "string"
+          ? regenerationInstructions
+          : undefined,
+      );
+    },
+    [start],
+  );
 
   const cancel = useCallback(async () => {
     progressReadSequenceRef.current += 1;
@@ -248,13 +283,16 @@ export function useGeneration({
 
   return {
     phase: state.phase,
+    attemptId: state.attemptId,
     currentStage: state.currentStage,
     succeededStages: state.succeededStages,
     totalStages: state.totalStages,
     timing: state.timing,
     trialUsage: state.trialUsage,
+    regenerationInstructions: state.regenerationInstructions,
     error: state.error,
     begin,
+    restart,
     cancel,
   };
 }

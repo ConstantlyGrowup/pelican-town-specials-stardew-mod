@@ -725,6 +725,65 @@ input[type="checkbox"] {
   margin-top: 20px;
 }
 
+/* M13 Task 57: homepage draft sort toolbar and pagination. */
+.draft-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.draft-sort {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.draft-sort__field.btn,
+.draft-sort__field.btn:focus {
+  min-height: 38px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.draft-sort__field.is-active {
+  background: var(--pts-highlight);
+  border-color: var(--pts-wood-mid);
+  box-shadow: inset 2px 2px 0 #ffffff, inset -2px -2px 0 var(--pts-wood-mid);
+}
+
+.draft-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: fit-content;
+  margin: 16px auto 0;
+  padding: 10px 18px;
+  background: var(--pts-cream);
+  border: var(--pts-border-strong) solid var(--pts-ink);
+  box-shadow: var(--pts-shadow-pixel);
+}
+
+.draft-pagination .btn {
+  min-height: 38px;
+  padding: 4px 14px;
+  background: var(--pts-paper);
+  color: var(--pts-ink);
+}
+
+.draft-pagination__meta {
+  color: var(--pts-ink);
+  font-family: var(--pts-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .upload-layout {
   display: grid;
   grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.4fr);
@@ -1137,8 +1196,46 @@ input[type="checkbox"] {
 
 .gus-actions {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gus-actions__row {
+  display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* M13 Task 59: optional pixel-styled regeneration instruction box. */
+.gus-regenerate-instructions {
+  display: grid;
+  gap: 6px;
+}
+
+.gus-regenerate-instructions label {
+  font-weight: 900;
+}
+
+.gus-regenerate-instructions textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 8px 10px;
+  color: var(--pts-ink);
+  background: var(--pts-paper);
+  border: 3px solid var(--pts-ink);
+  border-radius: 0;
+  box-shadow: inset 2px 2px 0 var(--pts-paper-muted);
+  resize: vertical;
+}
+
+.gus-regenerate-instructions textarea:focus-visible {
+  outline: 3px solid var(--pts-gold);
+  outline-offset: 2px;
+}
+
+.gus-regenerate-instructions__hint {
+  color: var(--pts-ink-soft);
+  font-size: 12px;
 }
 
 .gus-comment {
@@ -2434,6 +2531,35 @@ input[type="checkbox"] {
 
   .hero-media img {
     height: 360px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cookbook-grid-panel .slot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gus-page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .gus-status-cluster {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .draft-status-line {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  }
+
+  .draft-status-line > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 

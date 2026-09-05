@@ -11,7 +11,15 @@ const copy = catalogs["zh-CN"];
 
 const server = setupServer(
   http.get("/api/v1/drafts", () =>
-    HttpResponse.json({ items: [], nextCursor: null, total: 0 }),
+    HttpResponse.json({
+      items: [],
+      nextCursor: null,
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      totalPages: 0,
+      hasRunningGeneration: false,
+    }),
   ),
 );
 

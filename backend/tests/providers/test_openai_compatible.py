@@ -25,6 +25,7 @@ from pelican_town_specials.providers import (
     ProviderImageInput,
 )
 from pelican_town_specials.providers.contracts import (
+    CanonicalIconComparisonRequest,
     CanonicalMatchCandidate,
     CanonicalMatchRequest,
 )
@@ -42,6 +43,9 @@ _ANALYSIS_JSON = {
     ],
     "confidence": 0.9,
 }
+
+
+_DESIGN_CORE_JSON = '{"presentation": {"displayName": "春日面碗", "internalName": "SpringNoodleBowl", "categoryLabel": "主菜", "description": "一碗带着春天气息的热汤面。", "tags": ["spring"]}, "ingredients": [{"name": "Egg", "normalizedName": "egg", "quantityHint": null}], "recovery": {"edibility": 80}, "sellPrice": 220, "isDrink": false, "visualBrief": "Warm ceramic bowl on a rustic tavern table."}'
 
 
 def _chat_response(content: str) -> httpx.Response:
@@ -141,12 +145,17 @@ def test_generated_dish_core_rejects_echoed_derived_recovery_fields() -> None:
         validate_structured(GeneratedDishCore, payload)
 
 
-def _analysis_request() -> DishAnalysisRequest:
+def _analysis_request(
+    *,
+    context_text: str | None = None,
+    regeneration_instructions: str | None = None,
+) -> DishAnalysisRequest:
     return DishAnalysisRequest(
         image=ProviderImageInput(data=b"png-bytes", media_type=ImageMediaType.PNG),
-        context_text=None,
+        context_text=context_text,
         language=Language.ZH_CN,
         requestId=uuid4(),
+        regenerationInstructions=regeneration_instructions,
     )
 
 
@@ -778,12 +787,17 @@ async def test_sleep_sequence_is_recorded(settings: object) -> None:
     assert all(delay >= 0 for delay in delays)
 
 
-def _ask_gus_design_request() -> AskGusDesignRequest:
+def _ask_gus_design_request(
+    *,
+    context_text: str | None = None,
+    regeneration_instructions: str | None = None,
+) -> AskGusDesignRequest:
     return AskGusDesignRequest(
         analysis=DishAnalysis.model_validate(_ANALYSIS_JSON),
-        context_text=None,
+        context_text=context_text,
         language=Language.ZH_CN,
         requestId=uuid4(),
+        regenerationInstructions=regeneration_instructions,
     )
 
 
@@ -885,13 +899,76 @@ async def test_analyze_dish_en_us_uses_english_prompt(
 
     await gateway.analyze_dish(_analysis_request_en())
 
+    assert route.call_count == 1
     outbound = json.loads(route.calls[0].request.content.decode())
     prompt = outbound["messages"][0]["content"][0]["text"]
     assert "Identify this dish from the provided photo" in prompt
     assert "recognizedDish" in prompt
     assert "Return only a single JSON object, with no code blocks or extra text." in prompt
+    assert "Collapse common synonymous names for the same dish to one stable name" in prompt
+    assert "Tomato and Egg Stir-Fry" in prompt
+    assert "Preserve all real distinctions that define dish identity, including main ingredients, sauces" in prompt
+    assert "Tomato Egg Soup" in prompt
+    assert "do not invent or add speculative ingredients to improve recall" in prompt
+    assert "Do not output Chinese dish names in en-US" in prompt
+    assert outbound["response_format"]["type"] == "json_schema"
+    assert "temperature" not in outbound
     assert "菜品识别助手" not in prompt
     assert "只返回一个 JSON 对象" not in prompt
+
+
+@respx.mock
+async def test_analyze_dish_zh_cn_uses_stable_naming_prompt_and_json_schema(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON, ensure_ascii=False))
+    )
+
+    await gateway.analyze_dish(_analysis_request())
+
+    assert route.call_count == 1
+    outbound = json.loads(route.calls[0].request.content.decode())
+    prompt = outbound["messages"][0]["content"][0]["text"]
+    assert "同一道菜的常见同义表达要收敛到一个名称" in prompt
+    assert "番茄炒蛋" in prompt
+    assert "西红柿炒鸡蛋" in prompt
+    assert "不要并列输出别名，也不要添加创作性修饰" in prompt
+    assert "把“西红柿”归一为“番茄”、把“马铃薯”归一为“土豆”" in prompt
+    assert "保留所有会定义菜品身份的真实区别，包括主食材、酱汁、风味和做法" in prompt
+    assert "番茄蛋汤”与“番茄炒蛋”必须区分" in prompt
+    assert "不要为了提高召回而编造或补充推测原料" in prompt
+    assert "cuisine、cookingMethods、flavorProfile、summary 使用简短一致的表达" in prompt
+    assert "response_format" in outbound
+    assert outbound["response_format"]["type"] == "json_schema"
+    assert "temperature" not in outbound
+
+
+@respx.mock
+@pytest.mark.parametrize("language", [Language.ZH_CN, Language.EN_US])
+async def test_analyze_dish_json_only_keeps_bilingual_contract_without_schema(
+    gateway: OpenAICompatibleGateway,
+    language: Language,
+) -> None:
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON, ensure_ascii=False))
+    )
+
+    request = _analysis_request() if language is Language.ZH_CN else _analysis_request_en()
+    await gateway.analyze_dish(request, json_only=True)
+
+    assert route.call_count == 1
+    outbound = json.loads(route.calls[0].request.content.decode())
+    prompt = outbound["messages"][0]["content"][0]["text"]
+    if language is Language.EN_US:
+        assert "Collapse common synonymous names for the same dish to one stable name" in prompt
+        assert "Return only a single JSON object, with no code blocks or extra text." in prompt
+    else:
+        assert "同一道菜的常见同义表达要收敛到一个名称" in prompt
+        assert "只返回一个 JSON 对象，不包含代码块或额外文字。" in prompt
+    assert "response_format" not in outbound
+    assert "temperature" not in outbound
+    assert any(part.get("type") == "image_url" for part in outbound["messages"][0]["content"])
 
 
 @respx.mock
@@ -1024,3 +1101,126 @@ async def test_empty_required_model_fails_before_relay(
     assert excinfo.value.details["emptyFields"] == [empty_field]
     assert chat_route.call_count == 0
     assert image_route.call_count == 0
+
+
+def _canonical_icon_comparison_request() -> CanonicalIconComparisonRequest:
+    return CanonicalIconComparisonRequest(
+        currentOriginal=ProviderImageInput(
+            data=b"photo-bytes", media_type=ImageMediaType.JPEG
+        ),
+        canonicalIconSource=ProviderImageInput(
+            data=b"icon-bytes", media_type=ImageMediaType.PNG
+        ),
+        language=Language.ZH_CN,
+        requestId=uuid4(),
+    )
+
+
+@respx.mock
+async def test_compare_canonical_icon_sends_dual_image_vision_request(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """M13 Task 58: the reuse judgment is a dual-image vision-model chat call
+    with both images in role order and a strict single-field JSON schema."""
+    request = _canonical_icon_comparison_request()
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps({"visualSimilarity": 0.88}))
+    )
+
+    result = await gateway.compare_canonical_icon(request)
+
+    assert result.visual_similarity == 0.88
+    body = json.loads(route.calls[0].request.content.decode())
+    assert body["model"] == "vision-model"
+    assert "temperature" not in body
+    content = body["messages"][0]["content"]
+    assert [item["type"] for item in content] == ["text", "image_url", "image_url"]
+    image_urls = [item["image_url"]["url"] for item in content[1:]]
+    assert image_urls[0].startswith("data:image/jpeg;base64,")
+    assert image_urls[1].startswith("data:image/png;base64,")
+    assert "photo-bytes" not in image_urls[0]
+    assert "icon-bytes" not in image_urls[1]
+    prompt_text = content[0]["text"]
+    assert "visualSimilarity" in prompt_text or "visualSimilarity" in body
+    response_format = body["response_format"]
+    assert set(response_format["json_schema"]["schema"]["properties"]) == {
+        "visualSimilarity"
+    }
+
+
+@respx.mock
+async def test_compare_canonical_icon_bounds_check_score(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """A provider that answers outside 0..1 must be rejected by the strict
+    domain response instead of flowing into the 0.75 reuse gate."""
+    from pelican_town_specials.domain.errors import AppError as _AppError
+
+    bad_route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps({"visualSimilarity": 1.4}))
+    )
+
+    with pytest.raises(_AppError) as excinfo:
+        await gateway.compare_canonical_icon(_canonical_icon_comparison_request())
+
+    assert excinfo.value.code == "PTS_PROVIDER_INVALID_STRUCTURED_OUTPUT"
+    assert bad_route.call_count == 3  # original + two bounded repairs
+
+
+@respx.mock
+async def test_design_prompt_renders_regeneration_instruction_section(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """M13 Task 59: the instruction travels inside the design prompt itself,
+    not only in the request DTO."""
+    request = _ask_gus_design_request(
+        context_text="不要放辣椒，保持清淡。",
+        regeneration_instructions="鱼片切厚一点，摆成扇形。",
+    )
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(_DESIGN_CORE_JSON)
+    )
+
+    await gateway.design_ask_gus(request)
+
+    body = json.loads(route.calls[0].request.content.decode())
+    content = body["messages"][0]["content"]
+    prompt_text = content[0]["text"]
+    assert "本轮重新生成要求" in prompt_text
+    assert "鱼片切厚一点，摆成扇形。" in prompt_text
+    assert "原始 contextText" in prompt_text
+    assert "不要放辣椒，保持清淡。" in prompt_text
+    assert prompt_text.index("原始 contextText") < prompt_text.index("本轮重新生成要求")
+    assert "本轮优先级最高" in prompt_text
+    # The original contextText remains independent from the current round.
+    assert "Spring Noodles" in prompt_text  # analysis payload stays present
+
+
+@respx.mock
+async def test_analysis_prompt_renders_regeneration_instruction_section(
+    gateway: OpenAICompatibleGateway,
+) -> None:
+    """A full regeneration re-runs the photo analysis; the round instruction
+    is rendered into that vision prompt too."""
+    request = _analysis_request_en().model_copy(
+        update={
+            "context_text": "Keep the original mild seasoning.",
+            "regeneration_instructions": "make the slices thicker and spicy",
+        }
+    )
+    route = respx.post("https://yibuapi.com/v1/chat/completions").mock(
+        return_value=_chat_response(json.dumps(_ANALYSIS_JSON))
+    )
+
+    await gateway.analyze_dish(request)
+
+    body = json.loads(route.calls[0].request.content.decode())
+    content = body["messages"][0]["content"]
+    prompt_text = content[0]["text"]
+    assert "Current regeneration requirements" in prompt_text
+    assert "make the slices thicker and spicy" in prompt_text
+    assert "Original contextText" in prompt_text
+    assert "Keep the original mild seasoning." in prompt_text
+    assert prompt_text.index("Original contextText") < prompt_text.index(
+        "Current regeneration requirements"
+    )

@@ -99,6 +99,14 @@ const secondDetail = {
   },
 };
 
+function numberedSummary(index: number) {
+  return {
+    ...summary,
+    dishId: `dish-${index}`,
+    displayName: `测试菜品 ${String(index).padStart(2, "0")}`,
+  };
+}
+
 describe("cookbook", () => {
   it("renders summaries and never shows source labels even when injected", async () => {
     server.use(
@@ -258,6 +266,53 @@ describe("cookbook", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(copy.batchDeleteFailed);
     expect(getSelectedDishIds()).toEqual(new Set(["dish-1"]));
+  });
+
+  it("paginates collection items eight at a time and keeps selection across pages", async () => {
+    const dishes = Array.from({ length: 11 }, (_, index) => numberedSummary(index + 1));
+    server.use(
+      http.get("/api/v1/cookbook", () =>
+        HttpResponse.json({ items: dishes, nextCursor: null, total: dishes.length }),
+      ),
+    );
+    renderInRouter(["/cookbook"]);
+
+    expect(await screen.findByText(copy.pageIndicator.replace("{current}", "1").replace("{total}", "2"))).toBeVisible();
+    expect(screen.getByText(copy.collectionItemsCount.replace("{count}", "11"))).toBeVisible();
+    expect(screen.getByRole("button", { name: "查看测试菜品 01预览" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "查看测试菜品 11预览" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: copy.nextPage }));
+    expect(await screen.findByRole("button", { name: "查看测试菜品 11预览" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "查看测试菜品 01预览" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+
+    fireEvent.click(screen.getByRole("button", { name: copy.previousPage }));
+    expect(await screen.findByRole("button", { name: "查看测试菜品 01预览" })).toBeVisible();
+    expect(screen.getByText(copy.selectedCount.replace("{count}", "1"))).toBeVisible();
+  });
+
+  it("restores a requested page and falls back after deleting the last item", async () => {
+    let dishes = Array.from({ length: 9 }, (_, index) => numberedSummary(index + 1));
+    server.use(
+      http.get("/api/v1/cookbook", () =>
+        HttpResponse.json({ items: dishes, nextCursor: null, total: dishes.length }),
+      ),
+      http.delete("/api/v1/cookbook/:dish_id", ({ params }) => {
+        dishes = dishes.filter((dish) => dish.dishId !== String(params.dish_id));
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderInRouter(["/cookbook?page=2"]);
+
+    expect(await screen.findByRole("button", { name: "查看测试菜品 09预览" })).toBeVisible();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: copy.batchDelete }));
+    fireEvent.click(screen.getByRole("button", { name: copy.deleteDish }));
+
+    expect(await screen.findByText(copy.pageIndicator.replace("{current}", "1").replace("{total}", "1"))).toBeVisible();
+    expect(screen.getByRole("button", { name: "查看测试菜品 01预览" })).toBeVisible();
+    expect(screen.getByText(copy.collectionItemsCount.replace("{count}", "8"))).toBeVisible();
   });
 
   it("confirms before delete, calls DELETE, and navigates back", async () => {

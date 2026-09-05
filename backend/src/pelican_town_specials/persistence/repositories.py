@@ -10,6 +10,7 @@ from uuid import UUID
 from pydantic import Field
 
 from pelican_town_specials.domain.archive import ArchivedDish
+from pelican_town_specials.domain.assets import MediaType
 from pelican_town_specials.domain.common import (
     DraftMode,
     GenerationStage,
@@ -17,7 +18,11 @@ from pelican_town_specials.domain.common import (
     StrictModel,
     utc_now,
 )
-from pelican_town_specials.domain.dish import FieldAuthority, GenerationSource
+from pelican_town_specials.domain.dish import (
+    FieldAuthority,
+    GenerationSource,
+    IconReuseDecision,
+)
 from pelican_town_specials.domain.draft import (
     AttemptStatus,
     DraftRecord,
@@ -27,6 +32,7 @@ from pelican_town_specials.domain.draft import (
     StageStatus,
 )
 from pelican_town_specials.domain.export import ExportRecord, ExportStatus
+from pelican_town_specials.generation.checkpoints import GenerationCheckpoint
 
 from .atomic import atomic_write_json, read_json_with_backup
 from .trash import CookbookTombstone, move_directory_to_trash
@@ -66,6 +72,8 @@ _UUID_FIELD_NAMES = {
     "artifactAssetId",
     "assetId",
     "attemptId",
+    "canonicalDishId",
+    "canonicalId",
     "dishId",
     "draftId",
     "exportId",
@@ -76,20 +84,25 @@ _UUID_FIELD_NAMES = {
     "originalImageAssetId",
     "previewAssetId",
     "requestId",
+    "sourceArchiveId",
     "sourceDraftId",
 }
 _DATETIME_FIELD_NAMES = {
     "archivedAt",
     "createdAt",
     "finishedAt",
+    "lastUsedAt",
     "occurredAt",
+    "registeredAt",
     "startedAt",
     "updatedAt",
     "validatedAt",
 }
 _ENUM_FIELD_PARSERS = {
     "generationSource": GenerationSource,
+    "iconReuseDecision": IconReuseDecision,
     "language": Language,
+    "mediaType": MediaType,
     "mode": DraftMode,
     "status": DraftStatus,
 }
@@ -310,6 +323,28 @@ def _validate_attempt(payload: object) -> GenerationAttempt:
     return GenerationAttempt.model_validate(_normalize_attempt_payload(payload))
 
 
+def _normalize_checkpoint_payload(payload: object) -> object:
+    """Normalize JSON enum/UUID/datetime values before strict checkpoint parsing."""
+    normalized = _normalize_domain_payload(payload)
+    if not isinstance(normalized, dict):
+        return normalized
+    if isinstance(payload, dict):
+        kind = payload.get("kind")
+        if isinstance(kind, str):
+            normalized["kind"] = GenerationAttemptKind(kind)
+        completed = payload.get("completedStages")
+        if isinstance(completed, list):
+            normalized["completedStages"] = [
+                GenerationStage(stage) if isinstance(stage, str) else stage
+                for stage in completed
+            ]
+    return normalized
+
+
+def _validate_checkpoint(payload: object) -> GenerationCheckpoint:
+    return GenerationCheckpoint.model_validate(_normalize_checkpoint_payload(payload))
+
+
 class GenerationAttemptRepository:
     """Atomic attempt and candidate persistence under workspace staging."""
 
@@ -318,6 +353,9 @@ class GenerationAttemptRepository:
 
     def _attempt_dir(self, attempt_id: UUID) -> Path:
         return self._staging_root / f"attempt-{attempt_id}"
+
+    def _checkpoint_path(self, attempt_id: UUID) -> Path:
+        return self._attempt_dir(attempt_id) / "checkpoint.json"
 
     def save(self, attempt: GenerationAttempt) -> GenerationAttempt:
         attempt_dir = self._attempt_dir(attempt.attempt_id)
@@ -352,6 +390,80 @@ class GenerationAttemptRepository:
         if not path.exists():
             return None
         return read_json_with_backup(path, _validate_model_payload(DraftRecord))
+
+    def save_checkpoint(self, checkpoint: GenerationCheckpoint) -> GenerationCheckpoint:
+        """Atomically persist one typed checkpoint inside its attempt directory."""
+        attempt_dir = self._attempt_dir(checkpoint.attempt_id)
+        attempt_dir.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(
+            self._checkpoint_path(checkpoint.attempt_id),
+            checkpoint.model_dump(by_alias=True, mode="json"),
+        )
+        return checkpoint
+
+    def get_checkpoint(self, attempt_id: UUID) -> GenerationCheckpoint | None:
+        """Load a checkpoint only when its JSON and nested domain data validate."""
+        path = self._checkpoint_path(attempt_id)
+        if not path.exists():
+            return None
+        try:
+            return read_json_with_backup(path, _validate_checkpoint)
+        except (OSError, TypeError, ValueError, AttributeError):
+            # Corrupt or future-version staging is an ordinary cache miss. It
+            # must never block a fresh generation, failure handling, or leak
+            # storage details.
+            return None
+
+    def delete_checkpoint(self, attempt_id: UUID) -> None:
+        """Clear checkpoint metadata while leaving assets for orphan GC."""
+        self._checkpoint_path(attempt_id).unlink(missing_ok=True)
+
+    def delete_checkpoints_for_draft(self, draft_id: UUID) -> int:
+        """Clear all checkpoint metadata belonging to a draft."""
+        deleted = 0
+        for attempt_path in self._staging_root.glob("attempt-*/attempt.json"):
+            try:
+                attempt = read_json_with_backup(attempt_path, _validate_attempt)
+            except (OSError, TypeError, ValueError):
+                continue
+            if attempt.draft_id != draft_id:
+                continue
+            checkpoint_path = attempt_path.parent / "checkpoint.json"
+            if checkpoint_path.exists():
+                checkpoint_path.unlink(missing_ok=True)
+                deleted += 1
+        return deleted
+
+    def list_checkpoint_asset_ids(self, *, excluding: UUID | None = None) -> set[UUID]:
+        """Return assets retained by valid checkpoints for shared-asset safety."""
+        referenced: set[UUID] = set()
+        for checkpoint_path in self._staging_root.glob("attempt-*/checkpoint.json"):
+            try:
+                checkpoint = read_json_with_backup(
+                    checkpoint_path,
+                    _validate_checkpoint,
+                )
+            except (OSError, TypeError, ValueError):
+                continue
+            if excluding is not None and checkpoint.draft_id == excluding:
+                continue
+            for asset_id in (
+                checkpoint.icon_source_asset_id,
+                checkpoint.icon_16_asset_id,
+                checkpoint.preview_asset_id,
+            ):
+                if asset_id is not None:
+                    referenced.add(asset_id)
+            if checkpoint.candidate.visuals is not None:
+                for visuals_asset_id in (
+                    checkpoint.candidate.visuals.generated_art_asset_id,
+                    checkpoint.candidate.visuals.preview_asset_id,
+                    checkpoint.candidate.visuals.icon_source_asset_id,
+                    checkpoint.candidate.visuals.icon_16_asset_id,
+                ):
+                    if visuals_asset_id is not None:
+                        referenced.add(visuals_asset_id)
+        return referenced
 
     def list_running(self) -> list[GenerationAttempt]:
         running: list[GenerationAttempt] = []

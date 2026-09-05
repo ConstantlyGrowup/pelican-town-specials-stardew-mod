@@ -27,6 +27,7 @@ from pelican_town_specials.application.settings import (
     SecretStore,
 )
 from pelican_town_specials.domain.common import StrictModel
+from pelican_town_specials.domain.dish import DishAnalysis
 from pelican_town_specials.domain.errors import (
     AppError,
     trial_unavailable_error,
@@ -39,9 +40,10 @@ from pelican_town_specials.persistence.secret_store import ApiKeySource
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 from pelican_town_specials.providers.contracts import (
     AskGusDesignRequest,
+    CanonicalIconComparisonRequest,
+    CanonicalIconComparisonResponse,
     CanonicalMatchRequest,
     CanonicalMatchResponse,
-    DishAnalysis,
     DishAnalysisRequest,
     GeneratedDishCore,
     GeneratedImage,
@@ -50,13 +52,13 @@ from pelican_town_specials.providers.contracts import (
 )
 
 TRIAL_GENERATION_LIMIT = 5
-TRIAL_BASE_URL = "https://yibuapi.com/v1"
-TRIAL_VISION_MODEL = "gpt-5.6-luna"
-TRIAL_TEXT_MODEL = "gpt-5.6-luna"
+TRIAL_BASE_URL = "https://totokens.cc/v1"
+TRIAL_VISION_MODEL = "gpt-5.6-terra"
+TRIAL_TEXT_MODEL = "gpt-5.6-terra"
 TRIAL_IMAGE_MODEL = "gpt-image-2"
 TRIAL_CHAT_TIMEOUT_SECONDS = 120
 TRIAL_IMAGE_TIMEOUT_SECONDS = 300
-TRIAL_MAX_AUTOMATIC_RETRIES = 0
+TRIAL_MAX_AUTOMATIC_RETRIES = 2
 
 
 class TrialProviderPreference(str, Enum):
@@ -186,6 +188,19 @@ class TrialSafeGateway:
     ) -> CanonicalMatchResponse:
         try:
             return await self._inner.match_canonical(request, json_only=json_only)
+        except AppError as exc:
+            raise _trial_safe_error(exc) from exc
+
+    async def compare_canonical_icon(
+        self,
+        request: CanonicalIconComparisonRequest,
+        *,
+        json_only: bool = False,
+    ) -> CanonicalIconComparisonResponse:
+        try:
+            return await self._inner.compare_canonical_icon(
+                request, json_only=json_only
+            )
         except AppError as exc:
             raise _trial_safe_error(exc) from exc
 

@@ -349,7 +349,7 @@ def create_app(
 
     app = FastAPI(
         title="PelicanTownSpecials API",
-        version="1.5.4",
+        version="1.5.5",
         docs_url="/docs" if enable_docs else None,
         redoc_url="/redoc" if enable_docs else None,
         openapi_url="/openapi.json" if enable_docs else None,
@@ -512,7 +512,7 @@ def _default_open_folder() -> Callable[[Path], None] | None:
     exports directory before invoking this adapter (ruling R17-3).
     """
     if os.name == "nt":
-        return os.startfile  # type: ignore[return-value]
+        return os.startfile  # type: ignore[return-value,unused-ignore]
     return None
 
 

@@ -23,7 +23,7 @@ _TASK9_SCHEMAS = {
     "DraftPatchRequest",
     "DraftView",
     "DraftSummary",
-    "Page_DraftSummary_",
+    "DraftPage",
     "Page_CookbookDishSummary_",
     "CookbookDishSummary",
     "CookbookDishDetail",

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { apiClient, getCsrfToken } from "../../api/client";
 import { GameUiIcon, SpecificIcon } from "../../components/ui/GameAssetIcon";
 import { PixelModal } from "../../components/ui/PixelModal";
@@ -8,17 +8,40 @@ import type { components } from "../../api/generated/schema";
 import { useCopy, useLocale } from "../../i18n/locale";
 import type { Language } from "../../i18n/copy";
 
-type DraftSummary = components["schemas"]["DraftSummary"];
+type DraftSortBy = "updatedAt" | "createdAt";
+type DraftSortOrder = "desc" | "asc";
 
-async function loadDrafts(): Promise<DraftSummary[]> {
-  const { data, error } = await apiClient.GET("/api/v1/drafts");
+const PAGE_SIZE = 10;
+const VALID_SORT_FIELDS: ReadonlySet<string> = new Set([
+  "updatedAt",
+  "createdAt",
+]);
+const VALID_SORT_ORDERS: ReadonlySet<string> = new Set(["desc", "asc"]);
+
+type DraftsResponse = components["schemas"]["DraftPage"];
+
+async function loadDrafts(params: {
+  page: number;
+  sortBy: DraftSortBy;
+  sortOrder: DraftSortOrder;
+}): Promise<DraftsResponse> {
+  const { data, error } = await apiClient.GET("/api/v1/drafts", {
+    params: {
+      query: {
+        page: params.page,
+        pageSize: PAGE_SIZE,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      },
+    },
+  });
   if (error || !data) {
     throw new Error("load failed");
   }
-  return data.items;
+  return data;
 }
 
-function formatUpdatedAt(value: string, locale: Language): string {
+function formatTimestamp(value: string, locale: Language): string {
   const date = new Date(value);
   return date.toLocaleString(locale, {
     year: "numeric",
@@ -30,38 +53,123 @@ function formatUpdatedAt(value: string, locale: Language): string {
 }
 
 /**
- * Home dashboard: product identity plus a list of saved drafts. Each draft
- * links to its editor and offers a delete (discard) entry; an empty state
- * guides the user to create a dish.
+ * Home dashboard: product identity plus a paginated, sortable list of saved
+ * drafts (M13 Task 57). Each draft links to its editor and offers a delete
+ * (discard) entry; an empty state guides the user to create a dish.
+ *
+ * URL state: page / sortBy / sortOrder live in the query string so a refresh
+ * or a back/forward navigation restores the exact view. Invalid values are
+ * normalized to the defaults with replace navigation, changing the sort
+ * resets to page 1, and the server-clamped page is written back to the URL.
  */
-export function HomePage() {
+export function HomePage({ pollIntervalMs = 2000 }: { pollIntervalMs?: number }) {
   const copy = useCopy();
   const locale = useLocale();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
   const [confirmingDraftId, setConfirmingDraftId] = useState<string | null>(null);
-  const query = useQuery({
-    queryKey: ["drafts"],
-    queryFn: loadDrafts,
-  });
 
-  // Task 19.5: while any listed draft is generating server-side, keep the
-  // dashboard fresh so a just-finished generation is reflected without a manual
-  // reload. The interval is torn down when nothing is generating or on unmount.
-  const hasRunningGeneration =
-    query.data?.some(
-      (draft) =>
-        draft.status === "GENERATING" || draft.status === "REGENERATING",
-    ) ?? false;
+  const rawSortBy = searchParams.get("sortBy") ?? "updatedAt";
+  const rawSortOrder = searchParams.get("sortOrder") ?? "desc";
+  const rawPage = Number(searchParams.get("page") ?? "1");
+  const sortBy: DraftSortBy = VALID_SORT_FIELDS.has(rawSortBy)
+    ? (rawSortBy as DraftSortBy)
+    : "updatedAt";
+  const sortOrder: DraftSortOrder = VALID_SORT_ORDERS.has(rawSortOrder)
+    ? (rawSortOrder as DraftSortOrder)
+    : "desc";
+  const page = Number.isInteger(rawPage) && rawPage >= 1 ? rawPage : 1;
+
+  const query = useQuery({
+    queryKey: ["drafts", page, sortBy, sortOrder],
+    queryFn: () => loadDrafts({ page, sortBy, sortOrder }),
+  });
+  const { isPending } = query;
+
+  // The server clamps out-of-range requests (a deleted last item of a page or
+  // a deep link past the end) to the last valid page; that effective page in
+  // the response drives the pager and is normalized into the URL below.
+  const effectivePage = query.data?.page ?? page;
+
   useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+    const rawPageParam = searchParams.get("page");
+    const rawSortByParam = searchParams.get("sortBy");
+    const rawSortOrderParam = searchParams.get("sortOrder");
+
+    // Keep a clean root URL while still replacing explicitly invalid values
+    // instead of adding another browser-history entry.
+    if (rawPageParam !== null && rawPageParam !== String(page)) {
+      next.set("page", String(page));
+      changed = true;
+    }
+    if (rawSortByParam !== null && rawSortByParam !== sortBy) {
+      next.set("sortBy", sortBy);
+      changed = true;
+    }
+    if (rawSortOrderParam !== null && rawSortOrderParam !== sortOrder) {
+      next.set("sortOrder", sortOrder);
+      changed = true;
+    }
+
+    // A successful response can clamp a deep link or a page that became
+    // invalid after deleting its final draft. Persist that effective page so
+    // refresh/back navigation returns to a valid view.
+    const serverPage = query.data?.page;
+    if (serverPage !== undefined && serverPage !== page && serverPage >= 1) {
+      next.set("page", String(serverPage));
+      changed = true;
+    }
+
+    if (changed) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [page, query.data?.page, searchParams, setSearchParams, sortBy, sortOrder]);
+
+
+  // M13 Task 57: while ANY visible draft (including one on another page) is
+  // generating server-side, keep the dashboard fresh so a just-finished
+  // generation is reflected without a manual reload. The server flag covers
+  // every page of the visible set; the first poll to observe it false after a
+  // running sequence performs one final refresh so an off-page generation
+  // finishing between polls is never left stale. The interval belongs to the
+  // query key being shown: page/sort navigation tears it down and resets the
+  // running history so stale transitions never fire extra requests.
+  const hasRunningGeneration = query.data?.hasRunningGeneration ?? false;
+  const pollingStateRef = useRef<{
+    key: string;
+    wasRunning: boolean;
+  }>({ key: "", wasRunning: false });
+  useEffect(() => {
+    const pollingKey = `${page}:${sortBy}:${sortOrder}`;
+    const state = pollingStateRef.current;
+    const keyChanged = state.key !== pollingKey;
+    const wasRunning = keyChanged ? false : state.wasRunning;
+    pollingStateRef.current = { key: pollingKey, wasRunning: hasRunningGeneration };
     if (!hasRunningGeneration) {
+      if (wasRunning && !keyChanged) {
+        void queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      }
       return;
     }
     const interval = window.setInterval(() => {
       void queryClient.invalidateQueries({ queryKey: ["drafts"] });
-    }, 2000);
+    }, pollIntervalMs);
     return () => window.clearInterval(interval);
-  }, [hasRunningGeneration, queryClient]);
+  }, [hasRunningGeneration, page, sortBy, sortOrder, pollIntervalMs, queryClient]);
+
+  function applySort(nextSortBy: DraftSortBy, nextSortOrder: DraftSortOrder) {
+    setSearchParams(
+      { page: "1", sortBy: nextSortBy, sortOrder: nextSortOrder },
+      { replace: false },
+    );
+  }
+
+  function goToPage(nextPage: number) {
+    setSearchParams({ page: String(nextPage), sortBy, sortOrder });
+  }
 
   async function onConfirmDiscard(draftId: string) {
     setConfirmingDraftId(null);
@@ -87,6 +195,13 @@ export function HomePage() {
       });
     }
   }
+
+  const totalPages = query.data?.totalPages ?? 0;
+  const total = query.data?.total ?? 0;
+  const items = query.data?.items ?? [];
+  const timestampKey =
+    sortBy === "createdAt" ? "timestampCreatedPrefix" : "timestampUpdatedPrefix";
+  const timestampLabel = copy[timestampKey];
 
   return (
     <main className="home-page" aria-labelledby="home-title">
@@ -177,13 +292,84 @@ export function HomePage() {
             <p className="eyebrow">{copy.eyebrowYourKitchenLog}</p>
             <h2 id="my-drafts-title" className="section-title">{copy.myDrafts}</h2>
           </div>
-          <Link className="btn btn-ghost" to="/create">{copy.newDraft}</Link>
+          <div className="draft-toolbar">
+            <div className="draft-sort" role="group" aria-label={copy.draftSortLabel}>
+              <button
+                className={`btn btn-ghost draft-sort__field${sortBy === "updatedAt" ? " is-active" : ""}`}
+                type="button"
+                aria-pressed={sortBy === "updatedAt"}
+                aria-label={
+                  sortBy === "updatedAt"
+                    ? copy.draftSortFieldActive
+                        .replace("{field}", copy.sortUpdatedAt)
+                        .replace(
+                          "{direction}",
+                          sortOrder === "desc"
+                            ? copy.sortDirectionDesc
+                            : copy.sortDirectionAsc,
+                        )
+                    : copy.sortUpdatedAt
+                }
+                onClick={() =>
+                  applySort(
+                    "updatedAt",
+                    sortBy === "updatedAt" ? sortOrder : "desc",
+                  )
+                }
+              >
+                {copy.sortUpdatedAt}
+              </button>
+              <button
+                className={`btn btn-ghost draft-sort__field${sortBy === "createdAt" ? " is-active" : ""}`}
+                type="button"
+                aria-pressed={sortBy === "createdAt"}
+                aria-label={
+                  sortBy === "createdAt"
+                    ? copy.draftSortFieldActive
+                        .replace("{field}", copy.sortCreatedAt)
+                        .replace(
+                          "{direction}",
+                          sortOrder === "desc"
+                            ? copy.sortDirectionDesc
+                            : copy.sortDirectionAsc,
+                        )
+                    : copy.sortCreatedAt
+                }
+                onClick={() =>
+                  applySort(
+                    "createdAt",
+                    sortBy === "createdAt" ? sortOrder : "desc",
+                  )
+                }
+              >
+                {copy.sortCreatedAt}
+              </button>
+              <button
+                className={`btn btn-ghost draft-sort__field draft-sort__field--direction${sortOrder === "desc" ? " is-active" : ""}`}
+                type="button"
+                aria-pressed={sortOrder === "desc"}
+                onClick={() =>
+                  applySort(sortBy, sortOrder === "desc" ? "asc" : "desc")
+                }
+              >
+                {sortOrder === "desc"
+                  ? copy.sortDirectionDesc
+                  : copy.sortDirectionAsc}
+              </button>
+            </div>
+            <Link className="btn btn-ghost" to="/create">{copy.newDraft}</Link>
+          </div>
         </div>
-        {query.isLoading && <p className="status-banner status-info">{copy.loading}</p>}
-        {query.isError && (
+        {isPending && (
+          <p className="status-banner status-info">{copy.loading}</p>
+        )}
+        {query.isError && query.data && (
+          <div className="status-banner status-warning">{copy.draftsLoadFailed}</div>
+        )}
+        {query.isError && !query.data && (
           <div className="status-banner status-error">{copy.draftsLoadFailed}</div>
         )}
-        {query.data && query.data.length === 0 && (
+        {query.data && total === 0 && (
           <div className="empty-state">
             <p>{copy.draftsEmpty}</p>
             <Link className="btn btn-primary" to="/create">
@@ -192,7 +378,7 @@ export function HomePage() {
           </div>
         )}
         <ul className="draft-grid" style={{ listStyle: "none", padding: 0 }}>
-          {query.data?.map((draft) => (
+          {items.map((draft) => (
             <li key={draft.draftId} className="draft-card">
               <Link
                 className="draft-card-main"
@@ -212,7 +398,15 @@ export function HomePage() {
                     <span className={`status-chip${draft.status === "FAILED" ? " error" : draft.status.includes("GENERATING") ? " generating" : ""}`}>
                       {copy.draftStatusLabels[draft.status] ?? draft.status}
                     </span>
-                    <span>{formatUpdatedAt(draft.updatedAt, locale)}</span>
+                    <span>
+                      {timestampLabel}{" "}
+                      {formatTimestamp(
+                        sortBy === "createdAt"
+                          ? draft.createdAt
+                          : draft.updatedAt,
+                        locale,
+                      )}
+                    </span>
                   </span>
                 </span>
               </Link>
@@ -231,6 +425,42 @@ export function HomePage() {
             </li>
           ))}
         </ul>
+        {total > 0 && (
+          <nav
+            className="draft-pagination"
+            aria-label={copy.myDrafts}
+          >
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => goToPage(effectivePage - 1)}
+              disabled={effectivePage <= 1}
+            >
+              {copy.previousPage}
+            </button>
+            <span
+              className="draft-pagination__meta"
+              role="status"
+              aria-label={`${copy.pageIndicator
+                .replace("{current}", String(effectivePage))
+                .replace("{total}", String(Math.max(totalPages, 1)))}, ${copy.draftsCount.replace("{count}", String(total))}`}
+            >
+              {copy.pageIndicator
+                .replace("{current}", String(effectivePage))
+                .replace("{total}", String(Math.max(totalPages, 1)))}
+              <span aria-hidden="true"> · </span>
+              {copy.draftsCount.replace("{count}", String(total))}
+            </span>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => goToPage(effectivePage + 1)}
+              disabled={effectivePage >= totalPages}
+            >
+              {copy.nextPage}
+            </button>
+          </nav>
+        )}
       </section>
 
       <section className="feature-grid" aria-label={copy.quickLinksLabel}>

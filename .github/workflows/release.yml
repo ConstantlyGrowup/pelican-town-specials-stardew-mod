@@ -8,13 +8,13 @@
 # optional workflow-call secret and both callers forward it, so the gitignored
 # trial bundle resource can be injected for the newcomer trial (Task 30); when
 # the repo secret is unset the resource stays absent and the trial safely
-# reports unavailable. The version is resolved from the tag (v1.5.4) or the
+# reports unavailable. The version is resolved from the tag (v1.5.5) or the
 # manual input, must match packaging/pyinstaller/version_info.txt (drift gate
 # in build.yml), and drives the installer / portable ZIP / checksum / release
 # title so they can never disagree. The release job knows its repository via GH_REPO and
 # creates the Release if absent, or edits and re-uploads (--clobber) if the tag
 # already has one, so re-running a tag flow is repeatable instead of failing.
-# v1.5.4 (2026-09-03): Cookbook batch delete for selected dishes.
+# v1.5.5 (2026-09-05): Trial provider migrated to the new quota-managed site.
 # v1.5.3 (2026-09-02): Task 47 — public trial uses gpt-image-2 with five
 # opportunities; legacy users receive one full reset and personal settings stay unchanged.
 # v1.5.2 (2026-09-01): Localized generation error banners for the English UI.
@@ -31,9 +31,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to release (with or without a leading v), e.g. v1.5.4
+        description: Version to release (with or without a leading v), e.g. v1.5.5
         required: false
-        default: 'v1.5.4'
+        default: 'v1.5.5'
 
 permissions:
   contents: read

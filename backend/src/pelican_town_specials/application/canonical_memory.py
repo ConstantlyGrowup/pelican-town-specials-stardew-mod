@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 from math import isfinite
 from time import monotonic
-from typing import Literal
+from typing import Literal, Protocol
 from uuid import UUID, uuid4
 
 from pelican_town_specials.domain.archive import ArchivedDish
@@ -299,6 +299,24 @@ class CandidateRetriever:
         return ranked[:CANONICAL_CANDIDATE_LIMIT]
 
 
+class CanonicalRetriever(Protocol):
+    """Internal candidate retriever contract used by evaluation tooling.
+
+    The protocol deliberately returns the established ranked candidate DTO so
+    ``RecallService`` remains the only owner of compatibility, threshold, and
+    fail-open decision rules.
+    """
+
+    def retrieve(
+        self,
+        analysis: DishAnalysis,
+        candidates: Iterable[CanonicalRecallCandidate],
+        *,
+        language: Language | None = None,
+        catalog_version: str | None = None,
+    ) -> list[RankedCanonicalCandidate]: ...
+
+
 @dataclass(frozen=True)
 class RecallResult:
     canonical_dish: CanonicalDish | None
@@ -322,6 +340,7 @@ class RecallService:
         registry: CanonicalRepository,
         matcher: ModelGateway | None = None,
         gateway: ModelGateway | None = None,
+        retriever: CanonicalRetriever | None = None,
         clock: Callable[[], float] = monotonic,
     ) -> None:
         selected_matcher = matcher or gateway
@@ -330,7 +349,9 @@ class RecallService:
         self._registry = registry
         self._matcher = selected_matcher
         self._clock = clock
-        self._retriever = CandidateRetriever()
+        self._retriever = (
+            retriever if retriever is not None else CandidateRetriever()
+        )
 
     async def recall(
         self,

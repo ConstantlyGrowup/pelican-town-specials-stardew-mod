@@ -26,7 +26,7 @@ from pelican_town_specials.persistence.secret_store import (
 )
 from pelican_town_specials.persistence.workspace import WorkspacePaths
 
-DEFAULT_BASE_URL = "https://yibuapi.com/v1"
+DEFAULT_BASE_URL = "https://totokens.cc/v1"
 _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
 
@@ -54,8 +54,8 @@ def _normalize_base_url(value: object) -> object:
 class _ProviderSettingsFields(StrictModel):
     provider_kind: ProviderKind = Field(default=ProviderKind.OPENAI_COMPATIBLE)
     base_url: str = Field(default=DEFAULT_BASE_URL, min_length=1)
-    vision_model: str = Field(default="gpt-5.6-luna", max_length=120)
-    text_model: str = Field(default="gpt-5.6-luna", max_length=120)
+    vision_model: str = Field(default="gpt-5.6-terra", max_length=120)
+    text_model: str = Field(default="gpt-5.6-terra", max_length=120)
     image_model: str = Field(default="gpt-image-2-max", max_length=120)
     chat_timeout_seconds: int = Field(default=120, ge=30, le=600)
     image_timeout_seconds: int = Field(default=300, ge=60, le=900)

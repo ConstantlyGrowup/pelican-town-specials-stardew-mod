@@ -37,6 +37,13 @@ class ModelGateway(Protocol):
         json_only: bool = False,
     ) -> CanonicalMatchResponse: ...
 
+    async def compare_canonical_icon(
+        self,
+        request: CanonicalIconComparisonRequest,
+        *,
+        json_only: bool = False,
+    ) -> CanonicalIconComparisonResponse: ...
+
     async def generate_image(self, request: ImageGenerationRequest) -> GeneratedImage: ...
 
 
@@ -61,6 +68,13 @@ class DishAnalysisRequest(StrictModel):
     context_text: str | None = Field(default=None, max_length=500)
     language: Language
     request_id: UUID
+    # M13 Task 59: this round's user-written regeneration instruction, kept
+    # separate from the original contextText.
+    regeneration_instructions: str | None = Field(
+        default=None,
+        alias="regenerationInstructions",
+        max_length=500,
+    )
 
 
 class AskGusDesignRequest(StrictModel):
@@ -68,6 +82,13 @@ class AskGusDesignRequest(StrictModel):
     context_text: str | None = Field(default=None, max_length=500)
     language: Language
     request_id: UUID
+    # M13 Task 59: this round's user-written regeneration instruction, kept
+    # separate from the original contextText.
+    regeneration_instructions: str | None = Field(
+        default=None,
+        alias="regenerationInstructions",
+        max_length=500,
+    )
 
 
 class CanonicalMatchCandidate(StrictModel):
@@ -113,6 +134,33 @@ class CanonicalMatchResponse(StrictModel):
     def _validate_finite_confidence(cls, value: float) -> float:
         if not isfinite(value):
             raise ValueError("confidence must be finite")
+        return value
+
+
+class CanonicalIconComparisonRequest(StrictModel):
+    """Ask the vision model whether the current dish photo matches the
+    canonical item's recorded icon source well enough to reuse it (M13
+    Task 58). The two images have explicit, ordered roles and both are always
+    present; the response is a single finite 0..1 visual similarity score."""
+
+    current_original: ProviderImageInput = Field(alias="currentOriginal")
+    canonical_icon_source: ProviderImageInput = Field(alias="canonicalIconSource")
+    language: Language
+    request_id: UUID = Field(alias="requestId")
+
+
+class CanonicalIconComparisonResponse(StrictModel):
+    visual_similarity: float = Field(
+        alias="visualSimilarity",
+        ge=0,
+        le=1,
+    )
+
+    @field_validator("visual_similarity")
+    @classmethod
+    def _validate_finite_similarity(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("visualSimilarity must be finite")
         return value
 
 

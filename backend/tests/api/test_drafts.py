@@ -109,9 +109,73 @@ def test_list_drafts_returns_page(auth_client: ApiClient) -> None:
     body = response.json()
     assert body["total"] == 1
     assert body["nextCursor"] is None
+    assert body["page"] == 1
+    assert body["pageSize"] == 10
+    assert body["totalPages"] == 1
+    assert body["hasRunningGeneration"] is False
     assert body["items"][0]["mode"] == "BLUEPRINT"
     assert body["items"][0]["displayName"] == ""
     assert body["items"][0]["originalImageAssetId"] == uploaded["assetId"]
+    assert body["items"][0]["createdAt"] == body["items"][0]["updatedAt"]
+
+
+def test_list_drafts_honors_pagination_query(auth_client: ApiClient) -> None:
+    uploaded = _upload(auth_client)
+    for _index in range(3):
+        _create_blueprint(auth_client, uploaded["assetId"])
+
+    response = auth_client.client.get(
+        "/api/v1/drafts",
+        headers=auth_client.session_headers,
+        params={"page": 2, "pageSize": 2},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 3
+    assert body["page"] == 2
+    assert body["pageSize"] == 2
+    assert body["totalPages"] == 2
+    assert len(body["items"]) == 1
+
+
+def test_list_drafts_accepts_created_at_sort_query(auth_client: ApiClient) -> None:
+    uploaded = _upload(auth_client)
+    _create_blueprint(auth_client, uploaded["assetId"])
+
+    response = auth_client.client.get(
+        "/api/v1/drafts",
+        headers=auth_client.session_headers,
+        params={"sortBy": "createdAt", "sortOrder": "asc", "pageSize": 100},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["page"] == 1
+
+
+def test_list_drafts_rejects_unknown_sort_values(auth_client: ApiClient) -> None:
+    bad = auth_client.client.get(
+        "/api/v1/drafts",
+        headers=auth_client.session_headers,
+        params={"sortBy": "bogus", "sortOrder": "sideways"},
+    )
+    assert bad.status_code == 422
+
+    zero_page = auth_client.client.get(
+        "/api/v1/drafts",
+        headers=auth_client.session_headers,
+        params={"page": 0},
+    )
+    assert zero_page.status_code == 422
+
+    oversized = auth_client.client.get(
+        "/api/v1/drafts",
+        headers=auth_client.session_headers,
+        params={"pageSize": 101},
+    )
+    assert oversized.status_code == 422
 
 
 def test_get_draft_returns_draft_view(auth_client: ApiClient) -> None:

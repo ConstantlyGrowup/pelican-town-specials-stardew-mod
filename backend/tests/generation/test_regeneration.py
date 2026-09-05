@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from pelican_town_specials.domain.common import GenerationStage
 from pelican_town_specials.domain.dish import GenerationSource
-from pelican_town_specials.domain.draft import DraftStatus
+from pelican_town_specials.domain.draft import (
+    DraftRecord,
+    DraftStatus,
+    GenerationAttemptKind,
+)
+from pelican_town_specials.generation.orchestrator import GenerationCommand
 from pelican_town_specials.images import downscale_for_vision
 from pelican_town_specials.images.vision_input import EDIT_MIN_PIXELS
 from pelican_town_specials.providers.contracts import ImageOperation
@@ -94,3 +99,76 @@ async def test_successful_full_regeneration_replaces_all_fields(
     assert icon_request.source_images[0].media_type is media_type
     assert preview_request.operation is ImageOperation.EDIT
     assert len(preview_request.source_images) == 2
+
+
+def _regen_with_instructions(
+    draft: DraftRecord, instructions: str | None
+) -> GenerationCommand:
+    from uuid import uuid4
+
+    return GenerationCommand(
+        draftId=draft.draft_id,
+        kind=GenerationAttemptKind.FULL_REGENERATE,
+        requestId=uuid4(),
+        regenerationInstructions=instructions,
+    )
+
+
+async def test_regeneration_instruction_round_persists_attempt_and_prompt(
+    harness: GenerationHarness,
+    reviewable_draft,
+) -> None:
+    """M13 Task 59: a full-regeneration round with an instruction carries it
+    into the persisted attempt and the provider design/analysis requests."""
+    instruction = "鱼片切厚一点，摆成扇形。"
+    events = [
+        event
+        async for event in harness.orchestrator.run(
+            _regen_with_instructions(reviewable_draft, instruction)
+        )
+    ]
+    assert events[-1].type == "attempt.succeeded"
+
+    assert len(harness.gateway.design_requests) == 1
+    assert (
+        getattr(harness.gateway.design_requests[0], "regeneration_instructions", None)
+        == instruction
+    )
+    attempt = harness.attempt_repository.get(events[-1].attempt_id)
+    assert attempt.regeneration_instructions == instruction
+
+
+async def test_changed_regeneration_instruction_starts_fresh_round(
+    harness: GenerationHarness,
+    reviewable_draft,
+) -> None:
+    """Changing the instruction must never reuse the previous round's saved
+    output: the checkpoint fingerprint covers the wording, so a new round is
+    a full restart and no provider stage is skipped."""
+    harness.gateway.fail_stage = GenerationStage.ICON_GENERATION_AND_NORMALIZATION
+    first = [
+        event
+        async for event in harness.orchestrator.run(
+            _regen_with_instructions(reviewable_draft, "鱼片切厚一点")
+        )
+    ]
+    assert first[-1].type == "attempt.failed"
+    saved_checkpoint = harness.attempt_repository.get_checkpoint(first[-1].attempt_id)
+    assert saved_checkpoint is not None
+
+    # Re-run with different wording: old checkpoint is incompatible (fingerprint
+    # mismatch) and the attempt starts over from the analysis stage.
+    harness.gateway.fail_stage = None
+    second = [
+        event
+        async for event in harness.orchestrator.run(
+            _regen_with_instructions(reviewable_draft, "摆成扇形")
+        )
+    ]
+    assert second[-1].type == "attempt.succeeded"
+    stages = [event for event in second if event.type == "stage.succeeded"]
+    assert {event.stage for event in stages} >= {
+        GenerationStage.DISH_ANALYSIS,
+        GenerationStage.GAMEPLAY_DESIGN,
+        GenerationStage.ICON_GENERATION_AND_NORMALIZATION,
+    }

@@ -24,6 +24,7 @@ from pelican_town_specials.application.drafts import DraftService
 from pelican_town_specials.application.generation import GenerationService
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.domain.assets import AssetKind
+from pelican_town_specials.domain.common import GenerationStage
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import GenerationOrchestrator
 from pelican_town_specials.persistence.asset_store import FileAssetStore
@@ -661,3 +662,140 @@ def test_progress_reflects_finished_terminal_state(
     assert body["active"] is False
     assert body["attempt"] is not None
     assert body["attempt"]["status"] == "SUCCEEDED"
+
+
+def test_failed_provider_progress_exposes_resume_flag_and_error_detail(
+    gen_services: GenServices,
+    gen_auth_client: ApiClient,
+) -> None:
+    draft_id = _create_ask_gus_draft(gen_services, gen_auth_client)
+    gen_services.gateway.fail_stage = GenerationStage.ICON_GENERATION_AND_NORMALIZATION
+
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+    )
+    assert response.status_code == 200
+    events = [json.loads(line) for line in response.text.splitlines() if line]
+    assert events[-1]["type"] == "attempt.failed"
+    assert events[-1]["error"]["details"]["progressSaved"] is True
+
+    status, body = _progress(gen_services, gen_auth_client, draft_id)
+    assert status == 200
+    assert body["attempt"]["progressSaved"] is True
+
+
+def _make_reviewable(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> str:
+    draft_id = _create_ask_gus_draft(gen_services, gen_auth_client)
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+    )
+    assert response.status_code == 200
+    saved = gen_services.draft_repository.get(draft_id)
+    assert saved.status.value == "REVIEWABLE"
+    return draft_id
+
+
+def test_regeneration_instructions_body_reaches_design_prompt(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> None:
+    """M13 Task 59: an optional instructions body is carried into the design
+    request without touching the draft's original contextText."""
+    draft_id = _make_reviewable(gen_services, gen_auth_client)
+    gen_services.gateway.calls.clear()
+    gen_services.gateway.design_requests.clear()
+    draft = gen_services.draft_repository.get(draft_id)
+    assert draft.source.context_text is None
+
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+        json={
+            "regenerationInstructions": "鱼片切厚一点，摆成扇形。",
+            "unexpected": "extra-field-must-be-rejected",
+        },
+    )
+    # Strict body model: unknown properties are rejected before generation.
+    assert response.status_code == 422
+
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+        json={"regenerationInstructions": "鱼片切厚一点，摆成扇形。"},
+    )
+    assert response.status_code == 200
+    events = [json.loads(line) for line in response.text.splitlines() if line]
+    assert events[-1]["type"] == "attempt.succeeded"
+    assert gen_services.gateway.calls == ["analyze", "design", "image", "image"]
+    assert len(gen_services.gateway.design_requests) == 1
+    design = gen_services.gateway.design_requests[0]
+    assert getattr(design, "regeneration_instructions", None) == (
+        "鱼片切厚一点，摆成扇形。"
+    )
+    # The draft's own context stays untouched after the round.
+    draft = gen_services.draft_repository.get(draft_id)
+    assert draft.source.context_text is None
+
+    progress = gen_auth_client.client.get(
+        f"/api/v1/drafts/{draft_id}/generation",
+        headers=gen_auth_client.session_headers,
+    )
+    assert progress.status_code == 200
+    assert (
+        progress.json()["attempt"]["regenerationInstructions"]
+        == "鱼片切厚一点，摆成扇形。"
+    )
+
+
+def test_regeneration_instructions_rejected_outside_full_regeneration(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> None:
+    """Instructions are only valid for the Ask Gus full regeneration of a
+    REVIEWABLE draft; an initial generation rejects them with 422."""
+    draft_id = _create_ask_gus_draft(gen_services, gen_auth_client)
+
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+        json={"regenerationInstructions": "换一种摆盘"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "PTS_INPUT_VALIDATION_FAILED"
+    assert gen_services.gateway.calls == []
+
+
+def test_regeneration_instructions_trim_and_length_limits(
+    gen_services: GenServices, gen_auth_client: ApiClient
+) -> None:
+    draft_id = _make_reviewable(gen_services, gen_auth_client)
+
+    # Whitespace-only body behaves like "no instruction" (historical restart).
+    gen_services.gateway.calls.clear()
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+        json={"regenerationInstructions": "   "},
+    )
+    assert response.status_code == 200
+    assert gen_services.gateway.calls == ["analyze", "design", "image", "image"]
+    gen_services.gateway.calls.clear()
+
+    # A non-string body is a plain validation failure.
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+        json={"regenerationInstructions": 123},
+    )
+    assert response.status_code == 422
+
+    # Over-length instructions are rejected (500 max after trim).
+    response = gen_auth_client.client.post(
+        f"/api/v1/drafts/{draft_id}/generate",
+        headers=gen_auth_client.mutation_headers,
+        json={"regenerationInstructions": "字" * 501},
+    )
+    assert response.status_code == 422

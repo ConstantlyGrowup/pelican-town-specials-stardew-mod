@@ -8,6 +8,7 @@ import pytest
 
 from pelican_town_specials.application.canonical_memory import (
     CandidateRetriever,
+    RankedCanonicalCandidate,
     RecallService,
     context_similarity,
     ingredient_similarity,
@@ -227,6 +228,23 @@ class _Matcher:
         return self.response
 
 
+class _InjectedRetriever:
+    def __init__(self, ranked: list[Any]) -> None:
+        self.ranked = ranked
+        self.calls: list[tuple[Any, list[Any], Language | None, str | None]] = []
+
+    def retrieve(
+        self,
+        analysis: Any,
+        candidates: Any,
+        *,
+        language: Language | None = None,
+        catalog_version: str | None = None,
+    ) -> list[Any]:
+        self.calls.append((analysis, list(candidates), language, catalog_version))
+        return self.ranked
+
+
 def _service(
     registry: _Registry,
     matcher: _Matcher,
@@ -236,6 +254,44 @@ def _service(
         matcher=matcher,
         clock=lambda: 100.0,
     )
+
+
+@pytest.mark.asyncio
+async def test_recall_service_accepts_an_internal_retriever_without_changing_default_contract() -> None:
+    candidate = _candidate()
+    canonical = _canonical(candidate)
+    matcher = _Matcher(
+        CanonicalMatchResponse(candidateId=candidate.canonical_id, confidence=0.85)
+    )
+    registry = _Registry(
+        pool=[candidate],
+        valid={candidate.canonical_id: canonical},
+    )
+    retriever = _InjectedRetriever(
+        [
+            # The service must continue to consume the established ranked
+            # candidate shape supplied by the injected internal implementation.
+            RankedCanonicalCandidate(
+                candidate=candidate,
+                ingredient_score=1.0,
+                name_score=1.0,
+                context_score=1.0,
+                score=1.0,
+            )
+        ]
+    )
+
+    result = await RecallService(
+        registry=registry,
+        matcher=matcher,
+        retriever=retriever,
+        clock=lambda: 100.0,
+    ).recall(
+        _analysis(), None, Language.ZH_CN, "catalog-v1", uuid4()
+    )
+
+    assert result.trace.outcome is RecallDecision.MATCH_HIT
+    assert len(retriever.calls) == 1
 
 
 @pytest.mark.asyncio
@@ -318,11 +374,11 @@ def test_retriever_ranks_full_pool_before_taking_five_and_stabilizes_ties() -> N
 
 
 @pytest.mark.asyncio
-async def test_exact_name_is_only_eligibility_and_matcher_adopts_one_valid_hit() -> None:
+async def test_exact_name_is_only_eligibility_and_matcher_adopts_one_valid_hit_at_threshold() -> None:
     candidate = _candidate(document=_document(name="Spring Noodles", ingredients=("pepper",)))
     canonical = _canonical(candidate)
     matcher = _Matcher(
-        CanonicalMatchResponse(candidateId=candidate.canonical_id, confidence=0.80)
+        CanonicalMatchResponse(candidateId=candidate.canonical_id, confidence=0.85)
     )
     registry = _Registry(
         pool=[candidate],
@@ -344,11 +400,17 @@ async def test_exact_name_is_only_eligibility_and_matcher_adopts_one_valid_hit()
 
 
 @pytest.mark.asyncio
-async def test_legal_candidate_below_calibrated_threshold_is_a_miss() -> None:
+@pytest.mark.parametrize("confidence", [0.849, 0.80, 0.799])
+async def test_legal_candidate_below_calibrated_threshold_is_a_miss(
+    confidence: float,
+) -> None:
     candidate = _candidate()
     canonical = _canonical(candidate)
     matcher = _Matcher(
-        CanonicalMatchResponse(candidateId=candidate.canonical_id, confidence=0.799)
+        CanonicalMatchResponse(
+            candidateId=candidate.canonical_id,
+            confidence=confidence,
+        )
     )
     registry = _Registry(
         pool=[candidate],
@@ -365,7 +427,7 @@ async def test_legal_candidate_below_calibrated_threshold_is_a_miss() -> None:
 
     assert result.canonical_dish is None
     assert result.trace.outcome is RecallDecision.MATCH_MISS
-    assert result.trace.confidence == pytest.approx(0.799)
+    assert result.trace.confidence == pytest.approx(confidence)
 
 
 @pytest.mark.asyncio
@@ -444,7 +506,7 @@ async def test_conflicting_supplemental_context_is_a_recall_miss() -> None:
         ) -> CanonicalMatchResponse:
             assert request.context_text == "make this a dessert without noodles"
             # The provider-facing contract requires a conflicting supplemental
-            # request to fall below the calibrated 0.80 reuse threshold.
+            # request to fall below the calibrated 0.85 reuse threshold.
             self.calls.append((request, json_only))
             return CanonicalMatchResponse(
                 candidateId=candidate.canonical_id,

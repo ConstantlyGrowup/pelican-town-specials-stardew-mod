@@ -6,16 +6,40 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_4_released |
-| project_phase | Task 48（收集品批量删除）已随 v1.5.4 正式发布；GitHub Actions 与正式 Release 资产均完成核验 |
+| overall_state | v1_5_5_release_candidate |
+| project_phase | 试用服务迁移（totokens）与 M13 分页已入 v1.5.5 RC；本地 bundle/installer 门禁全绿，待 push 双分支与 tag |
 | product_implementation_started | true |
-| active_session_id | none |
-| active_session_state | released |
-| active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
-| blocker | none |
-| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
+| active_session_id | `2026-09-03-v1-5-5-release` |
+| active_session_state | verification |
+| active_session_type | release |
+| current_task | v1.5.5 发布：push 双分支/tag → 核验 Release 三资产 → 收口 released |
+| blocker | 无 |
+| next_action | 用户在终端 push 双分支与 `v1.5.5` tag → 核验 release.yml 与三资产 → 收口 released |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
+
+## 已关闭 Task 56 Session（committed）
+
+- Session：`2026-09-03-task-56-gus-generation-resume`；用户实测认可并于 2026-09-04 明确授权提交推送。
+- Gus 成功阶段本地落盘，Provider 故障/重启后手动继续剩余步骤；显式完整重新生成仍从头，失败不扣试用。Blueprint 不变，不自动收费续跑。
+- 首轮 detector 提出的 Canonical 反序列化与试用错误分类问题均已修复；修复轮按 Session 所记用户授权由主 Agent 自审，不声称 detector 全量 PASS。
+- 验证记录：后端 901 passed / 2 skipped，前端 210 passed，repo 52 passed；提交前专项 19 passed，Ruff/mypy 97 files PASS。
+- 提交仅含 Task 56 产品、契约、测试、必要类型检查修复与控制文档；Task 50 当时保留未提交，后续已在6042274独立提交并随M12统一推送。正式发布包仍为 v1.5.4。
+
+## 已关闭 Milestone 12 规划 Session
+
+2026-09-03 用户要求暂时搁置整条量化评测任务链。Task 50 在 verification 暂停（paused_by_user），已实现脚本、测试、开发依赖和 retriever 接线保持原样，Task 51–55 不启动。新需求独立编号 Task 56，不混入评测代码提交。
+
+- 计划：`docs/plans/2026-09-03-milestone-12-quant-evaluation.md`；Session：`docs/development/sessions/2026-09-03-milestone-12-quant-evaluation-planning.md`。
+- 用户提供 3 页量化收尾 PDF，要求建立下一里程碑与任务拆解；v1.1 新增前置工具准备，Task 50–55 依次为工具/对照接线、约 30 Canonical/60 Positive/10 Negative 数据与标签、Current 正式评测、Embedding 正式对照、20 组 E2E 人审、汇总与最终清理。
+- 最低完成规模不含 90 Query/大池扩展；不建平台、不变更生产召回策略、Top 5/0.85 固定、复用当前开发 workspace。
+- 本轮仅规划及顺序修订；用户认可总体方向并要求人工工作后排。Task 50 无原图/人工标签前置；E2E 后移前先清除 synthetic Memory。无产品源码改动、模型下载、真实模型调用或 Memory 写入/删除；2026-09-03 用户随后明确授权开始实施，在实际需要人工介入处停止。
+
+## 已关闭 Task 49 Session（committed / pushed，未发布）
+
+- 会话：`docs/development/sessions/2026-09-03-task-49-analysis-consistency.md`；contract `task49-analysis-consistency-20260903-v1`。
+- 双语上游分析 prompt 收敛常见同义菜名/原料，保留不同菜品本体与不确定性；最终 Canonical 阈值 `>=0.85` HIT，`0.849`/`0.80` MISS。本地评分、Top 5、schema、历史记忆和 temperature 省略不变。
+- luna_worker 实施、detector PASS（round 0），主 Agent 全量 `880 passed / 2 skipped`、最终 focused `76 passed`、Ruff/mypy/diff-check 全绿；已自动验收并本地 focused commit，本记录随同一提交收口。
+- 未调用真实 Provider，未验证真实一致性或命中率改善；2026-09-04 fetch 核验远端 MVP 已包含 54ffc68。未发布，正式 v1.5.4 安装包仍使用旧 prompt/0.80。
 
 ## 当前 Git 状态事实
 
@@ -25,8 +49,8 @@
 | 当前分支 | feat/mvp-implementation |
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
-| 最新提交 | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
-| 最新工作树范围 | Task 48 批量删除与 v1.5.4 版本链已提交；RC 证据随本提交；推送/tag/Release 核验后收口。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
+| v1.5.4 发布提交（历史） | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
+| 最新工作树范围 | M13实现`55de37b`、状态`27cdc51`、Task60`d8fb1ed`、最终UI与验收`89a8a09`均已推送至`origin/feat/mvp-implementation`；本次追加推送事实记录。`asset_store.py`与`ask_gus_v3.py`既有无内容diff状态，以及prototype、samples、发布说明和历史临时目录不纳入。无tag、Release或版本链改动。 |
 
 ## 已关闭 v1.5.4 Release Session（released）
 

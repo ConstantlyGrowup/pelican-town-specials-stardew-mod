@@ -9,6 +9,7 @@ so a staging ZIP can never be downloaded.
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
 from uuid import UUID, uuid4
@@ -227,7 +228,7 @@ class ExportService:
         status: ExportStatus,
         validation: ValidationReport,
         dish_content_hashes: dict[str, str],
-        now,
+        now: datetime,
     ) -> ExportRecord:
         return ExportRecord(
             schema_version=1,
@@ -251,7 +252,7 @@ class ExportService:
         )
 
     @staticmethod
-    def _empty_report(now) -> ValidationReport:
+    def _empty_report(now: datetime) -> ValidationReport:
         return ValidationReport(
             valid=True,
             issues=[],

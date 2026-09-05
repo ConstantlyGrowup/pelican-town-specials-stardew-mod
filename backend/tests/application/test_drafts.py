@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import pytest
 from backend.tests.domain.factories import (
@@ -20,12 +21,15 @@ from pelican_town_specials.application.drafts import (
     DraftCreateSource,
     DraftPatchRequest,
     DraftService,
+    DraftSortBy,
+    DraftSortOrder,
 )
 from pelican_town_specials.domain.assets import AssetKind
 from pelican_town_specials.domain.common import DraftMode, Language, utc_now
 from pelican_town_specials.domain.dish import FieldAuthority, GenerationSource
 from pelican_town_specials.domain.draft import (
     AttemptStatus,
+    DraftRecord,
     DraftStatus,
     GenerationAttempt,
     GenerationAttemptKind,
@@ -34,6 +38,7 @@ from pelican_town_specials.domain.draft import (
     StageStatus,
 )
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.persistence.asset_store import AssetNotFoundError
 
 from .conftest import AppServices, make_reviewable_draft, put_png
@@ -582,3 +587,292 @@ async def test_list_drafts_keeps_archived_when_dish_active(
     with pytest.raises(AppError) as excinfo:
         await service.discard_draft(reviewable.draft_id)
     assert excinfo.value.code == "PTS_STATE_ILLEGAL_TRANSITION"
+
+
+# --- M13 Task 57: homepage pagination and time sorting ---
+
+
+def _persisted_draft(
+    services: AppServices,
+    *,
+    created_at: datetime,
+    updated_at: datetime,
+    name: str,
+) -> DraftRecord:
+    source_ref = put_png(
+        services.asset_store,
+        kind=AssetKind.ORIGINAL_IMAGE,
+        size=32,
+    )
+    base = ask_gus_reviewable_fixture(revision=1)
+    presentation = base.presentation.model_copy(update={"display_name": name})
+    draft = base.model_copy(
+        update={
+            "source": base.source.model_copy(
+                update={"original_image_asset_id": source_ref.asset_id}
+            ),
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "presentation": presentation,
+        }
+    )
+    return services.draft_repository.save(draft, expected_revision=None)
+
+
+def _seed_paginated_drafts(
+    services: AppServices,
+    *,
+    count: int = 11,
+) -> list[DraftRecord]:
+    base = datetime(2026, 9, 1, tzinfo=UTC)
+    saved: list[DraftRecord] = []
+    for index in range(count):
+        created = base.replace(hour=0) + timedelta(hours=index)
+        updated = base.replace(hour=1) + timedelta(hours=index)
+        draft = _persisted_draft(
+            services,
+            created_at=created,
+            updated_at=updated,
+            name=f"排序草稿-{index}",
+        )
+        saved.append(draft)
+    return saved
+
+
+def test_list_drafts_paginates_over_globally_sorted_set(
+    services: AppServices,
+) -> None:
+    drafts = _seed_paginated_drafts(services)
+    service = _service(services)
+
+    first = service.list_drafts(page=1, page_size=10)
+
+    assert first.total == 11
+    assert first.page_size == 10
+    assert first.total_pages == 2
+    assert first.page == 1
+    assert first.has_running_generation is False
+    assert [item.draft_id for item in first.items] == [
+        draft.draft_id for draft in reversed(drafts)
+    ][:10]
+    # The default sort is updatedAt desc; the newest draft is first.
+    assert first.items[0].display_name == "排序草稿-10"
+
+    last = service.list_drafts(page=2, page_size=10)
+    assert last.page == 2
+    assert [item.draft_id for item in last.items] == [
+        drafts[0].draft_id
+    ]
+    # An out-of-range page normalizes back to the last valid page (a page can
+    # become empty after deleting the final item of the previous page).
+    clamped = service.list_drafts(page=99, page_size=10)
+    assert clamped.page == 2
+    assert [item.draft_id for item in clamped.items] == [drafts[0].draft_id]
+
+    # pageSize 1 walks the full set without duplicates or gaps.
+    walked: list[UUID] = []
+    for page_number in range(1, 12):
+        page = service.list_drafts(page=page_number, page_size=1)
+        assert page.page == page_number
+        assert len(page.items) == 1
+        walked.append(page.items[0].draft_id)
+    assert sorted(walked) == sorted(draft.draft_id for draft in drafts)
+
+
+def test_list_drafts_sorts_by_field_and_direction_over_full_set(
+    services: AppServices,
+) -> None:
+    drafts = _seed_paginated_drafts(services)
+    service = _service(services)
+
+    # updatedAt desc (default): reversed insertion order (hour fields increase).
+    page = service.list_drafts(page=1, page_size=10)
+    assert [item.draft_id for item in page.items] == [
+        draft.draft_id for draft in reversed(drafts)
+    ][:10]
+
+    # updatedAt asc: oldest first.
+    page = service.list_drafts(
+        sort_by=DraftSortBy.UPDATED_AT,
+        sort_order=DraftSortOrder.ASC,
+    )
+    assert [item.draft_id for item in page.items] == [
+        draft.draft_id for draft in drafts
+    ][:10]
+
+    # createdAt asc vs desc differ when updated order diverges from creation
+    # order: swap updatedAt on one draft so the two orders disagree.
+    first = drafts[0]
+    services.draft_repository.save(
+        first.model_copy(
+            update={"updated_at": drafts[-1].updated_at + timedelta(hours=1)}
+        ),
+        expected_revision=1,
+    )
+    by_updated = service.list_drafts(page=1, page_size=10)
+    by_created = service.list_drafts(
+        sort_by=DraftSortBy.CREATED_AT,
+        sort_order=DraftSortOrder.ASC,
+    )
+    assert by_updated.items[0].draft_id == first.draft_id
+    assert by_created.items[0].draft_id == drafts[0].draft_id
+    assert by_created.items[0].display_name == "排序草稿-0"
+    # createdAt desc puts the newest-created draft first.
+    by_created_desc = service.list_drafts(
+        sort_by=DraftSortBy.CREATED_AT,
+        sort_order=DraftSortOrder.DESC,
+    )
+    assert by_created_desc.items[0].draft_id == drafts[-1].draft_id
+
+
+def test_list_drafts_sorts_stably_when_times_are_equal(
+    services: AppServices,
+) -> None:
+    """Drafts sharing one timestamp order by draftId ascending as a stable
+    secondary key so pagination never duplicates or drops items."""
+    source_ref = put_png(services.asset_store, kind=AssetKind.ORIGINAL_IMAGE)
+    saved: list[DraftRecord] = []
+    shared_time = datetime(2026, 9, 2, tzinfo=UTC)
+    for index in range(3):
+        base = ask_gus_reviewable_fixture(revision=1)
+        draft = base.model_copy(
+            update={
+                "source": base.source.model_copy(
+                    update={"original_image_asset_id": source_ref.asset_id}
+                ),
+                "created_at": shared_time,
+                "updated_at": shared_time,
+            }
+        )
+        saved.append(services.draft_repository.save(draft, expected_revision=None))
+
+    page = _service(services).list_drafts(
+        page=1,
+        page_size=10,
+        sort_by=DraftSortBy.UPDATED_AT,
+        sort_order=DraftSortOrder.DESC,
+    )
+    # The timestamp direction must not change the stable draftId tiebreaker.
+    by_id_asc = sorted(str(record.draft_id) for record in saved)
+    assert [str(item.draft_id) for item in page.items] == by_id_asc
+
+
+@pytest.mark.parametrize(
+    ("count", "expected_pages"),
+    [(0, 0), (1, 1), (10, 1), (11, 2), (21, 3)],
+)
+def test_list_drafts_page_boundaries(
+    services: AppServices,
+    count: int,
+    expected_pages: int,
+) -> None:
+    drafts = _seed_paginated_drafts(services, count=count)
+    service = _service(services)
+
+    page = service.list_drafts(page=1, page_size=10)
+
+    assert page.total == count
+    assert page.total_pages == expected_pages
+    assert page.page == 1
+    assert len(page.items) == min(count, 10)
+    if count:
+        assert page.items[0].draft_id == drafts[-1].draft_id
+
+    if count > 10:
+        last = service.list_drafts(page=expected_pages, page_size=10)
+        assert last.page == expected_pages
+        assert len(last.items) == count - ((expected_pages - 1) * 10)
+
+
+def test_list_drafts_filters_before_pagination(services: AppServices) -> None:
+    visible = _seed_paginated_drafts(services, count=11)
+    service = _service(services)
+    orphan = make_reviewable_draft(services)
+    archive = service.archive_draft(orphan.draft_id, "orphan-pagination-key")
+    services.archive_repository.delete(archive.dish_id)
+
+    page = service.list_drafts(page=2, page_size=10)
+
+    assert page.total == len(visible)
+    assert page.total_pages == 2
+    assert page.page == 2
+    assert [item.draft_id for item in page.items] == [visible[0].draft_id]
+
+
+def test_list_drafts_empty_set_uses_page_one(
+    services: AppServices,
+) -> None:
+    page = _service(services).list_drafts(page=1, page_size=10)
+    assert page.total == 0
+    assert page.total_pages == 0
+    assert page.page == 1
+    assert page.items == []
+
+
+def test_list_drafts_has_running_generation_without_registry(
+    services: AppServices,
+) -> None:
+    """A draft the service still believes is generating (no live registry) keeps
+    the homepage polling flag on; a terminal draft clears it."""
+    source_ref = put_png(services.asset_store, kind=AssetKind.ORIGINAL_IMAGE)
+    base = ask_gus_reviewable_fixture(revision=1)
+    generating = base.model_copy(
+        update={
+            "source": base.source.model_copy(
+                update={"original_image_asset_id": source_ref.asset_id}
+            ),
+            "status": DraftStatus.GENERATING,
+            "active_attempt_id": uuid4(),
+            "updated_at": datetime(2026, 9, 3, tzinfo=UTC),
+        }
+    )
+    services.draft_repository.save(generating, expected_revision=None)
+    service = _service(services)
+
+    page = service.list_drafts(page=1, page_size=10)
+    assert page.has_running_generation is True
+
+
+def _service_with_registry(
+    services: AppServices,
+    registry: AttemptRegistry,
+) -> DraftService:
+    return DraftService(
+        draft_repository=services.draft_repository,
+        archive_repository=services.archive_repository,
+        asset_store=services.asset_store,
+        catalog=services.catalog,
+        attempt_repository=services.attempt_repository,
+        attempt_registry=registry,
+        canonical_registration_service=services.canonical_registration,
+    )
+
+
+def test_list_drafts_has_running_generation_follows_live_registry(
+    services: AppServices,
+) -> None:
+    """The flag reflects the live registry, so an off-page draft that finishes
+    (owner released) stops the poll without another page read."""
+    source_ref = put_png(services.asset_store, kind=AssetKind.ORIGINAL_IMAGE)
+    base = ask_gus_reviewable_fixture(revision=1)
+    attempt_id = uuid4()
+    generating = base.model_copy(
+        update={
+            "source": base.source.model_copy(
+                update={"original_image_asset_id": source_ref.asset_id}
+            ),
+            "status": DraftStatus.REGENERATING,
+            "active_attempt_id": attempt_id,
+            "updated_at": datetime(2026, 9, 3, tzinfo=UTC),
+        }
+    )
+    record = services.draft_repository.save(generating, expected_revision=None)
+    registry = AttemptRegistry()
+    assert registry.reserve_slot(record.draft_id, attempt_id)
+    try:
+        page = _service_with_registry(services, registry).list_drafts()
+        assert page.has_running_generation is True
+        assert page.items[0].draft_id == record.draft_id
+        assert page.items[0].created_at is not None
+    finally:
+        registry.release_slot(attempt_id)
