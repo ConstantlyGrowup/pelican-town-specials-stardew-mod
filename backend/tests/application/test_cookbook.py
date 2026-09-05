@@ -61,6 +61,23 @@ def test_cookbook_list_returns_public_summaries(services: AppServices) -> None:
     assert summary.category_label
 
 
+def test_cookbook_list_orders_newest_archive_first(services: AppServices) -> None:
+    draft_service, cookbook = _cookbook(services)
+    archived_ids = [
+        draft_service.archive_draft(
+            make_reviewable_draft(services).draft_id, f"archive-key-{index}"
+        ).dish_id
+        for index in range(3)
+    ]
+
+    page = cookbook.list()
+
+    listed_ids = [summary.dish_id for summary in page.items]
+    assert listed_ids == list(reversed(archived_ids))
+    listed_times = [summary.archived_at for summary in page.items]
+    assert listed_times == sorted(listed_times, reverse=True)
+
+
 def test_cookbook_detail_hides_source_fields(services: AppServices) -> None:
     draft_service, cookbook = _cookbook(services)
     dish_id = _archived_dish_id(services, draft_service)

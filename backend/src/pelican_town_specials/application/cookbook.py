@@ -30,6 +30,9 @@ class CookbookService:
 
     def list(self) -> Page[CookbookDishSummary]:
         archives = self._repository.list_active()
+        # Newest acceptance first: the dish the user just accepted into the
+        # cookbook leads the list, so index insertion order never surfaces.
+        archives.sort(key=lambda archive: archive.archived_at, reverse=True)
         items = [CookbookDishSummary.from_archived_dish(archive) for archive in archives]
         return Page(items=items, nextCursor=None, total=len(items))
 
