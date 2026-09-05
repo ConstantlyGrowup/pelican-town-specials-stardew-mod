@@ -6,12 +6,12 @@
 # the notes always match the artifacts they describe.
 #
 # Run from anywhere; the script locates the repo root via $PSScriptRoot.
-#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.4 -OutputFile RELEASE_NOTES.md
-# v1.5.4 (2026-09-03): Cookbook batch delete for selected dishes.
+#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.5 -OutputFile RELEASE_NOTES.md
+# v1.5.5 (2026-09-05): Trial provider migrated to the new quota-managed site.
 # v1.5.3 (2026-09-02): Task 47 public trial model/quota hotfix; personal settings unchanged.
 
 param(
-    [string]$Version = "1.5.4",
+    [string]$Version = "1.5.5",
     [string]$OutputFile = ""
 )
 
@@ -25,7 +25,12 @@ $body = @"
 感谢使用「鹈鹕镇新菜单」！这是一个本地运行、为《星露谷物语》生成自定义食谱
 内容包的桌面工具。
 
-## v$normalized / 收集品批量删除
+## v$normalized / 试用服务迁移
+
+- 公共试用服务迁移到新的 Provider 站点，试用额度与规则保持不变。
+- 新用户的默认 Provider 配置同步更新。
+
+## v1.5.4 / 收集品批量删除
 
 - 收集品页面勾选多道菜后，可一键「批量删除」，与「打包菜单」并列。
 - 删除前有二次确认；预览图、图标素材与来源草稿会一并清理。

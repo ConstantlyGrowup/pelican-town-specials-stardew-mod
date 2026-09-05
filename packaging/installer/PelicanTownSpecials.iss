@@ -12,7 +12,7 @@
 ; v1.5.3 (2026-09-02): Task 47 public trial model/quota hotfix; personal settings unchanged.
 
 #ifndef PtsAppVersion
-  #define PtsAppVersion "1.5.4"
+  #define PtsAppVersion "1.5.5"
 #endif
 #ifndef PtsBundleDir
   #define PtsBundleDir "..\..\dist\PelicanTownSpecials-windows-x64"

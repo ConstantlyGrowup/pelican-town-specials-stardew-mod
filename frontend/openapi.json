@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "PelicanTownSpecials API",
-    "version": "1.5.4"
+    "version": "1.5.5"
   },
   "paths": {
     "/session/bootstrap": {
@@ -3434,7 +3434,7 @@
             "type": "string",
             "minLength": 1,
             "title": "Baseurl",
-            "default": "https://yibuapi.com/v1"
+            "default": "https://totokens.cc/v1"
           },
           "visionModel": {
             "type": "string",
@@ -3496,19 +3496,19 @@
             "type": "string",
             "minLength": 1,
             "title": "Baseurl",
-            "default": "https://yibuapi.com/v1"
+            "default": "https://totokens.cc/v1"
           },
           "visionModel": {
             "type": "string",
             "maxLength": 120,
             "title": "Visionmodel",
-            "default": "gpt-5.6-luna"
+            "default": "gpt-5.6-terra"
           },
           "textModel": {
             "type": "string",
             "maxLength": 120,
             "title": "Textmodel",
-            "default": "gpt-5.6-luna"
+            "default": "gpt-5.6-terra"
           },
           "imageModel": {
             "type": "string",
