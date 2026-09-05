@@ -2527,6 +2527,10 @@ input[type="checkbox"] {
 }
 
 @media (max-width: 640px) {
+  .cookbook-grid-panel .slot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .gus-page-header {
     align-items: stretch;
     flex-direction: column;

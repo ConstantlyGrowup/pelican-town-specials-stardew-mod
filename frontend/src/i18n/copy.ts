@@ -317,6 +317,8 @@ const zh = {
   batchDelete: "批量删除",
   batchDeleteMessage: "删除后，选中的 {count} 道收集品以及对应素材将无法恢复。",
   batchDeleteFailed: "部分选中的收集品删除失败，请重试。",
+  collectionPaginationLabel: "收集品分页",
+  collectionItemsCount: "共 {count} 道",
   statsTitle: "料理数据",
   noPreviewPlaceholder: "暂无预览图",
 
@@ -767,6 +769,8 @@ const en: Copy = {
   batchDelete: "Delete selected",
   batchDeleteMessage: "After deletion, the {count} selected items and their assets cannot be restored.",
   batchDeleteFailed: "Some selected dishes could not be deleted. Please try again.",
+  collectionPaginationLabel: "Collection pages",
+  collectionItemsCount: "{count} dishes total",
   statsTitle: "Dish stats",
   noPreviewPlaceholder: "No preview yet",
 
