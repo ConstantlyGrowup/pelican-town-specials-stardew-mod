@@ -268,7 +268,7 @@ describe("cookbook", () => {
     expect(getSelectedDishIds()).toEqual(new Set(["dish-1"]));
   });
 
-  it("paginates collection items ten at a time and keeps selection across pages", async () => {
+  it("paginates collection items eight at a time and keeps selection across pages", async () => {
     const dishes = Array.from({ length: 11 }, (_, index) => numberedSummary(index + 1));
     server.use(
       http.get("/api/v1/cookbook", () =>
@@ -285,7 +285,7 @@ describe("cookbook", () => {
     fireEvent.click(screen.getByRole("button", { name: copy.nextPage }));
     expect(await screen.findByRole("button", { name: "查看测试菜品 11预览" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "查看测试菜品 01预览" })).toBeNull();
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
 
     fireEvent.click(screen.getByRole("button", { name: copy.previousPage }));
     expect(await screen.findByRole("button", { name: "查看测试菜品 01预览" })).toBeVisible();
@@ -293,7 +293,7 @@ describe("cookbook", () => {
   });
 
   it("restores a requested page and falls back after deleting the last item", async () => {
-    let dishes = Array.from({ length: 11 }, (_, index) => numberedSummary(index + 1));
+    let dishes = Array.from({ length: 9 }, (_, index) => numberedSummary(index + 1));
     server.use(
       http.get("/api/v1/cookbook", () =>
         HttpResponse.json({ items: dishes, nextCursor: null, total: dishes.length }),
@@ -305,14 +305,14 @@ describe("cookbook", () => {
     );
     renderInRouter(["/cookbook?page=2"]);
 
-    expect(await screen.findByRole("button", { name: "查看测试菜品 11预览" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "查看测试菜品 09预览" })).toBeVisible();
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: copy.batchDelete }));
     fireEvent.click(screen.getByRole("button", { name: copy.deleteDish }));
 
     expect(await screen.findByText(copy.pageIndicator.replace("{current}", "1").replace("{total}", "1"))).toBeVisible();
     expect(screen.getByRole("button", { name: "查看测试菜品 01预览" })).toBeVisible();
-    expect(screen.getByText(copy.collectionItemsCount.replace("{count}", "10"))).toBeVisible();
+    expect(screen.getByText(copy.collectionItemsCount.replace("{count}", "8"))).toBeVisible();
   });
 
   it("confirms before delete, calls DELETE, and navigates back", async () => {

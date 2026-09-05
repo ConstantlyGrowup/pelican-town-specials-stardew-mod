@@ -761,18 +761,26 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  margin-top: 16px;
+  width: fit-content;
+  margin: 16px auto 0;
+  padding: 10px 18px;
+  background: var(--pts-cream);
+  border: var(--pts-border-strong) solid var(--pts-ink);
+  box-shadow: var(--pts-shadow-pixel);
 }
 
 .draft-pagination .btn {
   min-height: 38px;
   padding: 4px 14px;
+  background: var(--pts-paper);
+  color: var(--pts-ink);
 }
 
 .draft-pagination__meta {
-  color: var(--pts-ink-soft);
+  color: var(--pts-ink);
   font-family: var(--pts-font-mono);
   font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
 }
 

@@ -18,7 +18,7 @@ import {
 type CookbookDishSummary = components["schemas"]["CookbookDishSummary"];
 type CookbookDishDetail = components["schemas"]["CookbookDishDetail"];
 
-const COOKBOOK_PAGE_SIZE = 10;
+const COOKBOOK_PAGE_SIZE = 8;
 
 function parsePage(value: string | null): number {
   if (value === null || !/^\d+$/.test(value)) {
