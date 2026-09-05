@@ -8,7 +8,7 @@
 
 param(
     [string]$Repository = "ConstantlyGrowup/pelican-town-specials-stardew-mod",
-    [string]$Tag = "v1.5.5",
+    [string]$Tag = "v1.5.6",
     [string]$FixturePath = ""
 )
 
