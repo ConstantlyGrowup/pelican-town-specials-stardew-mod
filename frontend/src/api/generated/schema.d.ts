@@ -1360,7 +1360,7 @@ export interface components {
             providerKind: components["schemas"]["ProviderKind"];
             /**
              * Baseurl
-             * @default https://yibuapi.com/v1
+             * @default https://totokens.cc/v1
              */
             baseUrl: string;
             /** Visionmodel */
@@ -1391,17 +1391,17 @@ export interface components {
             providerKind: components["schemas"]["ProviderKind"];
             /**
              * Baseurl
-             * @default https://yibuapi.com/v1
+             * @default https://totokens.cc/v1
              */
             baseUrl: string;
             /**
              * Visionmodel
-             * @default gpt-5.6-luna
+             * @default gpt-5.6-terra
              */
             visionModel: string;
             /**
              * Textmodel
-             * @default gpt-5.6-luna
+             * @default gpt-5.6-terra
              */
             textModel: string;
             /**
