@@ -50,7 +50,7 @@
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | v1.5.4 发布提交（历史） | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
-| 最新工作树范围 | Task57–59 产品代码、测试、生成契约与M13控制面已完成验证，等待本地原子提交；`asset_store.py` 既有无内容 diff 状态，以及 prototype、samples、发布说明和历史临时目录保持原样且不纳入。当前无 push、tag、Release 或版本链改动。 |
+| 最新工作树范围 | Task57–59 产品代码、测试、生成契约与M13控制面已在本地提交 `55de37b`；`asset_store.py` 与 `ask_gus_v3.py` 既有无内容 diff 状态，以及 prototype、samples、发布说明和历史临时目录保持原样且不纳入。当前无 push、tag、Release 或版本链改动。 |
 
 ## 已关闭 v1.5.4 Release Session（released）
 
