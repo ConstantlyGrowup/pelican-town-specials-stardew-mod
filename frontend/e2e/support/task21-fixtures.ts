@@ -163,7 +163,7 @@ export async function installTask21Routes(page: Page): Promise<void> {
       }),
     }),
   );
-  await page.route("**/api/v1/drafts", (route) =>
+  await page.route("**/api/v1/drafts*", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -198,6 +198,8 @@ export async function installTask21Routes(page: Page): Promise<void> {
           },
         ],
         nextCursor: null,
+        page: 1,
+        totalPages: 1,
         total: 3,
       }),
     }),
