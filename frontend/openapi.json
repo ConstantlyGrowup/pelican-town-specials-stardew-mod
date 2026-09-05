@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "PelicanTownSpecials API",
-    "version": "1.5.5"
+    "version": "1.5.6"
   },
   "paths": {
     "/session/bootstrap": {
