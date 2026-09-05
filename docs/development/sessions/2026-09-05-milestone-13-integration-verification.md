@@ -36,3 +36,5 @@ M13自动开发与验证到此完成。按用户“待到需要人工介入参�
 ## Milestone acceptance and push authorization
 
 2026-09-05用户在追加Task60并自行优化UI后，明确确认当前所有改动可以提交推送，同时要求更新过时文档。最终UI将Task60收集品分页调整为每页8条，并统一主页/收集品分页像素面板样式；该确认覆盖此前等待人工Provider门的状态，M13整体进入accepted。最终前端回归为23 files / 231 passed，ESLint与TypeScript/Vite build PASS，仅既有chunk-size warning。授权范围为提交并推送`feat/mvp-implementation`；未授权版本提升、tag或GitHub Release。
+
+M13提交链`55de37b`、`27cdc51`、`d8fb1ed`、`89a8a09`已于2026-09-05成功推送，远端更新`7768172..89a8a09`。Session关闭；正式安装包仍为v1.5.4。

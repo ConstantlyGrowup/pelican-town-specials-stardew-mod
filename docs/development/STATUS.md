@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m13_accepted_push_authorized |
-| project_phase | 用户确认M13当前全部改动可提交推送，并追加验收其UI优化：Task60收集品最终为8条/页，主页与收集品分页使用统一像素面板样式。正在完成前端回归与过时文档同步；正式Release仍v1.5.4 |
+| overall_state | m13_accepted_pushed |
+| project_phase | M13 Task57–60及用户最终UI已验收并推送`feat/mvp-implementation`至`89a8a09`；Task60最终为8条/页，主页与收集品分页使用统一像素面板样式。未发布，正式Release仍v1.5.4 |
 | product_implementation_started | true |
-| active_session_id | 2026-09-05-milestone-13-integration-verification |
-| active_session_state | accepted |
-| active_session_type | milestone_closeout |
-| current_task | M13最终UI回归、过时文档同步、提交并推送feat/mvp-implementation |
+| active_session_id | none；最近关闭2026-09-05-milestone-13-integration-verification |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | 无；M13已验收并推送，未发布 |
 | blocker | 无 |
-| next_action | 验证用户UI改动，提交控制面与UI差异，推送当前开发分支；不创建tag或Release。 |
+| next_action | 等待用户下一项任务；如需安装包，须另行授权版本提升、tag与Release。 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
 
 ## 已关闭 Task 56 Session（committed）
@@ -50,7 +50,7 @@
 | origin | https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod.git |
 | 初始提交 | 517f844 chore: add serial agent handoff control plane |
 | v1.5.4 发布提交（历史） | MVP：批量删除 `6315591`、版本链 `5441c61`、RC 证据 `c64c75b`、收口随本提交；main：`112476f`/`02469a3`/`55c0dc7`+收口；annotated tag `v1.5.4` 指向 `c64c75b` |
-| 最新工作树范围 | M13实现提交为`55de37b`、`d8fb1ed`，状态记录为`27cdc51`；用户最终UI把收集品改为8条/页并统一分页像素面板样式，本轮同步测试与文档后提交推送。`asset_store.py`与`ask_gus_v3.py`既有无内容diff状态，以及prototype、samples、发布说明和历史临时目录不纳入。无tag、Release或版本链改动。 |
+| 最新工作树范围 | M13实现`55de37b`、状态`27cdc51`、Task60`d8fb1ed`、最终UI与验收`89a8a09`均已推送至`origin/feat/mvp-implementation`；本次追加推送事实记录。`asset_store.py`与`ask_gus_v3.py`既有无内容diff状态，以及prototype、samples、发布说明和历史临时目录不纳入。无tag、Release或版本链改动。 |
 
 ## 已关闭 v1.5.4 Release Session（released）
 
