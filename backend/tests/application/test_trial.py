@@ -670,7 +670,7 @@ def _echoing_provider_error() -> AppError:
         message="Provider 返回了无法处理的响应。",
         http_status=502,
         details={
-            "providerError": "https://yibuapi.com/v1 gpt-5.6-luna sk-test-trial",
+            "providerError": "https://totokens.cc/v1 gpt-5.6-terra sk-test-trial",
             "providerHttpStatus": 502,
         },
         retryable=True,
@@ -737,7 +737,7 @@ async def test_trial_safe_gateway_strips_app_error_details() -> None:
         assert error.http_status == 502
         assert error.retryable is True
         assert error.details == {}
-        assert "yibuapi" not in str(error.details)
+        assert "totokens.cc" not in str(error.details)
         assert "sk-test-trial" not in str(error.details)
 
 

@@ -52,13 +52,13 @@ from pelican_town_specials.providers.contracts import (
 )
 
 TRIAL_GENERATION_LIMIT = 5
-TRIAL_BASE_URL = "https://yibuapi.com/v1"
-TRIAL_VISION_MODEL = "gpt-5.6-luna"
-TRIAL_TEXT_MODEL = "gpt-5.6-luna"
+TRIAL_BASE_URL = "https://totokens.cc/v1"
+TRIAL_VISION_MODEL = "gpt-5.6-terra"
+TRIAL_TEXT_MODEL = "gpt-5.6-terra"
 TRIAL_IMAGE_MODEL = "gpt-image-2"
 TRIAL_CHAT_TIMEOUT_SECONDS = 120
 TRIAL_IMAGE_TIMEOUT_SECONDS = 300
-TRIAL_MAX_AUTOMATIC_RETRIES = 0
+TRIAL_MAX_AUTOMATIC_RETRIES = 2
 
 
 class TrialProviderPreference(str, Enum):
