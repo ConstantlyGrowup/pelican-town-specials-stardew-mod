@@ -1,9 +1,9 @@
-# Shared Windows verify-and-build pipeline (Milestone 7 Task 24).
+# Shared Windows Release verify-and-build pipeline (Milestone 7 Task 24).
 #
-# Reusable workflow called by both ci.yml (push/PR) and release.yml (v* tag /
-# manual dispatch). This is the single verified pipeline: full tests, frontend,
-# PyInstaller onedir bundle, bundle smoke, Inno Setup installer and installer
-# smoke. If any gate fails, the run fails and no artifact is promoted.
+# Reusable workflow called only by release.yml (v* tag / manual dispatch).
+# This is the Release pipeline: full tests, frontend, PyInstaller onedir bundle,
+# bundle smoke, Inno Setup installer and installer smoke. If any gate fails,
+# the run fails and no artifact is promoted.
 #
 # The version input drives the installer filename and release assets. A
 # version-drift gate (scripts/check_release_version.ps1) fails the build if the

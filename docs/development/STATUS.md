@@ -6,16 +6,23 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_ci_maintenance_pushed_verified |
-| project_phase | v1.5.6 已发布；M14 Task 61–63、M12 文档澄清和 CI Ruff 修复均已推送 MVP 分支；CI 全链路通过，Task 64 未启动 |
+| overall_state | ci_tiered_workflow_maintenance_auto_accepted |
+| project_phase | v1.5.6 已发布；M14 Task 61–63、M12 文档澄清和 CI Ruff 修复均已推送 MVP 分支；CI 分层维护本地已验收，待 focused commit 和用户授权推送；Task 64 未启动 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | none；CI Ruff 维护已 auto_accepted |
+| active_session_state | none；CI 分层维护 auto_accepted |
 | active_session_type | none |
 | current_task | none；Task 64 未启动 |
 | blocker | 无 |
-| next_action | CI 阻断已修复；等待用户下一步指示，再决定是否启动 M14 Task 64 |
+| next_action | 创建 CI 分层维护本地 focused commit；等待用户授权推送并观察新 CI 实际耗时，不自动启动 Task 64 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-23 CI 三层工作流维护
+
+- 用户要求普通 push 执行快速 CI，PR/main 增加全量 integration + E2E，Release 才执行 PyInstaller、Windows/installer smoke、Inno Setup、ZIP 和 artifact。维护 Session `2026-09-23-ci-tiered-workflows` 以此冻结合同，不属于 Task 64。
+- 新 `ci.yml` 对所有分支 push 和 PR 运行并行后端/前端快检（Ruff、Mypy、后端/repo 单测、遥测集成切片、前端单测/lint/build），PR/main 在快检成功后运行全量 integration + Playwright fake E2E；tag 不进入普通 CI。普通 CI 不再调用 `build.yml`、读取试用 Secret 或上传发布产物。
+- Release 仍独占调用 `build.yml`，发布打包、烟测、版本、遥测与资产逻辑未变；两份 Release 工作流仅改注释。repo 旧合同测试已同步新分层。worker 定向 `32 passed`、三 YAML 解析与 diff check 通过；独立 detector round 0 `PASS`。actionlint 本机未安装，远端实际触发与耗时尚待用户授权 push 后验证；不声称已实测提速。
+- 仅本地 focused commit，不推送、不修改 main/tag/Release，不启动 Task 64。worker 的受限临时测试目录留在工作区且不纳入提交。
 
 ### 2026-09-23 子代理路由配置维护
 

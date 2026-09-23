@@ -43,7 +43,7 @@ def test_release_triggered_only_by_tag_or_manual() -> None:
     assert "gh release create" not in ci, "ci must never create a Release"
 
 
-def test_build_pipeline_reused_and_gated() -> None:
+def test_release_build_pipeline_is_reused_and_gated() -> None:
     build = _text(BUILD)
     assert "workflow_call" in build, "build.yml must be reusable"
     assert "install_innosetup.ps1" in build, "pipeline must pin/install Inno Setup"
@@ -53,11 +53,50 @@ def test_build_pipeline_reused_and_gated() -> None:
     assert "check_release_version.ps1" in build, "version drift gate must run in the pipeline"
     assert "Compress-Archive" in build, "portable ZIP must be built in the pipeline"
     assert "if-no-files-found: error" in build, "missing artifacts must fail the pipeline"
-    # Both CI and release reuse the single verified pipeline.
-    for workflow in (CI, RELEASE):
-        assert "uses: ./.github/workflows/build.yml" in _text(workflow), (
-            f"{workflow.name} must reuse the shared pipeline"
-        )
+    assert "uses: ./.github/workflows/build.yml" in _text(RELEASE), (
+        "release.yml must reuse the Release packaging pipeline"
+    )
+    assert "uses: ./.github/workflows/build.yml" not in _text(CI), (
+        "ordinary CI must not run the Release packaging pipeline"
+    )
+
+
+def test_ci_splits_fast_push_checks_from_pr_and_main_checks() -> None:
+    ci = _text(CI)
+
+    assert "branches:\n      - '**'" in ci, "all branch pushes must receive fast CI"
+    assert "pull_request:" in ci, "CI must run for pull requests"
+    assert "backend-fast:" in ci and "frontend-fast:" in ci
+    assert "python -m ruff check backend" in ci
+    assert "python -m mypy backend/src" in ci
+    assert "python -m pytest backend/tests tests/repo -q" in ci
+    assert "pnpm --dir frontend test:run" in ci
+    assert "pnpm --dir frontend lint" in ci
+    assert "pnpm --dir frontend build" in ci
+    assert (
+        "python -m pytest tests/integration/test_task39_telemetry_e2e.py -q"
+        in ci
+    )
+
+    full = ci.split("  pr-main-integration:", maxsplit=1)[1]
+    assert (
+        "if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'"
+        in full
+    )
+    assert "needs: [backend-fast, frontend-fast]" in full
+    assert "scripts/check_openapi_drift.ps1" in full
+    assert "python -m pytest tests/integration -q" in full
+    assert "pnpm --dir frontend exec playwright install chromium" in full
+    assert "pnpm --dir frontend e2e" in full
+
+    # The fast workflow checks source and frontend output only; release build
+    # and upload remain exclusive to the reusable Release pipeline.
+    assert "build.yml" not in ci
+    assert "install_innosetup.ps1" not in ci
+    assert "build_installer.ps1" not in ci
+    assert "actions/upload-artifact" not in ci
+    assert "PTS_TRIAL_API_KEY" not in ci
+    assert "secrets." not in ci
 
 
 def test_version_consistency_driven_by_one_define() -> None:
@@ -133,10 +172,12 @@ def test_minimal_write_permissions_and_no_secrets() -> None:
     assert "secrets.PTS_TRIAL_API_KEY" in build, (
         "the injection step must read the forwarded trial key secret"
     )
-    for caller in (CI, RELEASE):
-        assert "PTS_TRIAL_API_KEY" in _text(caller), (
-            f"{caller.name} must forward the trial key secret to build.yml"
-        )
+    assert "PTS_TRIAL_API_KEY" not in _text(CI), (
+        "fast CI must not read or forward the trial key secret"
+    )
+    assert "PTS_TRIAL_API_KEY" in _text(RELEASE), (
+        "release.yml must forward the trial key secret to build.yml"
+    )
 
 
 def test_release_assets_checksum_and_notes_consistent() -> None:
