@@ -16,7 +16,7 @@
 | `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并推送 |
 | `docs/architecture/TRIAL_EXPERIENCE_TECHNICAL_DESIGN.md` v1.2 | Milestone 11 试用预留/完整成功确认、任意失败不扣、个人服务接管、结果快照及 Task 43/44；已随 v1.5.0 发布 |
 | `docs/plans/2026-08-30-milestone-11-trial-experience.md` v1.2 | Task 40–44 的依赖、Acceptance、测试、统一验收与 v1.5.0 发布结果 |
-| `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` v1.4 | M14 Task 61–66 按数据、定位、方案、评测、实现、验证推进；Task 65 已获授权启动，Task66 以菜品全部合理率为主指标 |
+| `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` v1.4 | M14 Task 61–66 按数据、定位、方案、评测、实现、验证推进；Task66 同集 JEV 对照已完成，主指标为菜品全部合理率，默认仍为 LEGACY |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |
 | `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.3 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
@@ -123,6 +123,6 @@ Task50–55 全部完成并经用户整体验收，用户授权提交推送 MVP 
 
 ## 2026-09-23 Milestone 14 规划边界
 
-用户已确认下一 Milestone 的六步方向，并授权启动 Task 61；Task 62–66 尚未实施。计划细节和状态以 `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` 与 `STATUS.md` 为准。原料 RAG 是新任务，M12“Embedding 只用于开发期评测、不得进入生产包”的限制只约束已关闭的 M12，不能阻止经 M14 设计/评测后获准的本地产品重构。
+用户已确认本 Milestone 的六步方向；Task 61–66 的当前完成状态以 `STATUS.md` 为准。计划细节见 `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md`。原料 RAG 是新任务，M12“Embedding 只用于开发期评测、不得进入生产包”的限制只约束已关闭的 M12，不能阻止经 M14 设计/评测后获准的本地产品重构。
 
-M14 的 PostHog 看板使用预置数据演示 10–15 个匿名安装、每安装最多 5 次试用的使用路径；底层事件与开发记录保留来源，看板不显示永久说明，未来真实事件仍进入同一看板，但任何归因分析须按来源区分；不把预置数值当作真实观测或因果证明。真正的原料质量结论须以冻结 Query 集、JEV 结构化全量评测和同集对照为依据。JEV 不输出理由；人工只作抽样或争议复核。目录缺少对应物的原料在评测样本冻结前排除，兜底率不作为改善指标。当前正式安装包为 v1.5.6；用户已单独授权 Task 61 的目标 Dashboard 操作，未授权真实模型费用、产品重构或发布。
+M14 的 PostHog 看板使用预置数据演示 10–15 个匿名安装、每安装最多 5 次试用的使用路径；底层事件与开发记录保留来源，看板不显示永久说明，未来真实事件仍进入同一看板，但任何归因分析须按来源区分；不把预置数值当作真实观测或因果证明。真正的原料质量结论须以冻结 Query 集、JEV 结构化全量评测和同集对照为依据。JEV 不输出理由；人工只作抽样或争议复核。目录缺少对应物的原料在评测样本冻结前排除，兜底率不作为改善指标。当前正式安装包为 v1.5.6。原先 Task61 阶段未授权的真实模型费用，已由用户随后对 Task64、Task66 的明确评测授权覆盖；Task66 用户明确授权发送限定字段至 OpenRouter Decisions API、最多 72 次，本轮实际 8 次。该授权不包含自动切换产品默认、push、main/tag 或 Release。
