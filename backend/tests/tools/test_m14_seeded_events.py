@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.telemetry.m14_seeded_events import (  # noqa: E402
+from scripts.telemetry.m14_seeded_events import (
     END_DATE,
     ORIGIN,
     START_DATE,
@@ -58,11 +58,11 @@ def test_installations_have_paired_attempts_trial_limits_and_dashboard_coverage(
 
     assert min(event_dates) >= START_DATE
     assert max(event_dates) <= END_DATE
-    assert any(day >= datetime(2026, 9, 17).date() for day in event_dates)
+    assert any(day >= date(2026, 9, 17) for day in event_dates)
     assert any(
         item["event"] == "generation started"
         and datetime.fromisoformat(item["timestamp"]).date()
-        >= datetime(2026, 9, 17).date()
+        >= date(2026, 9, 17)
         for item in events
     )
 
