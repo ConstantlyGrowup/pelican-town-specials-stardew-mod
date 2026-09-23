@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task66_auto_accepted |
-| project_phase | v1.5.6 已发布；M14 Task 61–65 与 CI 分层维护已推送 MVP 分支，远端 HEAD `ce14827`；Task 66 同集评测与独立审阅已完成，本地收口，不自动推送或切换默认 |
+| overall_state | m14_task66_committed |
+| project_phase | v1.5.6 已发布；M14 Task 61–65 与 CI 分层维护已推送 MVP 分支；Task66 本地 focused commit `3bc0757` 已完成，远端仍为 `ce14827`；未推送或切换默认 |
 | product_implementation_started | true |
 | active_session_id | 无 |
 | active_session_state | 无 |
 | active_session_type | 无 |
 | current_task | Task 66 同集对照完成；等待用户决定推送与后续产品切换范围 |
 | blocker | 无 |
-| next_action | Task66 本地 focused commit 收口；之后等待用户是否授权推送。切换默认、正式打包/发布仍需单独任务与授权 |
+| next_action | 等待用户是否授权将 Task66 提交 `3bc0757` 推送至 MVP 分支；切换默认、正式打包/发布仍需单独任务与授权 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-23 Task 66 启动
@@ -27,7 +27,7 @@
 - 冻结 24 道菜/72 项原料上，Task65 显式 RAG 72/72 成功、0 检索降级/目录兜底/映射错误；JEV 72/72 typed Choice，其中 64 条复用 Task64 完全同状态且同返回版本的已完成判定，8 次新 OpenRouter Decisions API 请求均成功，实际模型 `typesafe/jev-1.13-20260917`。用户对限定字段、目的地和最多 72 次按服务商计费的调用作了明确授权；实际增量费用 `$0.000187152`，Key 未落盘。
 - 主指标固定 24 道菜“全部原料合理”：旧 `14/24`（58.33%）→新 `18/24`（75.00%），配对改善 4、退步 0、持平 20。Gold Recall@5 `70/72`→`72/72`，固定全集合理覆盖 `61/72`→`65/72`；冻结质量门槛与 Task65 既有 host-Python 资源门槛均达标。该策划 Query 集不是自然用户流量或因果效果，Task65 的 EXE smoke 未选择 RAG，产品默认仍为 `LEGACY`。
 - `luna_worker` 报告 focused pytest `39 passed`、Ruff PASS、diff check PASS；独立 `detector` round 0 对 C66-01..06 给出 `PASS`、`must_fix=[]`，复核 Task64 原始文件 hash、RAG/JEV 原始行数、同集指标及默认边界。detector 的独立聚合复算受其沙箱读取 Task65 模型清单 PermissionError 限制，已如实记录为 optional hardening，不冒充该项复跑。完整可审计结果见 `docs/development/M14_TASK66_INGREDIENT_RAG_COMPARISON.md`，原始新侧记录仍在 ignored `output/m14-task66/`。
-- 主 Agent 按 `PASS` 进入 `auto_accepted` 并仅创建 Task66 本地 focused commit；不自动 push/main/tag/Release，也不自动启用 RAG 默认。后续动作须由用户决定。
+- 主 Agent 按 `PASS` 进入 `auto_accepted` 并创建 Task66 本地 focused commit `3bc0757`；提交后 tracked 工作树干净。未 push/main/tag/Release，也未启用 RAG 默认。后续动作须由用户决定。
 
 ### 2026-09-23 Task 65 启动
 

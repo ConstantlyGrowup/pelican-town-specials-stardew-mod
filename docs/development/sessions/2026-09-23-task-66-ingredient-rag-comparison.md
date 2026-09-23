@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-09-23-task-66-ingredient-rag-comparison` |
-| status | `auto_accepted` |
+| status | `committed` |
 | session_type | `implementation` |
 | owner | Codex 主 Agent |
 | started_at | `2026-09-23` |
@@ -108,3 +108,5 @@ test_commands: [python -m pytest backend/tests/tools/test_m14_ingredient_compari
 独立 `detector / gpt-6-sol / medium` 按冻结合同 round 0 返回 `PASS`，核对 `C66-01..06` 与 `R66-01..05`，`must_fix: []`、`scope_delta: none`、`implementation_scope_delta: none`。其只读检查确认 Task64 五个源文件 hash 与 Task66 manifest 一致、新侧 RAG/JEV 原始记录各 72 条、JEV 来源为 64 复用/8 新调用、菜品主指标 `14/24 → 18/24`、配对改善 4/退步 0、门槛 met、默认 LEGACY；Ruff PASS、`git diff --check` 退出码 0。审阅沙箱读取 Task65 模型清单遇 `PermissionError`，因此其独立 `calculate_metrics()` 复算未执行；worker 的 focused pytest 为 39 passed，此边界作为 optional hardening 记录，不扩大冻结合同。
 
 主 Agent 已核对 worker handoff、独立 PASS、Task66 报告和产品默认边界，依项目自动验收路径进入 `auto_accepted`。本 Session 只包含 Task66 新侧评测工具、测试、结果报告、ignored 原始证据与必要控制面；不包含产品默认切换、push/main/tag/Release。仅创建本地 focused commit；推送和后续产品切换需要用户单独决定。
+
+本地 focused commit 为 `3bc0757`（`Evaluate ingredient RAG against frozen JEV baseline`），提交后 tracked 工作树干净。提交事实由独立纯控制面维护 Session 记录；远端仍为 `ce14827`，未推送或发布。
