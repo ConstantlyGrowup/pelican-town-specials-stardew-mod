@@ -12,6 +12,7 @@
 
 param(
     [string]$BundleDir = "",
+    [string]$PyInstallerWorkDir = "",
     [string]$TelemetryHost = "",
     [string]$TelemetryProjectToken = "",
     [switch]$TelemetryEnabledForBuild
@@ -24,6 +25,9 @@ Set-Location $repoRoot
 
 if (-not $BundleDir) {
     $BundleDir = Join-Path $repoRoot 'dist\PelicanTownSpecials-windows-x64'
+}
+if (-not $PyInstallerWorkDir) {
+    $PyInstallerWorkDir = Join-Path $repoRoot 'build'
 }
 
 function Assert-Zero {
@@ -73,8 +77,19 @@ Write-Host "==> internal telemetry dashboard contract"
 python scripts/validate_telemetry_dashboard.py
 Assert-Zero "internal telemetry dashboard contract"
 
+Write-Host "==> build pinned local ingredient-RAG CPU model and static index"
+python scripts/build_ingredient_rag.py
+Assert-Zero "ingredient-RAG model and index build"
+
 Write-Host "==> PyInstaller build"
-python -m PyInstaller --clean --noconfirm packaging/pyinstaller/PelicanTownSpecials.spec
+$bundleFullPath = [System.IO.Path]::GetFullPath($BundleDir)
+$expectedBundleName = 'PelicanTownSpecials-windows-x64'
+if ([System.IO.Path]::GetFileName($bundleFullPath) -ne $expectedBundleName) {
+    throw "BundleDir must end with ${expectedBundleName}: $bundleFullPath"
+}
+$pyinstallerDistDir = Split-Path -Parent $bundleFullPath
+$pyinstallerWorkFullPath = [System.IO.Path]::GetFullPath($PyInstallerWorkDir)
+python -m PyInstaller --clean --noconfirm --distpath $pyinstallerDistDir --workpath $pyinstallerWorkFullPath packaging/pyinstaller/PelicanTownSpecials.spec
 Assert-Zero "PyInstaller build"
 
 Write-Host "==> EXE icon gate (Task 22)"

@@ -17,6 +17,9 @@ dependencies = [
     "platformdirs>=4.3,<5",
     "portalocker>=3.2,<4",
     "Pillow==12.3.0",
+    "numpy==2.5.2",
+    "onnxruntime==1.26.0",
+    "sentencepiece==0.2.2",
 ]
 
 [dependency-groups]
@@ -30,9 +33,18 @@ dev = [
     "PyInstaller>=6.14,<7",
 ]
 
+build = [
+    "huggingface-hub==1.29.0",
+    "onnx==1.21.0",
+    "tokenizers==0.23.2",
+]
+
 evaluation = [
     "sentence-transformers==6.0.1",
     "psutil>=7.2,<8",
+    "huggingface-hub==1.29.0",
+    "onnx==1.21.0",
+    "tokenizers==0.23.2",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -5,8 +5,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
+import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import suppress
+from enum import StrEnum
+from threading import RLock
 from time import monotonic
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -88,6 +91,10 @@ from pelican_town_specials.images.vision_input import (
     EDIT_MIN_PIXELS,
     VISION_MIN_PIXELS,
 )
+from pelican_town_specials.ingredient_rag import (
+    IngredientRagRetriever,
+    IngredientRagUnavailable,
+)
 from pelican_town_specials.persistence.asset_store import (
     AssetMetadata,
     AssetNotFoundError,
@@ -148,6 +155,19 @@ _ICON_SIZE = "1024x1024"
 # model reports visual similarity at or above this threshold (0.75 passes,
 # 0.749 misses). This is the raw score gate, never the rounded display value.
 _ICON_REUSE_THRESHOLD = 0.75
+
+
+class IngredientRetrievalBackend(StrEnum):
+    LEGACY = "legacy"
+    RAG = "rag"
+
+
+# M14 Task 65 packages and exposes an internal RAG selector, but the existing
+# path stays active until Task 66 completes the frozen same-set quality gate.
+DEFAULT_INGREDIENT_RETRIEVAL_BACKEND = IngredientRetrievalBackend.LEGACY
+_INGREDIENT_RAG_RETRIEVER: IngredientRagRetriever | None = None
+_INGREDIENT_RAG_LOCK = RLock()
+_LOGGER = logging.getLogger(__name__)
 
 _CANONICAL_REUSED_AUTHORITY = {
     "presentation.display_name": FieldAuthority.CACHE_REUSED,
@@ -290,11 +310,17 @@ def _map_gameplay(
     catalog: VanillaCatalog,
     *,
     language: Language,
+    retrieval_backend: IngredientRetrievalBackend = DEFAULT_INGREDIENT_RETRIEVAL_BACKEND,
 ) -> GameplaySpec:
     ingredients: list[GameIngredient] = []
     used_item_ids: set[str] = set()
     for semantic in core.ingredients:
-        candidates = _build_candidates(semantic, catalog)
+        candidates = _build_candidates(
+            semantic,
+            catalog,
+            used_item_ids=frozenset(used_item_ids),
+            backend=retrieval_backend,
+        )
         mapped = map_ingredient(
             semantic,
             candidates,
@@ -332,9 +358,34 @@ def _dish_text(core: GeneratedDishCore) -> str:
 
 
 def _build_candidates(
-    semantic: object, catalog: VanillaCatalog
+    semantic: object,
+    catalog: VanillaCatalog,
+    *,
+    used_item_ids: frozenset[str] = frozenset(),
+    backend: IngredientRetrievalBackend = DEFAULT_INGREDIENT_RETRIEVAL_BACKEND,
 ) -> list[CatalogCandidate]:
     name = getattr(semantic, "normalized_name", None) or getattr(semantic, "name", "")
+    if backend is IngredientRetrievalBackend.RAG:
+        try:
+            candidates = _get_default_ingredient_rag_retriever(catalog).retrieve(
+                str(name), used_item_ids=used_item_ids
+            )
+            candidates = [
+                candidate
+                for candidate in candidates
+                if candidate.item_id not in used_item_ids
+            ]
+            if candidates:
+                return candidates
+        except IngredientRagUnavailable as exc:
+            _LOGGER.warning(
+                "ingredient RAG disabled; legacy retrieval selected reason=%s",
+                exc.reason_code,
+            )
+        except Exception:  # noqa: BLE001 - local retrieval must fail open.
+            _LOGGER.warning(
+                "ingredient RAG disabled; legacy retrieval selected reason=rag_query_failed"
+            )
     items = catalog.search_ingredients(str(name), limit=5)
     total = sum(item.edibility or 0 for item in items) or 1
     candidates = []
@@ -344,6 +395,16 @@ def _build_candidates(
             score = score * (1.0 + (item.edibility / total))
         candidates.append(CatalogCandidate(item_id=item.item_id, score=score))
     return candidates
+
+
+def _get_default_ingredient_rag_retriever(
+    catalog: VanillaCatalog,
+) -> IngredientRagRetriever:
+    global _INGREDIENT_RAG_RETRIEVER
+    with _INGREDIENT_RAG_LOCK:
+        if _INGREDIENT_RAG_RETRIEVER is None:
+            _INGREDIENT_RAG_RETRIEVER = IngredientRagRetriever(catalog)
+        return _INGREDIENT_RAG_RETRIEVER
 
 
 def _read_source_image(asset_store: FileAssetStore, draft: DraftRecord) -> bytes:

@@ -28,12 +28,27 @@ Runtime (bundled in the application):
     https://github.com/wolph/python-portalocker
   Pillow                                  HPND (Pillow license)
     https://github.com/python-pillow/Pillow
+  NumPy                                   BSD-3-Clause
+    https://github.com/numpy/numpy/blob/main/LICENSE.txt
+  ONNX Runtime                            MIT
+    https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+  SentencePiece                           Apache-2.0
+    https://github.com/google/sentencepiece/blob/master/LICENSE
+  intfloat/multilingual-e5-small           MIT
+    Official model at fixed revision fd1525a9fd15316a2d503bf26ab031a61d056e98
+    https://huggingface.co/intfloat/multilingual-e5-small/tree/fd1525a9fd15316a2d503bf26ab031a61d056e98
 
 Build tooling (not part of the application runtime):
 
   PyInstaller bootloader                  GPL-2.0-or-later WITH
                                           Bootloader-exception
     https://github.com/pyinstaller/pyinstaller
+  ONNX                                    Apache-2.0
+    https://github.com/onnx/onnx/blob/main/LICENSE
+  Hugging Face Hub client                 Apache-2.0
+    https://github.com/huggingface/huggingface_hub/blob/main/LICENSE
+  Hugging Face Tokenizers                 Apache-2.0 (parity validation only)
+    https://github.com/huggingface/tokenizers/blob/main/LICENSE
 
 Frontend (compiled into the local interface):
 

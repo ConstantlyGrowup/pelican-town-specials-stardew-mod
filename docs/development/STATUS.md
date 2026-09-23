@@ -6,16 +6,25 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task64_auto_accepted |
-| project_phase | v1.5.6 已发布；M14 Task 61–63 与 CI 分层维护已推送 MVP 分支；快速 CI run 35831790521 success。Task 64 已完成本地全量评测并通过独立复审；Task 65 未启动 |
+| overall_state | m14_task65_auto_accepted |
+| project_phase | v1.5.6 已发布；M14 Task 61–63 与 CI 分层维护已推送 MVP 分支；Task 64 已本地 focused commit `7175d9c`，未推送；Task 65 已通过独立封闭复审，准备本地 focused commit |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | none；Task 64 auto_accepted |
+| active_session_state | none；Task 65 auto_accepted |
 | active_session_type | none |
-| current_task | none；Task 65 未启动 |
+| current_task | none；Task 66 未启动 |
 | blocker | 无 |
-| next_action | Task 64 本地 focused commit；等待用户决定推送及是否启动 Task 65，不自动改造生产原料链路 |
+| next_action | Task65 本地 focused commit 后等待用户决定是否推送及启动 Task66；Task66 须以固定菜品全部合理率做同集 JEV 对照，未验证前旧原料 backend 保持默认 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-23 Task 65 启动
+
+- 用户确认保持“现实语义原料逐项召回”，不加入整道菜联合选择，并授权 Task65 实施。Task64 本地提交为 `7175d9c`，当前 tracked 工作树在 Task65 状态/Session 更新前干净；未授权推送、tag 或 Release。
+- 用户先前将 Task66 主指标改为固定菜品集合的“全部原料合理”，Task64 的 14/24 作为历史菜品基线；M14 ignored 计划与技术设计已同步该口径。Task65 不调用 JEV 做同集效果判定，默认旧 backend，最终质量 gate 留到 Task66。
+- 唯一活动 Session 为 `2026-09-23-task-65-ingredient-rag-implementation`，合同 `m14-task65-local-ingredient-rag-v1`；实施、独立复审和资源/打包实测待完成。
+- 首轮 worker 已交本地检索、固定模型与索引、全量测试和隔离 Windows bundle；detector round 0 判 `REVISE`，两项现存 MUST_FIX：干净 Release runner 未安装构建期依赖；旧默认链路误过滤同菜已用 ID。两项均属当前 C65-03/04/05/06 合同，worker 正在 revise round 1 最小修复。此前资源实测与 bundle PASS 保留，但不视为最终 Task 验收。
+- revise round 1 已补固定 `build` 依赖组及 reusable workflow 安装，恢复默认 LEGACY 与 RAG 降级的原词面序列，仅成功 RAG 结果排除已用 ID；scoped `62 passed`、Ruff/mypy PASS。未重跑真实干净 Release runner 或修复后的 frozen exe；此证据边界交封闭 detector 判断，不预称最终通过。
+- 独立封闭 detector round 1 给出 `PASS`、无剩余 MUST_FIX；确认 build 组/工作流和旧默认/降级行为修复，接受无用户可见 Scope Delta。其普通权限 broader pytest 受 WinError 5 临时目录 ACL 影响；采用 worker 最小提升下 `62 passed` 证据。主 Agent 核对后 Task65 `auto_accepted`，仅本地 focused commit，不自动 push/Release/Task66；修复后的 GitHub clean-runner 与 frozen exe 未实测，效果质量仍待 Task66。
 
 ### 2026-09-23 Task 64 启动
 
