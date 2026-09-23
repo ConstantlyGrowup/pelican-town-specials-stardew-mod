@@ -7,14 +7,14 @@
 | 字段 | 值 |
 |---|---|
 | overall_state | m14_task63_auto_accepted |
-| project_phase | v1.5.6 已发布；Task 61 与 GPT-6 子代理路由维护均已推送；M14 Task 62 已本地提交，Task 63 方案设计通过独立复审 |
+| project_phase | v1.5.6 已发布；M14 Task 61–63 与 GPT-6 子代理路由维护均已推送 MVP 分支；Task 64 未启动 |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none；Task 63 已 auto_accepted |
 | active_session_type | none |
 | current_task | none；Task 63 已完成，Task 64 未启动 |
 | blocker | 无 |
-| next_action | 等待用户确认是否启动 Task 64 冻结 Query/JEV/旧链路基线；Task 62/63 本地提交不自动推送或发布 |
+| next_action | 等待用户确认是否启动 Task 64 冻结 Query/JEV/旧链路基线；不自动发布 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-23 子代理路由配置维护
@@ -34,6 +34,7 @@
 - Task 62 已记录现实语义原料→目录 Top 5→食用值评分→合法候选选择/兜底→鱼类守卫的真实路径，四个离线复现样本覆盖候选遗漏、候选内排序错误与非法 ID 拒绝；报告严格区分机制样本和真实用户事故/正式基线。worker focused `4 passed`、既有 catalog/mapping `56 passed`；独立 detector round 0 `PASS`，主 Agent 进入 `auto_accepted`，仅做本地 focused commit，不自动推送。诊断见 `docs/development/M14_TASK62_INGREDIENT_DIAGNOSIS.md`。
 - Task 62 focused commit 为 `46f3b72`，尚未推送。用户随后说“请继续”；Task 63 Session `2026-09-23-task-63-local-ingredient-rag-design` 已启动，仅设计本地模型/检索/存储/回退，不触发产品实现、JEV 或模型下载。
 - Task 63 选定有条件采用的本地 E5 双语检索、词面+语义 Top 5、253 条 flat 向量精确扫描、manifest 校验与旧检索器回退；向量文件计算 379.5 KiB，模型/资源/质量仍待 Task 65/66 实测。正式设计位于 ignored `docs/architecture/M14_INGREDIENT_RAG_TECHNICAL_DESIGN.md`，可提交摘要 `docs/development/M14_TASK63_DESIGN_DECISIONS.md`；ignored 根设计源索引已按其同步规则登记。独立 detector round 0 `PASS`，主 Agent `auto_accepted` 并仅本地 focused commit，不自动推送或启动 Task 64。
+- 用户 2026-09-23 明确授权 Task 62/63 提交并推送；两 Task focused commits `46f3b72`、`41b5ba9` 已快进推送至 `origin/feat/mvp-implementation`，`git ls-remote` 核验远端为 `41b5ba97e977f5e5065e71fde2d99c4d44304940`。正式设计和根索引仍按项目规则 Git ignored、只在本地；M12 用户未提交修改未纳入推送。未发布或修改 main。
 
 ## 已关闭 Task 56 Session（committed）
 
