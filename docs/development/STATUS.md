@@ -6,16 +6,23 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task61_auto_accepted |
-| project_phase | v1.5.6 已发布；Milestone 14 已获用户授权启动 Task 61，产品重构未开始 |
+| overall_state | subagent_routing_config_accepted |
+| project_phase | v1.5.6 已发布；Task 61 已完成；子代理 GPT-6 路由配置维护已获用户验收及 MVP 分支推送授权 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | none；Task 61 已 auto_accepted |
+| active_session_state | none；子代理路由配置维护已验收 |
 | active_session_type | none |
-| current_task | none；Task 61 已完成，Task 62 未启动 |
+| current_task | none；下一步启动 Task 62 |
 | blocker | 无 |
-| next_action | 等待用户确认下一步；不得自动启动 Task 62、推送或发布 |
-| collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
+| next_action | 按用户授权仅提交并推送子代理路由配置维护的 focused 范围；核验远端后单独启动 Task 62，不发布 |
+| collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-23 子代理路由配置维护
+
+- 用户已明确接受此项协作机制升级，并授权先提交推送至 MVP 分支，再启动 Task 62；维护 Session 不包含 Task 62 的实现。
+- 用户级角色配置已更新：`luna_worker` → `gpt-6-luna` / `max`，`detector` → `gpt-6-sol` / `medium` / read-only；主 Agent 全局模型配置未改。
+- 路由注册表已热加载并明确显示上述固定型号与 effort；两个角色均成功创建并完成无文件访问、无命令、无修改的 smoke 回应。子代理运行时不向自身暴露 model/effort，因此不伪造自报信息；路由结论以注册表固定配置和成功启动为证据。
+- 协作策略同步调整：worker 负责合同实现与测试，detector 负责独立复核；主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试。
 
 ## Milestone 14 与 Task 61（auto_accepted）
 

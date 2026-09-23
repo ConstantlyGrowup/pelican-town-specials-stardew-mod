@@ -88,7 +88,7 @@ reason_for_blocked: <仅 BLOCKED 时填写>
 
 ## 6. 模型和路由校验
 
-- 包工、Codex Review 和实施子代理必须在交接中报告实际使用的模型与 reasoning effort。
+- 包工、Codex Review 和实施子代理必须在交接中报告实际使用的模型与 reasoning effort。当前自定义角色固定为实施 `luna_worker`（`gpt-6-luna` / `max`）和只读审阅 `detector`（`gpt-6-sol` / `medium`）。
 - 指定模型不可用时不得静默 fallback；应返回 `BLOCKED`，除非用户已明确授权替代模型。
 - 多模态路由只改变执行 Agent，不改变 Acceptance Ledger、轮次上限和 Task 范围。
 
@@ -162,13 +162,13 @@ implementation_scope_delta:
 ## 12. Task 完成与 Milestone 提交门
 
 - Task 9 双 Agent 协作范式实验已成功（2026-08-04 用户确认）；自治提交范式已启用。
-- 实验成功后，普通 Task 的 `PASS` 自动进入 `auto_accepted`，自动更新 Session/`STATUS.md` 并创建本地 focused commit。
+- 实验成功后，普通 Task 的 `PASS` 自动进入 `auto_accepted`，自动更新 Session/`STATUS.md` 并创建本地 focused commit。主 Agent 核对 worker 测试证据与 detector 结论，不默认重跑完整测试；仅在证据缺失、结果冲突或集成异常时执行最小定向检查。
 - 单个 Task 不自动 push；下一项已有正式计划且依赖满足时可以自动启动。
 - Milestone 全量验证后进入 `awaiting_milestone_acceptance`，用户一次性验收并授权统一 push。
 
 ## 13. 强制模型与交接字段
 
-包工、Codex Review 和实施子代理必须报告实际模型与 effort。模型路由：规划与协调由包工（Claude Code 主会话）承担；Review 由 Codex `gpt-Luna`/max（经 codex-mcp 新建独立 thread）承担；Implementer 为每个 Task 新的实施子代理，多模态实施 `gpt-Luna`/max。路由变化不得重置 Acceptance Ledger 或 Review 轮次。
+包工、Codex Review 和实施子代理必须报告实际模型与 effort。当前模型路由：主 Agent 负责规划、协调、状态与整体文档；Implementer 使用 `luna_worker`（`gpt-6-luna` / `max`）；Review 使用只读 `detector`（`gpt-6-sol` / `medium`）。路由变化不得重置 Acceptance Ledger 或 Review 轮次；指定型号不可用且未获替代授权时不得静默回退。
 
 Review 输出除第 5 节字段外，必须包含：
 

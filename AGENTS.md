@@ -28,9 +28,9 @@ Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记
 本节记录 Milestone 9 Task 31–36 已实际采用并完成的临时优先流程；M9 已获用户统一验收并推送。它不删除或永久改写下方历史/default 的 Claude+Codex 通信流，后续是否继续采用 Codex 全量接管由用户另行决定。
 
 - Codex 主 Agent 作为 M9 常驻协调者和最终验收者：持有状态真源、生成/冻结 Context Packet、串行派发、复核证据、编排返工、更新控制面并创建 PASS 后的本地 focused commit。
-- 每个 Task 使用新的自定义 `luna_worker`（`gpt-5.6-luna` / `max`）实施；worker 只处理一个范围明确、边界清晰、可独立完成的委派任务，不改变主任务目标、不扩大冻结范围、不提交或 push。
-- 实施完成后使用新的自定义 `detector`（`gpt-5.6-sol` / `medium`，read-only）按冻结 Acceptance Ledger 和 `REVIEW_PROTOCOL.md` 独立审阅，返回 `PASS` / `REVISE` / `BLOCKED`；当前会话若尚未热加载角色名，可用相同模型、effort 与只读 instructions 显式派发，不得降低审阅标准。
-- Codex 主 Agent 只在 detector `PASS` 后复跑验收并自动进入 `auto_accepted`；Task 31→36 仍严格串行、每 Task 一个本地 focused commit、不 push，M9 全量完成后统一用户验收。
+- 每个 Task 使用新的自定义 `luna_worker`（`gpt-6-luna` / `max`）实施；worker 只处理一个范围明确、边界清晰、可独立完成的委派任务，不改变主任务目标、不扩大冻结范围、不提交或 push。
+- 实施完成后使用新的自定义 `detector`（`gpt-6-sol` / `medium`，read-only）按冻结 Acceptance Ledger 和 `REVIEW_PROTOCOL.md` 独立审阅，返回 `PASS` / `REVISE` / `BLOCKED`；指定型号不可用时必须报告，不得静默回退。
+- detector `PASS` 后，Codex 主 Agent 负责确定状态、核对交接证据、组织集成及更新系统整体文档，不再默认从头重跑完整测试。只有证据缺失、结果冲突或集成异常时，才补充最小定向检查。Task 31→36 的历史执行方式保持为历史事实。
 - 原 Claude Code 主会话、Codex MCP Review 和既有 Session 记录继续作为历史/default 协作协议保留，不在本次临时接管中删除或改写历史事实。
 
 - Claude Code 主会话作为常驻包工/协调者：持有状态真源（`STATUS.md`、Session、约束），为每个 Task 生成 Context Packet，组装前置文档包并分发；桥接 Codex 审阅，编排返工与本地提交，维持 Milestone 粒度下的长时间自动开发。
@@ -53,7 +53,7 @@ Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记
 - 同一时间最多存在一个 `active`、`verification` 或 `awaiting_user_acceptance` 的修改型 Session。
 - 一个实施 Task 对应一个修改型 Session；一个 Session 只处理计划中一个 Task 的范围。
 - 每个 Task 使用新的 implementer Subagent；它只接收该 Task 的 Context Packet、相关约束和必要的当前状态。
-- implementer 子代理完成后，由包工（Claude Code 主会话）桥接 Codex（新建独立 thread 路由 `gpt-Luna`/max）做独立只读审阅；包工负责复跑验收、集成和状态更新。
+- implementer 子代理完成后，由主 Agent 派发新的只读 `detector`（`gpt-6-sol` / `medium`）审阅；主 Agent 负责证据核对、集成和状态更新，不默认复跑完整测试。
 - Session 记录是追加式历史；`STATUS.md` 是当前状态真源。历史记录不能覆盖当前状态。
 - 任何无法安全解释的状态冲突、脏工作树、重复活动 Session 或缺失下一步，都必须停下来报告。
 
