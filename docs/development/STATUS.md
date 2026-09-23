@@ -6,16 +6,22 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_6_released |
-| project_phase | 收集品「最新收录优先」排序已随 v1.5.6 正式发布；GitHub Actions 与正式 Release 资产均完成核验 |
+| overall_state | m14_task61_auto_accepted |
+| project_phase | v1.5.6 已发布；Milestone 14 已获用户授权启动 Task 61，产品重构未开始 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | released |
+| active_session_state | none；Task 61 已 auto_accepted |
 | active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
+| current_task | none；Task 61 已完成，Task 62 未启动 |
 | blocker | 无 |
-| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
+| next_action | 等待用户确认下一步；不得自动启动 Task 62、推送或发布 |
 | collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
+
+## Milestone 14 与 Task 61（auto_accepted）
+
+- 2026-09-23 用户要求将“数据/反馈 → 定位问题 → 解决方案 → 搭建评测及旧基线 → 实现方案 → 数据验证”登记为下一开发 Milestone；随后授权启动 Task 61。计划为 `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` v1.3，Task 61–66；规划 Session 为 `docs/development/sessions/2026-09-23-milestone-14-planning.md`，当前 Task Session 为 `docs/development/sessions/2026-09-23-task-61-posthog-ingredient-attribution.md`。
+- 用户已提供“原料定位不准”的调研反馈。Task 61 在 PostHog 项目 `583351` 中预置一批共用事件，使 User volume `2045232`、Core usage `2045233` 和 Quality and canonical memory `2045234` 三张现有看板的数据联动变化；Core usage 是重点调整指标口径和图表的对象，其余两张保留结构但需核对数据变化。预置记录为 10–15 个匿名安装、每安装最多 5 次试用，底层保留事件来源，看板不放永久说明；未来真实事件进入同一项目，归因分析按来源分开。预置数据不得作为真实行为或因果证据。真实原料质量由冻结 Query、JEV 全量判定和同集实验衡量。
+- Task 61 已单次写入 103 条来源标记事件（12 个匿名安装），PostHog SQL 核对 103/103；User volume、Core usage、Quality and canonical memory 三张原看板数据均已刷新变化。Core usage 原位把 p50 时长 tile 改成生成类型分布，漏斗明确安装级。预置分区的成功生成→存档为 4/12，合计看板为 5/13；不得将合计当作真实用户行为或原料问题因果证据。完整本地 focused pytest `10 passed`，局部生成器 detector 修复轮 PASS，Task 61 全范围 detector round 0 PASS；主 Agent 进入 `auto_accepted` 并创建本地 focused commit，不 push。未改产品/发布版本，正式版本保持 v1.5.6。已有 `docs/development/M12_QUANTITATIVE_RESULTS.md` 本地修改及未跟踪资料继续保留，不纳入 M14 范围。
 
 ## 已关闭 Task 56 Session（committed）
 
