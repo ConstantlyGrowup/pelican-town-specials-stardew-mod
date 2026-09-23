@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task62_auto_accepted |
-| project_phase | v1.5.6 已发布；Task 61 与 GPT-6 子代理路由维护均已推送；M14 Task 62 诊断完成并通过独立复审 |
+| overall_state | m14_task63_auto_accepted |
+| project_phase | v1.5.6 已发布；Task 61 与 GPT-6 子代理路由维护均已推送；M14 Task 62 已本地提交，Task 63 方案设计通过独立复审 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | none；Task 62 已 auto_accepted |
+| active_session_state | none；Task 63 已 auto_accepted |
 | active_session_type | none |
-| current_task | none；Task 62 已完成，Task 63 未启动 |
+| current_task | none；Task 63 已完成，Task 64 未启动 |
 | blocker | 无 |
-| next_action | 等待用户确认 Task 62 结果及下一步；不得自动推送、发布或启动 Task 63 |
+| next_action | 等待用户确认是否启动 Task 64 冻结 Query/JEV/旧链路基线；Task 62/63 本地提交不自动推送或发布 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-23 子代理路由配置维护
@@ -25,13 +25,15 @@
 - 路由注册表已热加载并明确显示上述固定型号与 effort；两个角色均成功创建并完成无文件访问、无命令、无修改的 smoke 回应。子代理运行时不向自身暴露 model/effort，因此不伪造自报信息；路由结论以注册表固定配置和成功启动为证据。
 - 协作策略同步调整：worker 负责合同实现与测试，detector 负责独立复核；主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试。
 
-## Milestone 14 与 Task 61（已推送）、Task 62（实施中）
+## Milestone 14 与 Task 61–63
 
 - 2026-09-23 用户要求将“数据/反馈 → 定位问题 → 解决方案 → 搭建评测及旧基线 → 实现方案 → 数据验证”登记为下一开发 Milestone；随后授权启动 Task 61。计划为 `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` v1.3，Task 61–66；规划 Session 为 `docs/development/sessions/2026-09-23-milestone-14-planning.md`，当前 Task Session 为 `docs/development/sessions/2026-09-23-task-61-posthog-ingredient-attribution.md`。
 - 用户已提供“原料定位不准”的调研反馈。Task 61 在 PostHog 项目 `583351` 中预置一批共用事件，使 User volume `2045232`、Core usage `2045233` 和 Quality and canonical memory `2045234` 三张现有看板的数据联动变化；Core usage 是重点调整指标口径和图表的对象，其余两张保留结构但需核对数据变化。预置记录为 10–15 个匿名安装、每安装最多 5 次试用，底层保留事件来源，看板不放永久说明；未来真实事件进入同一项目，归因分析按来源分开。预置数据不得作为真实行为或因果证据。真实原料质量由冻结 Query、JEV 全量判定和同集实验衡量。
 - Task 61 已单次写入 103 条来源标记事件（12 个匿名安装），PostHog SQL 核对 103/103；User volume、Core usage、Quality and canonical memory 三张原看板数据均已刷新变化。Core usage 原位把 p50 时长 tile 改成生成类型分布，漏斗明确安装级。预置分区的成功生成→存档为 4/12，合计看板为 5/13；不得将合计当作真实用户行为或原料问题因果证据。完整本地 focused pytest `10 passed`，局部生成器 detector 修复轮 PASS，Task 61 全范围 detector round 0 PASS；主 Agent 进入 `auto_accepted` 并创建本地 focused commit，不 push。未改产品/发布版本，正式版本保持 v1.5.6。已有 `docs/development/M12_QUANTITATIVE_RESULTS.md` 本地修改及未跟踪资料继续保留，不纳入 M14 范围。
 - Task 61 focused commit `4137b6f` 已按用户单独授权推送 MVP 分支；2026-09-23 用户随后授权启动 Task 62，Session `2026-09-23-task-62-ingredient-mapping-diagnosis`，只定位问题、不做 Task 63 RAG 选型或 Task 64 JEV/旧链路正式评测。
 - Task 62 已记录现实语义原料→目录 Top 5→食用值评分→合法候选选择/兜底→鱼类守卫的真实路径，四个离线复现样本覆盖候选遗漏、候选内排序错误与非法 ID 拒绝；报告严格区分机制样本和真实用户事故/正式基线。worker focused `4 passed`、既有 catalog/mapping `56 passed`；独立 detector round 0 `PASS`，主 Agent 进入 `auto_accepted`，仅做本地 focused commit，不自动推送。诊断见 `docs/development/M14_TASK62_INGREDIENT_DIAGNOSIS.md`。
+- Task 62 focused commit 为 `46f3b72`，尚未推送。用户随后说“请继续”；Task 63 Session `2026-09-23-task-63-local-ingredient-rag-design` 已启动，仅设计本地模型/检索/存储/回退，不触发产品实现、JEV 或模型下载。
+- Task 63 选定有条件采用的本地 E5 双语检索、词面+语义 Top 5、253 条 flat 向量精确扫描、manifest 校验与旧检索器回退；向量文件计算 379.5 KiB，模型/资源/质量仍待 Task 65/66 实测。正式设计位于 ignored `docs/architecture/M14_INGREDIENT_RAG_TECHNICAL_DESIGN.md`，可提交摘要 `docs/development/M14_TASK63_DESIGN_DECISIONS.md`；ignored 根设计源索引已按其同步规则登记。独立 detector round 0 `PASS`，主 Agent `auto_accepted` 并仅本地 focused commit，不自动推送或启动 Task 64。
 
 ## 已关闭 Task 56 Session（committed）
 
