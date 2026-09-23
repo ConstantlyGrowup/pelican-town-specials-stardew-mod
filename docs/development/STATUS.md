@@ -6,16 +6,23 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | ci_tiered_workflow_maintenance_auto_accepted |
-| project_phase | v1.5.6 已发布；M14 Task 61–63、M12 文档澄清和 CI Ruff 修复均已推送 MVP 分支；CI 分层维护本地已提交，待用户授权推送；Task 64 未启动 |
+| overall_state | m14_task64_auto_accepted |
+| project_phase | v1.5.6 已发布；M14 Task 61–63 与 CI 分层维护已推送 MVP 分支；快速 CI run 35831790521 success。Task 64 已完成本地全量评测并通过独立复审；Task 65 未启动 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | none；CI 分层维护 auto_accepted |
+| active_session_state | none；Task 64 auto_accepted |
 | active_session_type | none |
-| current_task | none；Task 64 未启动 |
+| current_task | none；Task 65 未启动 |
 | blocker | 无 |
-| next_action | 等待用户授权推送 CI 分层修改并观察新 CI 实际耗时，不自动启动 Task 64 |
+| next_action | Task 64 本地 focused commit；等待用户决定推送及是否启动 Task 65，不自动改造生产原料链路 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-23 Task 64 启动
+
+- 用户确认 CI 已成功并授权启动 Task 64。远端核验 `ci` run `35831790521` 对 `1a7cd94` 为 success：`backend-fast`、`frontend-fast` success，`pr-main-integration` 在普通 MVP push 上按预期 skipped；分层维护两个提交已推送至 `origin/feat/mvp-implementation`。
+- Task 64 唯一活动 Session 为 `2026-09-23-task-64-ingredient-evaluation-baseline`。当前环境未见 `OPENROUTER_API_KEY`；用户表示正在环境变量中设置 Key，不在聊天传递凭证。先做离线 Query/标签与旧链路/JEV 协议适配；真实 JEV 调用待凭证可用后执行，不得用假数据充当全量评测。
+- 用户随后已在 Windows 用户级环境变量设置 OpenRouter Key；Task64 worker 用临时子进程环境完成 3 项 Decisions API 探针与 71 项非兜底全量判定。冻结 Query 24 菜/72 项，旧链路 1 fallback/0 错误；JEV reasonable 61、unreasonable 10、undecidable 0，主率 61/71，固定集覆盖 61/72。7 项 JEV/Gold 二元分歧保留，不修改结果；完整报告见 `docs/development/M14_TASK64_INGREDIENT_BASELINE.md`。独立复审尚未完成，不预称 Task 已验收。
+- Task 64 初轮独立 detector 对 `m14-task64-ingredient-baseline-jev-v1` / round 0 给出 `PASS`，C64-01..06 全部符合、`must_fix=[]`。冻结 SHA、72 条基线、71 条真实 typed Choice、61/71 与 61/72、14/24、Gold Top5 命中 70/72 及 7 条分歧均复核。提交前主 Agent 发现 `core.autocrlf=true` 可能把新增 fixture 的 LF 改为 CRLF，令原始字节 SHA 失效；worker 随后按 C64-01 最小依赖闭包补 `.gitattributes` 精确 LF 规则与 checkout-filter 测试，定向 pytest 更新为 `11 passed`，Ruff/diff check PASS。补充只读 detector 复审 `PASS`，接受 `.gitattributes` 的 `implementation_scope_delta`，未重跑付费调用；仅本地 focused commit，不 push；Task 65 需另行决定。
 
 ### 2026-09-23 CI 三层工作流维护
 

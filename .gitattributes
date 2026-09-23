@@ -6,3 +6,4 @@
 *.jpeg binary
 # Golden fixtures are compared byte-for-byte with compiler output (LF).
 backend/tests/golden/**/*.json text eol=lf
+tests/fixtures/m14_ingredient_queries.json text eol=lf
