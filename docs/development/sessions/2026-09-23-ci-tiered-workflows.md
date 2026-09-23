@@ -112,3 +112,4 @@ worker 仅拥有两个 CI/Release workflow 注释、`ci.yml` 实现及两个 rep
 - 独立 `detector` 按同一合同 / round 0 复审 `CI-TIER-01..04`，结论 `PASS`，`must_fix=[]`、`new_design=[]`、`scope_delta=none`。审阅者核对了触发、job `needs`、Release-only 打包及 Secret/版本合同，三 YAML 解析和 `git diff --check` 通过。
 - detector 普通沙箱的 9 个 `tmp_path` 测试在初始化阶段遭系统临时目录 WinError 5；其余 23 passed。worker 在可访问环境同一目标命令 32 passed，证明并非产品断言失败。`actionlint` 未安装，且没有远端 CI run，故实际触发与运行时间仍待推送后验证。
 - 主 Agent 复核工作流差异：`build.yml` 与 `release.yml` 只有注释修改；`ci.yml` 使用分支通配符排除 tag；产品源码、发布输入及资产命名没有改变。按项目自动验收规则仅创建本地 focused commit，不推送或发布。
+- 本地 focused commit：`0c3295f ci: split fast validation from release packaging`。提交后 tracked 工作树干净；此后仅做控制面事实收口。远端 CI 实际耗时仍待用户授权 push 后验证。
