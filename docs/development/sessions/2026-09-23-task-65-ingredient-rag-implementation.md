@@ -152,3 +152,5 @@ Worker 已按同一冻结合同进入 revise round 1 集中最小修复；审阅
 ### 本地提交收尾
 
 Task65 的 26 个精确文件已在 `feat/mvp-implementation` 创建本地 focused commit `635f4af`（`feat: add local ingredient RAG candidate backend`）。提交前 staged diff check 通过，提交后 tracked 工作树干净。未 push、未改 main/tag/Release。此段由后续纯控制面维护 Session 同步，不改变 Task65 实施合同或 Review 结论。
+
+用户随后明确授权提交并推送。`635f4af` 连同 Task64 基线 `7175d9c` 和控制面提交 `c39f219` 已非强制推送到 `origin/feat/mvp-implementation`；本地/远端 HEAD 校验均为 `c39f219`。这不授权自动启动 Task66、修改 main、推 tag 或发布 Release。
