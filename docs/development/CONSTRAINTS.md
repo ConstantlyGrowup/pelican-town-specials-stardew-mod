@@ -48,7 +48,7 @@
 - Mod 目标为 Stardew Valley 1.6.15、Content Patcher 2.9.0、纯 JSON/PNG 内容包；本地 Mods 路径只从 `PTS_STARDEW_MODS_DIR` 获取。
 - `AuthorName` 在工作区首次创建时生成并持久化为 `D<YYYYMMDD>`；身份/账号策略后移第四期重新讨论。
 - 第三期只规划并验证问问 Gus 的本地 Canonical 召回：可复用结构化词条与像素图标，但最终专属预览必须使用本次用户原图重新生成。
-- Milestone 9 冻结（2026-09-03 Task 49 阈值调整）：全局有效 Canonical 至少 N=2；同语言现实原料主导 Top 5；模型只选最高候选且 `>=0.85`（包含边界 `0.85` 命中、`0.849` 与 `0.80` miss）；仅正式 Ask Gus 存档写入；完整重新生成/Blueprint 不召回；效果只衡量总耗时和真实单次任务成本。此前 90% / 2026-08-29 的 0.80 均为历史开发口径；正式 v1.5.4 包仍为 0.80，Task 49 尚未发布。
+- Milestone 9 冻结（2026-09-03 Task 49 阈值调整）：全局有效 Canonical 至少 N=2；同语言现实原料主导 Top 5；模型只选最高候选且 `>=0.85`（包含边界 `0.85` 命中、`0.849` 与 `0.80` miss）；仅正式 Ask Gus 存档写入；完整重新生成/Blueprint 不召回；效果只衡量总耗时和真实单次任务成本。此前 90% / 2026-08-29 的 0.80 均为历史开发口径；v1.5.4 及更早安装包为 0.80，Task 49 已随 v1.5.5 发布（正式包自 v1.5.5 起为 0.85）。
 - Task 36.1 冻结：Canonical HIT 直接复用历史 icon、零图标生成；Ask Gus INITIAL miss、FULL_REGENERATE 与 Blueprint 必须以当前 Draft 原图作为单图 edit 参考生成新 icon，再沿用现有背景透明化和 16×16 归一化。不得新增图片调用次数、设置项、前端/API/schema 或相似度模型。
 - Task 36.2 冻结：面向官方与非官方 OpenAI-compatible 端点；官方 `gpt-5.6` 文本/视觉调用不得固定发送其不支持的 `temperature=0`，官方 `gpt-image-2` generation/edit 不发送 `response_format`，单图 edit 使用 `image`、多图使用有序重复 `image[]`；默认 `b64_json` 与兼容端点 URL 均继续解析。保持 Base URL/模型 ID 可配置，不新增 Provider SDK、设置项、API/schema、Provider 自动分支、额外调用或模型 fallback；真实 API 验证必须由用户明确授权。
 - 第三期使用 Python 标准库 SQLite 和 Registry 自有图标目录，不要求用户安装数据库；调用/步骤数只用于正确性测试，不作为产品指标。
@@ -68,6 +68,7 @@
 - 图像编辑成功路径：`POST /images/edits` multipart，案例使用 `gpt-image-2-max`、原图、Prompt 和 `size=3840x2160`；SDK 案例读取 `data[0].b64_json`。
 - 当前样例同时记录 `gpt-image-2`、`gpt-image-2-max`、URL/`b64_json`、尺寸/比例和质量参数；这些参数变体不能全部视为已由真实 provider 单独验证。
 - 当前样例记录含 `pro` 的图像模型会返回 500，因此 MVP 不默认使用 `gpt-image-2-pro`，也不做静默模型 fallback。
+- 2026-09-05 试用服务迁移：Base URL `https://totokens.cc/v1`，视觉/文本 `gpt-5.6-terra`，图像 `gpt-image-2`，最大自动重试 2；以上 yibuapi/gpt-5.6-luna 记录保留为 2026-08-01 能力验证证据。
 - 多图案例以本地路径或 HTTP URL 加载，最多 10 张；这是调用案例能力，不直接冻结正式 MVP 上传上限。
 - `/images/generations`、JSON Schema、最终超时/限流、费用基线和正式产品模型仍需 Task 11 的显式 capability probe。
 
