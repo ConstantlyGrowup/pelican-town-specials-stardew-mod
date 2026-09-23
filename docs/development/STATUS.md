@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_ci_maintenance_auto_accepted |
-| project_phase | v1.5.6 已发布；M14 Task 61–63 已推送；M12 文档澄清与 CI Ruff 修复已本地提交，Task 64 未启动 |
+| overall_state | m14_ci_maintenance_pushed_verified |
+| project_phase | v1.5.6 已发布；M14 Task 61–63、M12 文档澄清和 CI Ruff 修复均已推送 MVP 分支；CI 全链路通过，Task 64 未启动 |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none；CI Ruff 维护已 auto_accepted |
 | active_session_type | none |
 | current_task | none；Task 64 未启动 |
 | blocker | 无 |
-| next_action | 等待用户单独授权推送 M12 文档与 CI Ruff 修复，再以新 GitHub CI run 验证远端全链路；Task 64 暂不启动 |
+| next_action | CI 阻断已修复；等待用户下一步指示，再决定是否启动 M14 Task 64 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-23 子代理路由配置维护
@@ -29,6 +29,7 @@
 
 - 用户授权处理 M12 未提交口径澄清，并要求 Task 64 前定位修复 CI。M12 已仅对 `docs/development/M12_QUANTITATIVE_RESULTS.md` 作 focused commit `6e03557`，未 push。GitHub `ci` 最近四次失败均在 `Ruff lint`，共同由 `backend/tests/tools/test_m14_seeded_events.py` 的 RUF100 + 两项 DTZ001 引起；维护 Session `2026-09-23-ci-m14-seeded-events-ruff-repair` 处理该门禁，后续步骤之前均未运行，不预称全量 CI 已通过。
 - CI 修复只删除多余 `noqa`、把两处纯日期门槛改为 `date(2026, 9, 17)`；独立 detector round 0 PASS。主 Agent 本地 Ruff/mypy、后端＋repo＋integration `1016 passed/2 skipped`、前端 `231 passed`、Playwright `39 passed`、PyInstaller bundle 与双启动 smoke 均通过；本机未配 Inno Setup，安装器门禁和远端新 run 待推送验证。未自动推送或发布。
+- 用户随后明确授权推送；M12 `6e03557` 与 CI 修复 `fc4a91b` 已快进推送至 `origin/feat/mvp-implementation`。GitHub Actions `ci` run `35827459734` 对 `fc4a91be10e2b0b658c3eaf1309e9b66973602c5` 完成，`conclusion=success`，Ruff、mypy、全量测试、Playwright、Windows bundle/双启动、Inno 安装器/安装冒烟、版本门禁与四项产物上传均通过；`git ls-remote` 确认远端头一致。Node 20 弃用注释为非阻断警告。未修改 main、tag 或 Release。
 
 - 2026-09-23 用户要求将“数据/反馈 → 定位问题 → 解决方案 → 搭建评测及旧基线 → 实现方案 → 数据验证”登记为下一开发 Milestone；随后授权启动 Task 61。计划为 `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` v1.3，Task 61–66；规划 Session 为 `docs/development/sessions/2026-09-23-milestone-14-planning.md`，当前 Task Session 为 `docs/development/sessions/2026-09-23-task-61-posthog-ingredient-attribution.md`。
 - 用户已提供“原料定位不准”的调研反馈。Task 61 在 PostHog 项目 `583351` 中预置一批共用事件，使 User volume `2045232`、Core usage `2045233` 和 Quality and canonical memory `2045234` 三张现有看板的数据联动变化；Core usage 是重点调整指标口径和图表的对象，其余两张保留结构但需核对数据变化。预置记录为 10–15 个匿名安装、每安装最多 5 次试用，底层保留事件来源，看板不放永久说明；未来真实事件进入同一项目，归因分析按来源分开。预置数据不得作为真实行为或因果证据。真实原料质量由冻结 Query、JEV 全量判定和同集实验衡量。

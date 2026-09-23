@@ -95,3 +95,8 @@ worker 仅拥有 `backend/tests/tools/test_m14_seeded_events.py`；主 Agent 拥
 - `scripts/build_windows.ps1` 全流程通过：backend/integration `964 passed / 2 skipped`、frontend `231 passed`、OpenAPI drift、ignore policy、telemetry manifest、PyInstaller、EXE icon/version/content gate PASS。`scripts/smoke_windows_bundle.ps1` 通过两次干净启动、health/首页和 SQLite 持久化；`scripts/check_release_version.ps1 -Version 1.5.6` PASS。
 - 本机没有 Inno Setup，因此未跑 installer 构建/安装器 smoke，也未形成新的 GitHub Actions CI 运行；远端全绿需要用户另行授权推送后观察。近期四次已失败的 run 不因本地修复自动变绿。Node 20 deprecation 与 Vite 大 chunk 只见警告，不是这四次运行的失败原因。
 - 主 Agent 核对源文件/Session/STATUS 范围与 `git diff --check`；仅创建本地 focused commit，不推送、不发布、不启动 Task 64。
+
+## 推送后远端核验
+
+- 用户明确授权推送后，M12 澄清 `6e03557` 与本维护 focused commit `fc4a91b` 已推送 MVP 分支；`git ls-remote` 对应 `fc4a91be10e2b0b658c3eaf1309e9b66973602c5`。
+- [GitHub Actions ci run 35827459734](https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod/actions/runs/35827459734) 对该 SHA `completed/success`（2026-09-23T06:49:03Z）；先前 Ruff 阻断已消失，所有后续 job steps 包含 Windows installer smoke 和产物上传均成功。Node 20 deprecation 仅为非阻断注释；旧失败运行保留历史状态。未发布或启动 Task 64。
