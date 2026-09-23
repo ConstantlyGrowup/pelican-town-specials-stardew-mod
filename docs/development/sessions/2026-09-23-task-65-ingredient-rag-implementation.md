@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | session_id | `2026-09-23-task-65-ingredient-rag-implementation` |
-| status | `auto_accepted` |
+| status | `committed` |
 | session_type | `implementation` |
 | owner | Codex 主 Agent |
 | started_at | `2026-09-23` |
@@ -148,3 +148,7 @@ Worker 已按同一冻结合同进入 revise round 1 集中最小修复；审阅
 - detector 查到 reusable build workflow 安装 pinned `build` 组，PyInstaller 排除 build-only 包；`orchestrator.py` 仅对成功 RAG 候选过滤已用 ID，LEGACY/失败回退保持未过滤的旧词面结果。其 targeted pytest `8 passed/28 deselected`、Ruff 与 diff check PASS；普通权限 broader pytest 因 Windows `WinError 5` 出现 34 项 fixture setup error，明确不是断言失败。主 Agent 采用 worker 已在最小权限提升下完成的 `62 passed` 作为完整 scoped 证据，不冒充 detector 独立完整重跑。
 - 主 Agent 核对交接、Scope Delta、冻结设计与文件边界，接受 Task65 技术实现与资源/打包实证；普通用户默认仍走旧映射。新包离线 smoke 与资源测量是修复前记录，修复后的 clean GitHub runner 和 frozen exe 未重跑；Task66 需另行按固定 Query/JEV 菜品全合理率决定能否启用 RAG，现不启动、不宣称质量改善。
 - Task65 按项目自治路径进入 `auto_accepted`，仅做本地 focused commit；不推送、不修改 main/tag/Release。运行时角色路由配置：implementer `gpt-6-luna/max`、review `gpt-6-sol/medium`，工具未向子代理暴露可核的运行时自报；主 Agent 自报亦未提供。
+
+### 本地提交收尾
+
+Task65 的 26 个精确文件已在 `feat/mvp-implementation` 创建本地 focused commit `635f4af`（`feat: add local ingredient RAG candidate backend`）。提交前 staged diff check 通过，提交后 tracked 工作树干净。未 push、未改 main/tag/Release。此段由后续纯控制面维护 Session 同步，不改变 Task65 实施合同或 Review 结论。

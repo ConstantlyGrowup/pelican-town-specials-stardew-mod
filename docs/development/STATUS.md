@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task65_auto_accepted |
-| project_phase | v1.5.6 已发布；M14 Task 61–63 与 CI 分层维护已推送 MVP 分支；Task 64 已本地 focused commit `7175d9c`，未推送；Task 65 已通过独立封闭复审，准备本地 focused commit |
+| overall_state | m14_task65_committed |
+| project_phase | v1.5.6 已发布；M14 Task 61–63 与 CI 分层维护已推送 MVP 分支；Task 64 已本地 focused commit `7175d9c`，Task 65 已本地 focused commit `635f4af`；两者均未推送 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | none；Task 65 auto_accepted |
+| active_session_state | none；Task 65 committed |
 | active_session_type | none |
 | current_task | none；Task 66 未启动 |
 | blocker | 无 |
-| next_action | Task65 本地 focused commit 后等待用户决定是否推送及启动 Task66；Task66 须以固定菜品全部合理率做同集 JEV 对照，未验证前旧原料 backend 保持默认 |
+| next_action | 等待用户决定是否推送 Task64/65 以及是否启动 Task66；Task66 须以固定菜品全部合理率做同集 JEV 对照，未验证前旧原料 backend 保持默认 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-23 Task 65 启动
@@ -25,6 +25,7 @@
 - 首轮 worker 已交本地检索、固定模型与索引、全量测试和隔离 Windows bundle；detector round 0 判 `REVISE`，两项现存 MUST_FIX：干净 Release runner 未安装构建期依赖；旧默认链路误过滤同菜已用 ID。两项均属当前 C65-03/04/05/06 合同，worker 正在 revise round 1 最小修复。此前资源实测与 bundle PASS 保留，但不视为最终 Task 验收。
 - revise round 1 已补固定 `build` 依赖组及 reusable workflow 安装，恢复默认 LEGACY 与 RAG 降级的原词面序列，仅成功 RAG 结果排除已用 ID；scoped `62 passed`、Ruff/mypy PASS。未重跑真实干净 Release runner 或修复后的 frozen exe；此证据边界交封闭 detector 判断，不预称最终通过。
 - 独立封闭 detector round 1 给出 `PASS`、无剩余 MUST_FIX；确认 build 组/工作流和旧默认/降级行为修复，接受无用户可见 Scope Delta。其普通权限 broader pytest 受 WinError 5 临时目录 ACL 影响；采用 worker 最小提升下 `62 passed` 证据。主 Agent 核对后 Task65 `auto_accepted`，仅本地 focused commit，不自动 push/Release/Task66；修复后的 GitHub clean-runner 与 frozen exe 未实测，效果质量仍待 Task66。
+- Task65 26 文件本地 focused commit 为 `635f4af`，提交后 tracked 工作树干净；本条由独立的纯控制面维护 Session 同步，未修改产品、推送或发布。
 
 ### 2026-09-23 Task 64 启动
 
