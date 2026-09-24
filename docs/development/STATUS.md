@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_documentation_state_sync_committed |
-| project_phase | v1.5.6 已发布；M14 Task61–67 已验收，Task67 commit `7b45e1a` 已推送 `feat/mvp-implementation`；正在同步过时文档状态，产品默认仍为 LEGACY |
+| overall_state | ci_trial_verifier_protocol_fix_committed |
+| project_phase | v1.5.6 已发布；Task67 commit `7b45e1a` 已推送，最新 push CI 的 backend-fast mypy 因试用网关协议缺方法失败；文档同步本地 commit `9807a5a` 尚未推送，产品默认仍为 LEGACY |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | 文档状态同步完成；下一项按用户授权诊断最近 CI 失败 |
-| blocker | 无；默认 RAG 切换、JEV 新请求、tag/Release 均未获授权 |
-| next_action | 核对最近 CI run 与失败日志，冻结最小修复范围；文档维护 focused commit 与 CI 修复分别提交，获本轮授权后统一推送 |
+| current_task | CI 协议修复已独立复核，等待本轮授权的推送与新 CI 结果 |
+| blocker | 需核验新 push CI；默认 RAG 切换、JEV 新请求、tag/Release 仍未授权 |
+| next_action | 将文档状态提交与 CI 修复 focused commit 推送 `feat/mvp-implementation`，核验新 CI；成功后再做增量文档更新 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-24 Task67 启动
@@ -41,6 +41,10 @@
 - Task67 focused commit `7b45e1a` 与 `origin/feat/mvp-implementation` 已核对一致；用户随后要求先更新过时文档状态。唯一修改型 Session 为 `2026-09-24-m14-documentation-state-sync`。八份入口文档统一当前状态：正式 Release v1.5.6；Task61–67 已验收推送；内部显式 RAG 才调用按菜 Provider，默认 LEGACY；Gold `56/120→94/120` 与先前 JEV 事后修正 `65/120→92/120` 分列，未做真实产品路径复测。历史计划和评测结论未追改。
 - 指定 `luna_worker` 完成内容修订但在正式交接前遇额度限制；主 Agent 接续小范围状态消歧。独立只读 `detector` 按 `CDOC-01..03` 返回 PASS，指出的 MVP 计划历史标题已修正；之后主 Agent 将设计源索引的两处旧“当前/优先快照”标题改为历史快照。`git diff --check` 通过，Git ignored 正式设计/计划/索引仍保持忽略；未改产品代码、发真实请求、提交或推送。本 Session 进入 `awaiting_user_acceptance`。
 - 用户接着明确要求“完成文档更新之后”诊断并修复最近 CI、提交推送，末尾再做增量文档同步。此指令允许已通过只读复核的纯文档维护先收口为一个本地 focused commit；CI 修复另起 Session 和提交，两者在 CI 修复验证后按本轮授权统一推送。正式设计/计划/索引保持 Git ignored，不随 commit 推送。
+
+### 2026-09-24 最近 push CI 修复
+
+- 最新失败 run `35978864894` 的 `backend-fast` 在 `python -m mypy backend/src` 报 `TrialSafeGateway` 缺少 Task67 新协议方法；`frontend-fast` 成功，PR/main integration 按分层跳过。新 Session `2026-09-24-ci-trial-verifier-protocol-fix` 仅补试用网关一次转发与错误脱敏回归。指定 `luna_worker` 先 RED 后修复，mypy 107 文件、Ruff、diff check PASS，冻结四文件 pytest `78 passed`；独立只读 `detector` 对 `CCI-01..03` PASS，独立 pytest 因本机 temp ACL 未复跑，保留 worker 的可用环境结果。用户本轮已授权提交推送；修复与前一文档提交分开，下一步核验新远端 CI。
 
 ### 2026-09-24 M14 人审简版报告
 

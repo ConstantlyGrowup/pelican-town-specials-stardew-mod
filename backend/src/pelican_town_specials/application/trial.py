@@ -48,6 +48,8 @@ from pelican_town_specials.providers.contracts import (
     GeneratedDishCore,
     GeneratedImage,
     ImageGenerationRequest,
+    IngredientVerifierRequest,
+    IngredientVerifierResponse,
     ModelGateway,
 )
 
@@ -177,6 +179,14 @@ class TrialSafeGateway:
     ) -> GeneratedDishCore:
         try:
             return await self._inner.design_ask_gus(request, json_only=json_only)
+        except AppError as exc:
+            raise _trial_safe_error(exc) from exc
+
+    async def verify_ingredient_candidates(
+        self, request: IngredientVerifierRequest
+    ) -> IngredientVerifierResponse:
+        try:
+            return await self._inner.verify_ingredient_candidates(request)
         except AppError as exc:
             raise _trial_safe_error(exc) from exc
 
