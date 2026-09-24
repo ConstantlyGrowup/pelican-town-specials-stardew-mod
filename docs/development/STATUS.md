@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | ci_green_docs_pushed |
-| project_phase | v1.5.6 已发布；Task67、文档同步与两项 CI 修复均已推送至 `feat/mvp-implementation`；最新 push CI `35987394616` 成功；产品默认仍为 LEGACY |
+| overall_state | v1_5_7_release_candidate |
+| project_phase | M14 RAG 默认启用已提交；v1.5.7 本地 bundle/installer 门禁全绿，待 push 双分支与 tag |
 | product_implementation_started | true |
-| active_session_id | none |
-| active_session_state | none |
-| active_session_type | none |
-| current_task | CI 修复已推送验证成功，末次增量文档 `75721ed` 已推送 |
-| blocker | 无 CI 阻塞；默认 RAG 切换、JEV 新请求、tag/Release 仍未授权 |
-| next_action | 等待用户决定下一项任务；不自动切换默认链路或发布 |
+| active_session_id | `2026-09-24-v1-5-7-release` |
+| active_session_state | verification |
+| active_session_type | release |
+| current_task | v1.5.7 发布：push 双分支/tag → 核验 Release 三资产 → 收口 released |
+| blocker | 无；默认 RAG 切换已经用户授权（2026-09-24） |
+| next_action | 用户在终端 push 双分支与 `v1.5.7` tag → 核验 release.yml 与三资产 → 收口 released |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-24 Task67 启动
