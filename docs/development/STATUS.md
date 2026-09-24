@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_7_release_candidate |
-| project_phase | M14 RAG 默认启用已提交；v1.5.7 本地 bundle/installer 门禁全绿，待 push 双分支与 tag |
+| overall_state | v1_5_7_released |
+| project_phase | 原料映射默认 RAG 链路已随 v1.5.7 正式发布；GitHub Actions 与正式 Release 资产均完成核验 |
 | product_implementation_started | true |
-| active_session_id | `2026-09-24-v1-5-7-release` |
-| active_session_state | verification |
-| active_session_type | release |
-| current_task | v1.5.7 发布：push 双分支/tag → 核验 Release 三资产 → 收口 released |
+| active_session_id | none |
+| active_session_state | released |
+| active_session_type | none |
+| current_task | none；等待下一项用户授权工作 |
 | blocker | 无；默认 RAG 切换已经用户授权（2026-09-24） |
-| next_action | 用户在终端 push 双分支与 `v1.5.7` tag → 核验 release.yml 与三资产 → 收口 released |
+| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-24 Task67 启动
@@ -171,7 +171,7 @@
 - 会话记录：`docs/development/sessions/2026-09-03-v1-5-4-release.md`。
 
 | 远端操作 | Milestone 7 已推送并关闭；tag `v1.1.0` 已推送并触发 `release.yml` 成功；GitHub Release **v1.1.0** 已发布（setup.exe + 便携 ZIP + SHA256SUMS + 中文 release notes，run 31394532120 success）；用户 2026-08-11 fresh-install 复验通过。旧 v1.0.0 tag 留在远端但无 Release 产物（首次发布因 ignore gate 失败后弃用）。**2026-08-14**：`feat/mvp-implementation` 已推送（33dd204..3604713，含 M8 全部提交 + v1.2.0 版本提升 + 控制面记录）；tag **v1.2.0** 已推送并触发 `release.yml` success（run 31769766198）；GitHub Release **v1.2.0** 已发布（`PelicanTownSpecials-Setup-v1.2.0.exe` 42,705,029 B + `PelicanTownSpecials-windows-x64-v1.2.0.zip` 47,485,062 B + SHA256SUMS.txt，中文 release notes）；SHA256SUMS 与两个产物逐一比对一致。**2026-08-17**：`feat/mvp-implementation` 推送至 `4de82ad`（Task 30 含 R-09 + v1.3.0 版本提升 + 控制面记录，`96e9988`/`9d1a245`/`9cb35a8`/`9b1f705`/`1a0c53a`/`4de82ad`）；tag **v1.3.0** 已推送并触发 `release.yml` success（run 31952659305：verify-and-build 10m48s → create-release 17s）；GitHub Release **v1.3.0** 已发布并核验（`PelicanTownSpecials-Setup-v1.3.0.exe` + `PelicanTownSpecials-windows-x64-v1.3.0.zip` + SHA256SUMS.txt，中文 release notes，`gh release view` 确认非 draft/pre-release）。**发布后维护**：M8 并发测试稳定性修复 `e6582f7` 与收尾记录 `7addfb8` 已推送。**2026-08-26**：用户验收 M9 并授权 push，实施提交 `7addfb8..3c3496b` 已推送，验收控制面记录随后同步当前分支。**2026-08-27**：Task 36.1 `a2d3756`、Task 36.2 `bf3d1ed` 与联合验收控制面 `93b408d` 已推送至 `origin/feat/mvp-implementation`，本收尾记录随后同步；未授权版本提升、tag 或 GitHub Release。**2026-09-02**：Task 47 与 v1.5.3 版本链经用户授权推送（MVP `feadade`、main `f06a4c4`+收口），annotated tag `v1.5.3` 触发 `release.yml` success（run `33638152719`）；GitHub Release **v1.5.3** 已发布并核验（三资产非 draft/pre-release，SHA256SUMS 与两产物摘要一致）。**2026-09-03**：Task 48 与 v1.5.4 版本链经用户授权推送（MVP `c64c75b`、main `55c0dc7`），annotated tag `v1.5.4` 触发 `release.yml` success（run `33705018482`）；GitHub Release **v1.5.4** 已发布并核验（三资产非 draft/pre-release，SHA256SUMS 与两产物摘要一致）。**2026-09-05**：试用迁移 + M13 分页经用户授权推送（MVP `ee2e885`、main `700ba03`），annotated tag `v1.5.5` 触发 `release.yml`：run #11 因 Task21 e2e 分页夹具未覆盖分页查询串而失败，修复 `ee2e885` 重打 tag 后 run #12 `33952701626` success；GitHub Release **v1.5.5** 已发布并核验（三资产非 draft/pre-release，SHA256SUMS 与两产物摘要一致）。**2026-09-23**：收集品排序（`a8b70b0`）与 v1.5.6 版本链经用户授权推送（MVP `1a4b088`、main `066678d`），annotated tag `v1.5.6` 触发 `release.yml` success（run `35802100370`）；GitHub Release **v1.5.6** 已发布并核验（三资产非 draft/pre-release，SHA256SUMS 与两产物摘要一致）。 |
-| 最新发布 | v1.5.6；GitHub Actions run `35802100370` success；正式 Release 非 draft/pre-release；setup.exe（43,631,216 B）、portable ZIP（48,681,272 B）与 SHA256SUMS 已独立下载并逐项核验一致。 |
+| 最新发布 | v1.5.7；GitHub Actions run `36016942528` success（前四次 run 分别因 e2e 分页夹具、build 组缺 sympy、依赖组契约测试、CRLF 正则与计算向量哈希不可跨机复现失败，逐一修复后第五次通过）；正式 Release 非 draft/pre-release；setup.exe（144,340,163 B）、portable ZIP（159,043,064 B）与 SHA256SUMS 已独立下载并逐项核验一致。 |
 | 当前工作树范围 | v1.5.5 收口文档随本提交；推送后即完整闭环。两个分支根 README 保持各自用途；既有 prototype、samples、Claude worktree 与历史临时目录不纳入。 |
 
 ## 已关闭 Task 46 / v1.5.2 Release Session（released）
