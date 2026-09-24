@@ -985,18 +985,12 @@ async def test_egg_plus_two_unmatched_ingredients_keep_unique_item_ids(
     assert len({ingredient.item_id for ingredient in fallbacks}) == 2
 
 
-def test_ingredient_rag_is_not_the_default_backend(
-    catalog, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    assert DEFAULT_INGREDIENT_RETRIEVAL_BACKEND is IngredientRetrievalBackend.LEGACY
+def test_ingredient_rag_is_the_default_backend(catalog) -> None:
+    assert DEFAULT_INGREDIENT_RETRIEVAL_BACKEND is IngredientRetrievalBackend.RAG
 
-    def unexpected_rag_access(*_args, **_kwargs):
-        raise AssertionError("default Ask Gus mapping must not load ingredient RAG")
-
-    monkeypatch.setattr(
-        orchestrator_module, "_get_default_ingredient_rag_retriever", unexpected_rag_access
-    )
-
+    # The packaged RAG resources are absent from the unit-test workspace, so
+    # the default path must fail open to the legacy catalog mapping instead
+    # of breaking generation.
     mapped = _map_gameplay(core_fixture(), catalog, language=Language.ZH_CN)
 
     assert len(mapped.ingredients) == 2

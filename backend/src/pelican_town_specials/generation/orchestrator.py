@@ -167,9 +167,11 @@ class IngredientRetrievalBackend(StrEnum):
     RAG = "rag"
 
 
-# M14 Task 65 packages and exposes an internal RAG selector, but the existing
-# path stays active until Task 66 completes the frozen same-set quality gate.
-DEFAULT_INGREDIENT_RETRIEVAL_BACKEND = IngredientRetrievalBackend.LEGACY
+# M14 Task 66 closed the frozen same-set quality gate (Gold ID 94/120 vs
+# 56/120 legacy), so v1.5.7 ships the explicit RAG path as the default; the
+# retriever fails open to the legacy catalog mapping whenever its local
+# resources are unavailable.
+DEFAULT_INGREDIENT_RETRIEVAL_BACKEND = IngredientRetrievalBackend.RAG
 _INGREDIENT_RAG_RETRIEVER: IngredientRagRetriever | None = None
 _INGREDIENT_RAG_LOCK = RLock()
 _LOGGER = logging.getLogger(__name__)
