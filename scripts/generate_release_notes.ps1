@@ -6,12 +6,12 @@
 # the notes always match the artifacts they describe.
 #
 # Run from anywhere; the script locates the repo root via $PSScriptRoot.
-#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.6 -OutputFile RELEASE_NOTES.md
-# v1.5.6 (2026-09-05): Cookbook ordered by newest acceptance first.
+#   pwsh -NoProfile -File scripts/generate_release_notes.ps1 -Version 1.5.7 -OutputFile RELEASE_NOTES.md
+# v1.5.7 (2026-09-24): Ingredient mapping ships the local RAG path by default.
 # v1.5.3 (2026-09-02): Task 47 public trial model/quota hotfix; personal settings unchanged.
 
 param(
-    [string]$Version = "1.5.6",
+    [string]$Version = "1.5.7",
     [string]$OutputFile = ""
 )
 
@@ -25,7 +25,12 @@ $body = @"
 感谢使用「鹈鹕镇新菜单」！这是一个本地运行、为《星露谷物语》生成自定义食谱
 内容包的桌面工具。
 
-## v$normalized / 收集品排序
+## v$normalized / 原料映射升级
+
+- 原料映射默认启用新的「本地检索 + 模型校验」链路，显著减少原料定位错误。
+- 检索资源不可用时自动回退到原有链路，不影响生成与打包。
+
+## v1.5.6 / 收集品排序
 
 - 收集品页面按「最新收录优先」排列，刚接受的菜品会排在最前。
 - 分页、批量删除与打包选择不受影响。
