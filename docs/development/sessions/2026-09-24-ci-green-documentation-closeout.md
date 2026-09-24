@@ -18,3 +18,7 @@
 ## 收口核对
 
 主 Agent 核对 CI run 的 head SHA、各 job 结论及文档一致性；`git diff --check` 通过。此纯文档 Session 在 CI 成功后收口为本地 focused commit，不推送。下一项产品任务等待用户决定。
+
+## 后续推送授权
+
+上述“不推送”记录的是原用户指令下的收口时点。用户随后明确授权将这些变更提交并推送；本 Session 的纯文档 focused commit `75721ed` 已推送到 `origin/feat/mvp-implementation`。此后状态同步单独记录，不追改历史提交事实。
