@@ -101,7 +101,7 @@ def test_ci_splits_fast_push_checks_from_pr_and_main_checks() -> None:
 
 def test_version_consistency_driven_by_one_define() -> None:
     version = _frozen_version()
-    assert version == "1.5.6", "frozen metadata version is expected to be 1.5.6"
+    assert version == "1.5.7", "frozen metadata version is expected to be 1.5.7"
     # The pipeline default, the drift gate and the release input all center on
     # the same version, so the installer / ZIP / checksum / title can't disagree.
     build = _text(BUILD)
@@ -198,6 +198,9 @@ def test_release_assets_checksum_and_notes_consistent() -> None:
         "notes must give the per-user install steps"
     )
     for expected in (
+        "原料映射升级",
+        "本地检索",
+        "自动回退",
         "收集品排序",
         "最新收录优先",
         "试用服务迁移",
@@ -217,12 +220,13 @@ def test_release_assets_checksum_and_notes_consistent() -> None:
         assert expected in notes, f"release notes must mention {expected!r}"
 
     readme = _text(RELEASE_README)
-    assert "v1.5.6" in readme, "bundle README must identify v1.5.6"
+    assert "v1.5.7" in readme, "bundle README must identify v1.5.7"
     assert "可先使用公共试用，也可以在「设置」页配置个人服务" in readme
     assert "英文提示" in readme
     assert "批量删除" in readme
     assert "试用服务迁移" in readme
     assert "最新收录优先" in readme
+    assert "原料映射升级" in readme
     for expected in (
         "gpt-image-2",
         "总额度为 5 次",
