@@ -37,6 +37,7 @@ build = [
     "huggingface-hub==1.29.0",
     "onnx==1.21.0",
     "tokenizers==0.23.2",
+    "sympy==1.14.0",
 ]
 
 evaluation = [
