@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
 from scripts import compare_ingredient_rag as comparison
+
+
+def _has_task64_artifacts(output_dir: Path) -> bool:
+    return any(
+        (output_dir / name).exists() or (output_dir / name).is_symlink()
+        for name in comparison.TASK64_ARTIFACT_NAMES
+    )
 
 
 def _fixture() -> dict[str, Any]:
@@ -212,6 +220,9 @@ def test_version_drift_blocks_comparison_and_adoption_gate() -> None:
 
 
 def test_task64_raw_outputs_match_frozen_input_hashes_and_historical_baseline() -> None:
+    if not _has_task64_artifacts(comparison.TASK64_OUTPUT_DIR):
+        pytest.skip("Task64 ignored historical artifacts are absent in this checkout")
+
     verified = comparison.verify_task64_artifacts()
 
     assert verified["fixture_sha256"] == comparison.evaluation.EXPECTED_FIXTURE_SHA256
@@ -222,6 +233,23 @@ def test_task64_raw_outputs_match_frozen_input_hashes_and_historical_baseline() 
     assert set(verified["artifact_hashes"]) == set(comparison.TASK64_ARTIFACT_NAMES)
     assert verified["metrics"]["jev"]["dish_all_reasonable_rate"]["numerator"] == 14
     assert verified["metrics"]["jev"]["dish_all_reasonable_rate"]["denominator"] == 24
+
+
+def test_task64_audit_guard_treats_all_artifacts_absent_as_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(Path, "exists", lambda _path: False)
+    monkeypatch.setattr(Path, "is_symlink", lambda _path: False)
+
+    assert _has_task64_artifacts(Path("ignored-output-dir")) is False
+
+
+def test_task64_audit_guard_treats_partial_artifact_set_as_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    present_name = comparison.TASK64_ARTIFACT_NAMES[0]
+    monkeypatch.setattr(Path, "exists", lambda path: path.name == present_name)
+    monkeypatch.setattr(Path, "is_symlink", lambda _path: False)
+
+    assert _has_task64_artifacts(Path("ignored-output-dir")) is True
 
 
 def test_task65_resource_gate_uses_reported_limits_and_measurements() -> None:
