@@ -19,6 +19,7 @@ def test_release_workflow_installs_the_pinned_build_group() -> None:
         "huggingface-hub==1.29.0",
         "onnx==1.21.0",
         "tokenizers==0.23.2",
+        "sympy==1.14.0",
     ]
     assert "python -m pip install --group dev --group build -e ." in workflow
 
