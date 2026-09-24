@@ -34,7 +34,7 @@ docs/development/CONSTRAINTS.md
 
 ## 当前状态
 
-当前正式版本为 v1.5.4。M12 Task 50–55、追加指标整理及 CPU Embedding 模型文件清理均已完成并获用户整体验收；结果入口见上方指标文档。精确状态和下一步始终以 `STATUS.md` 为准。
+当前正式版本为 v1.5.6。M12 Task 50–55 已完成并验收；M14 Task 61–67 已验收并推送至 `feat/mvp-implementation`（`7b45e1a`）。完整 RAG 的离线 Gold 对照见 [M14 Task67 人审简版报告](M14_TASK67_LEGACY_VS_FULL_RAG_REVIEW.md)；产品默认仍为 LEGACY，Task67 未创建新 Release。精确状态和下一步始终以 `STATUS.md` 为准。
 
 ## 分支文档边界
 

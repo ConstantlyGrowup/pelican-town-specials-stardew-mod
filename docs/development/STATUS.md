@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task67_committed |
-| project_phase | v1.5.6 已发布；M14 Task61–67 的本地开发和 Task67 人审对比报告已验收；当前 focused commit 与推送结果以 Git 核验，产品默认仍为 LEGACY |
+| overall_state | m14_documentation_state_sync_committed |
+| project_phase | v1.5.6 已发布；M14 Task61–67 已验收，Task67 commit `7b45e1a` 已推送 `feat/mvp-implementation`；正在同步过时文档状态，产品默认仍为 LEGACY |
 | product_implementation_started | true |
 | active_session_id | none |
 | active_session_state | none |
 | active_session_type | none |
-| current_task | 无活动 Task；Task67 已验收，产品默认 LEGACY 不变 |
+| current_task | 文档状态同步完成；下一项按用户授权诊断最近 CI 失败 |
 | blocker | 无；默认 RAG 切换、JEV 新请求、tag/Release 均未获授权 |
-| next_action | 核验 Task67 focused commit 与本次获授权的分支推送；其后仅按用户新任务继续，不自动切换默认或发布 |
+| next_action | 核对最近 CI run 与失败日志，冻结最小修复范围；文档维护 focused commit 与 CI 修复分别提交，获本轮授权后统一推送 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-24 Task67 启动
@@ -35,6 +35,12 @@
 - v5 已由指定 `luna_worker` 接入内部显式 RAG 的按菜一次 Provider 核验，默认 LEGACY 不发该请求；Provider 失败整菜退回 v2 本地 RAG，`null`/本地 no-match 走 catalog fallback。新增专项 `13 passed`，相关回归 `140 passed`，Ruff、mypy（23 source files）、diff check 通过，未调用真实 Provider/JEV。独立只读 `detector` 对 `C67v5-01..05` 返回 PASS；它独立复跑 Provider 6 项及静态检查，生成侧复跑因 pytest 临时目录 `WinError 5` 未能独立完成，保留实施者 140/13 项证据。Session 已经过 verification 进入 `awaiting_user_acceptance`；无 commit/push/默认切换/发布。
 - 用户追加要求给人审阅的“原始搜索匹配 vs 完整 RAG”可读结论。主 Agent 只读归并旧 Task64/66.1 与 Task67 v3/v4 的同一 120 菜、360 项 Gold，`query_id` 与可接受 ID 集合全量一致；原始全菜 `56/120`→完整 RAG `94/120`、单项 `264/360`→`327/360`，旧→新逐菜改善 38、退步 0。新增 `M14_TASK67_LEGACY_VS_FULL_RAG_REVIEW.md`，明确与先前 JEV 事后修正口径不同、产品默认未切换及未进行真实产品路径复测。此项纯报告维护纳入当前待验收 Task67，不发真实请求或变更业务代码。
 - 用户明确验收 Task67 新接入链路及上述人审结论报告，并单独授权创建 focused commit、推送 `feat/mvp-implementation`。Task67 Session 由 `awaiting_user_acceptance` 进入 `accepted`，本次控制面随 focused commit 记录 `committed`；推送成功与否以 Git 远端核验为准，不自动推 tag/Release 或切换 LEGACY 默认。
+
+### 2026-09-24 M14 后文档状态同步
+
+- Task67 focused commit `7b45e1a` 与 `origin/feat/mvp-implementation` 已核对一致；用户随后要求先更新过时文档状态。唯一修改型 Session 为 `2026-09-24-m14-documentation-state-sync`。八份入口文档统一当前状态：正式 Release v1.5.6；Task61–67 已验收推送；内部显式 RAG 才调用按菜 Provider，默认 LEGACY；Gold `56/120→94/120` 与先前 JEV 事后修正 `65/120→92/120` 分列，未做真实产品路径复测。历史计划和评测结论未追改。
+- 指定 `luna_worker` 完成内容修订但在正式交接前遇额度限制；主 Agent 接续小范围状态消歧。独立只读 `detector` 按 `CDOC-01..03` 返回 PASS，指出的 MVP 计划历史标题已修正；之后主 Agent 将设计源索引的两处旧“当前/优先快照”标题改为历史快照。`git diff --check` 通过，Git ignored 正式设计/计划/索引仍保持忽略；未改产品代码、发真实请求、提交或推送。本 Session 进入 `awaiting_user_acceptance`。
+- 用户接着明确要求“完成文档更新之后”诊断并修复最近 CI、提交推送，末尾再做增量文档同步。此指令允许已通过只读复核的纯文档维护先收口为一个本地 focused commit；CI 修复另起 Session 和提交，两者在 CI 修复验证后按本轮授权统一推送。正式设计/计划/索引保持 Git ignored，不随 commit 推送。
 
 ### 2026-09-24 M14 人审简版报告
 
