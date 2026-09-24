@@ -50,6 +50,11 @@ from pelican_town_specials.providers.contracts import (
     ImageGenerationRequest,
     ImageMediaType,
     ImageOperation,
+    IngredientVerifierCandidate,
+    IngredientVerifierIngredient,
+    IngredientVerifierRequest,
+    IngredientVerifierResponse,
+    IngredientVerifierSelection,
     ProviderImageInput,
 )
 
@@ -612,12 +617,14 @@ def test_trial_limit_error_code_and_recommended_action() -> None:
 _METHODS = (
     "analyze_dish",
     "design_ask_gus",
+    "verify_ingredient_candidates",
     "compare_canonical_icon",
     "generate_image",
 )
 _RESULT_ATTR = {
     "analyze_dish": "analyze_result",
     "design_ask_gus": "design_result",
+    "verify_ingredient_candidates": "ingredient_verifier_result",
     "compare_canonical_icon": "comparison_result",
     "generate_image": "image_result",
 }
@@ -629,6 +636,12 @@ class _StubGateway:
     def __init__(self) -> None:
         self.analyze_result: DishAnalysis | BaseException = analysis_fixture()
         self.design_result: GeneratedDishCore | BaseException = core_fixture()
+        self.ingredient_verifier_result: IngredientVerifierResponse | BaseException = (
+            IngredientVerifierResponse(
+                items=[IngredientVerifierSelection(index=0, selectedItemId="tomato")]
+            )
+        )
+        self.ingredient_verifier_calls = 0
         self.comparison_result: CanonicalIconComparisonResponse | BaseException = (
             CanonicalIconComparisonResponse(visualSimilarity=0.88)
         )
@@ -649,6 +662,14 @@ class _StubGateway:
         if isinstance(self.design_result, BaseException):
             raise self.design_result
         return self.design_result
+
+    async def verify_ingredient_candidates(
+        self, request: IngredientVerifierRequest
+    ) -> IngredientVerifierResponse:
+        self.ingredient_verifier_calls += 1
+        if isinstance(self.ingredient_verifier_result, BaseException):
+            raise self.ingredient_verifier_result
+        return self.ingredient_verifier_result
 
     async def compare_canonical_icon(
         self, request, *, json_only: bool = False
@@ -700,6 +721,26 @@ async def _invoke(gateway: TrialSafeGateway, method: str) -> object:
                 request_id=uuid4(),
             )
         )
+    if method == "verify_ingredient_candidates":
+        return await gateway.verify_ingredient_candidates(
+            IngredientVerifierRequest(
+                dishName="番茄炒蛋",
+                ingredients=[
+                    IngredientVerifierIngredient(
+                        index=0,
+                        name="tomato",
+                        candidates=[
+                            IngredientVerifierCandidate(
+                                itemId="tomato",
+                                displayNameEn="Tomato",
+                                displayNameZh="番茄",
+                            )
+                        ],
+                    )
+                ],
+                requestId=uuid4(),
+            )
+        )
     if method == "compare_canonical_icon":
         return await gateway.compare_canonical_icon(
             CanonicalIconComparisonRequest(
@@ -739,6 +780,8 @@ async def test_trial_safe_gateway_strips_app_error_details() -> None:
         assert error.details == {}
         assert "totokens.cc" not in str(error.details)
         assert "sk-test-trial" not in str(error.details)
+        if method == "verify_ingredient_candidates":
+            assert stub.ingredient_verifier_calls == 1
 
 
 async def test_trial_safe_gateway_passes_results_through() -> None:
@@ -750,6 +793,8 @@ async def test_trial_safe_gateway_passes_results_through() -> None:
         result = await _invoke(gateway, method)
 
         assert result is expected
+        if method == "verify_ingredient_candidates":
+            assert stub.ingredient_verifier_calls == 1
 
 
 async def test_trial_safe_gateway_passes_non_app_errors_through() -> None:
@@ -763,3 +808,5 @@ async def test_trial_safe_gateway_passes_non_app_errors_through() -> None:
             await _invoke(gateway, method)
 
         assert raised.value is inner_error
+        if method == "verify_ingredient_candidates":
+            assert stub.ingredient_verifier_calls == 1

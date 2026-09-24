@@ -1,0 +1,27 @@
+{
+  "fixture_id": "m14-task67-no-match-v1",
+  "catalog_version": "stardew-1.6.15-v1",
+  "expected_result": "catalog_fallback",
+  "cases": [
+    {"id": "n01", "query": "鸡肉", "group": "observed_seed"},
+    {"id": "n02", "query": "牛肉", "group": "observed_seed"},
+    {"id": "n03", "query": "羊肉", "group": "observed_seed"},
+    {"id": "n04", "query": "猪肉", "group": "observed_seed"},
+    {"id": "n05", "query": "豆腐", "group": "observed_seed"},
+    {"id": "n06", "query": "chicken meat", "group": "unseen_challenge"},
+    {"id": "n07", "query": "beef", "group": "unseen_challenge"},
+    {"id": "n08", "query": "lamb meat", "group": "unseen_challenge"},
+    {"id": "n09", "query": "pork", "group": "unseen_challenge"},
+    {"id": "n10", "query": "tofu", "group": "unseen_challenge"},
+    {"id": "n11", "query": "火鸡肉", "group": "unseen_challenge"},
+    {"id": "n12", "query": "鸭肉", "group": "unseen_challenge"},
+    {"id": "n13", "query": "培根", "group": "unseen_challenge"},
+    {"id": "n14", "query": "明胶", "group": "unseen_challenge"},
+    {"id": "n15", "query": "酵母", "group": "unseen_challenge"},
+    {"id": "n16", "query": "turkey meat", "group": "unseen_challenge"},
+    {"id": "n17", "query": "duck meat", "group": "unseen_challenge"},
+    {"id": "n18", "query": "bacon", "group": "unseen_challenge"},
+    {"id": "n19", "query": "gelatin", "group": "unseen_challenge"},
+    {"id": "n20", "query": "baking soda", "group": "unseen_challenge"}
+  ]
+}

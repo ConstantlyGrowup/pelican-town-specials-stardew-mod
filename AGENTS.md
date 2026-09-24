@@ -17,6 +17,8 @@
 
 2026-09-05 最新状态：Milestone 13 Task57–60及用户最终UI已验收并推送`feat/mvp-implementation`至`89a8a09`。Task60收集品分页最终为每页8条，主页/收集品分页使用统一像素面板样式；最终前端23 files / 231 passed，ESLint与TypeScript/Vite build PASS。Task57–59完整backend 931 passed/2 skipped及静态/契约/repo门禁结论保持。M13已随v1.5.6正式发布；v1.5.5（试用服务迁移到totokens）与v1.5.6（收集品最新收录优先排序，每页8条不变）均发布并核验（release.yml success，setup.exe + portable ZIP + SHA256SUMS 独立下载核验一致）。M12已关闭，指标稳定入口仍为`docs/development/M12_QUANTITATIVE_RESULTS.md`；Task56已在`f5a99aa`提交推送。精确状态以STATUS.md为准。
 
+2026-09-23 至 24 完成 Milestone 14 Task 61–67，Task67 commit `7b45e1a` 已推送 `feat/mvp-implementation`。当前显式 RAG 路径为本地 E5 Top 5 召回，加每道菜一次文本 Provider 候选选择/拒匹配；默认仍为 LEGACY，正式 Release 仍为 v1.5.6。固定 120 菜 Gold ID 对照为原始搜索 56/120、完整 RAG 94/120（中间仅本地 RAG 84/120）；这与先前 JEV 事后修正后的 65/120→92/120 属于不同评测口径，不得混写。结果、人审报告和限制见 `docs/development/M14_TASK67_LEGACY_VS_FULL_RAG_REVIEW.md`；尚未用真实产品路径重新评测 Provider 或 JEV。后续文档同步 `9807a5a`、试用网关协议修复 `18c7215`、Task64 历史产物 CI 测试边界修复 `681d3c1` 与末次纯文档收口 `75721ed` 均已推送开发分支；CI run `35987394616` 对代码修复成功（backend-fast、frontend-fast，PR/main integration 按条件跳过）。精确状态以 `STATUS.md` 为准。
+
 Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记忆与 Canonical 召回”Task 31–36、Task 36.1“原图参考像素图标生成补丁”和 Task 36.2“官方/非官方 OpenAI-compatible 端点适配补丁”均已实现、独立审阅并验收；Canonical 当前开发命中阈值为 `0.85`（2026-09-03 用户调整，边界命中、`0.849` 与 `0.80` miss；0.80 仅存在于 v1.5.4 及更早安装包，v1.5.5 起正式包已为 0.85）。Milestone 10“EXE 无感使用统计”Task 37–39 已在 Codex 全量接管范式下实现并通过 detector/主 Agent 全量验收，focused commits 为 `d198a3e`、`3600d09`、`c4c1bcf`。M10 在配置完整的 Release 后端静默记录最小 personless 人工事件，不改变 UI/API，不采集创作内容、Provider、设备指纹、IP/Geo 或页面行为，采集故障不得影响业务。用户于 2026-08-29 已配置 Repository Variables并接受首次验收数据直接参与匿名聚合；v1.4.0 已正式发布（GitHub Actions run `33228870083` success，setup.exe + portable ZIP + SHA256SUMS 均核验通过）。用户提供的 M9 对照样本仅 `n=2`，只作为正向实测信号，不承诺稳定节省。2026-08-30 用户已验收 Milestone 11“试用体验与可用性保护”规划并授权开发：Task 40–42 已完成；2026-08-31 用户验收确认失败不扣次修复有效，并追加“稍后重试→直接重试”、试用 Key 轮换、Task 43“蓝图分类/标签可直接移除”和 Task 44“试用不可用时放弃草稿并返回主页”。新增 UI Task 均经 `luna_worker` 实施、detector PASS，完整构建与 bundle smoke 全绿；用户已统一验收。v1.5.0 已正式发布（GitHub Actions run `33403142756` success）。Task 45“料理蓝图英文分类/标签显示与搜索”保持中文 canonical 存储不变，已同步 `main` 与 `feat/mvp-implementation` 并随 v1.5.1 正式发布（GitHub Actions run `33464868361` success）。Task 46“生成错误提示英文本地化”已同步两分支并随 v1.5.2 正式发布（GitHub Actions run `33470806371` success，setup.exe + portable ZIP + SHA256SUMS 均独立下载核验通过）。Task 47“公共试用模型/额度热修复”已通过 `luna_worker`、detector 与主 Agent验收：隐藏试用改用 `gpt-image-2`，额度为 5，合法 v1/v2 状态一次性迁移 schema v3 并为所有旧用户重置完整 5 次，个人默认模型不变；已随 v1.5.3 发布；Task 48 收集品批量删除已随 v1.5.4 发布并核验。2026-09-05 v1.5.5 发布：试用服务整体迁移到带额度管控的新站点（`https://totokens.cc/v1`，视觉/文本模型 `gpt-5.6-terra`，图像 `gpt-image-2`，最大自动重试 2），设置页默认配置同步更新；2026-09-23 v1.5.6 发布：收集品按最新收录优先排序（分页每页 8 条不变）。当前正式版本为 v1.5.6。2026-09-03 用户授权 Task 49：优化上游双语分析命名一致性，将最终匹配阈值调到 0.85；保持 schema、历史记忆、temperature 省略与本地评分不变，已按 luna_worker → detector PASS → 主 Agent 流程完成本地验证与 focused commit（全量 880 passed/2 skipped，focused 76 passed）；已随 v1.5.5 发布，真实一致性和命中率效果待实测。后续完整队列、Redis、夜间批处理和多用户在线架构不属于第三期。
 
 自 2026-08-04 起采用「包工-子代理-Codex 审阅」协作模式：
@@ -26,9 +28,9 @@ Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记
 本节记录 Milestone 9 Task 31–36 已实际采用并完成的临时优先流程；M9 已获用户统一验收并推送。它不删除或永久改写下方历史/default 的 Claude+Codex 通信流，后续是否继续采用 Codex 全量接管由用户另行决定。
 
 - Codex 主 Agent 作为 M9 常驻协调者和最终验收者：持有状态真源、生成/冻结 Context Packet、串行派发、复核证据、编排返工、更新控制面并创建 PASS 后的本地 focused commit。
-- 每个 Task 使用新的自定义 `luna_worker`（`gpt-5.6-luna` / `max`）实施；worker 只处理一个范围明确、边界清晰、可独立完成的委派任务，不改变主任务目标、不扩大冻结范围、不提交或 push。
-- 实施完成后使用新的自定义 `detector`（`gpt-5.6-sol` / `medium`，read-only）按冻结 Acceptance Ledger 和 `REVIEW_PROTOCOL.md` 独立审阅，返回 `PASS` / `REVISE` / `BLOCKED`；当前会话若尚未热加载角色名，可用相同模型、effort 与只读 instructions 显式派发，不得降低审阅标准。
-- Codex 主 Agent 只在 detector `PASS` 后复跑验收并自动进入 `auto_accepted`；Task 31→36 仍严格串行、每 Task 一个本地 focused commit、不 push，M9 全量完成后统一用户验收。
+- 每个 Task 使用新的自定义 `luna_worker`（`gpt-6-luna` / `max`）实施；worker 只处理一个范围明确、边界清晰、可独立完成的委派任务，不改变主任务目标、不扩大冻结范围、不提交或 push。
+- 实施完成后使用新的自定义 `detector`（`gpt-6-sol` / `medium`，read-only）按冻结 Acceptance Ledger 和 `REVIEW_PROTOCOL.md` 独立审阅，返回 `PASS` / `REVISE` / `BLOCKED`；指定型号不可用时必须报告，不得静默回退。
+- detector `PASS` 后，Codex 主 Agent 负责确定状态、核对交接证据、组织集成及更新系统整体文档，不再默认从头重跑完整测试。只有证据缺失、结果冲突或集成异常时，才补充最小定向检查。Task 31→36 的历史执行方式保持为历史事实。
 - 原 Claude Code 主会话、Codex MCP Review 和既有 Session 记录继续作为历史/default 协作协议保留，不在本次临时接管中删除或改写历史事实。
 
 - Claude Code 主会话作为常驻包工/协调者：持有状态真源（`STATUS.md`、Session、约束），为每个 Task 生成 Context Packet，组装前置文档包并分发；桥接 Codex 审阅，编排返工与本地提交，维持 Milestone 粒度下的长时间自动开发。
@@ -51,7 +53,7 @@ Milestone 6–8 与 Task 30 已随 v1.3.0 发布。Milestone 9“全局生成记
 - 同一时间最多存在一个 `active`、`verification` 或 `awaiting_user_acceptance` 的修改型 Session。
 - 一个实施 Task 对应一个修改型 Session；一个 Session 只处理计划中一个 Task 的范围。
 - 每个 Task 使用新的 implementer Subagent；它只接收该 Task 的 Context Packet、相关约束和必要的当前状态。
-- implementer 子代理完成后，由包工（Claude Code 主会话）桥接 Codex（新建独立 thread 路由 `gpt-Luna`/max）做独立只读审阅；包工负责复跑验收、集成和状态更新。
+- implementer 子代理完成后，由主 Agent 派发新的只读 `detector`（`gpt-6-sol` / `medium`）审阅；主 Agent 负责证据核对、集成和状态更新，不默认复跑完整测试。
 - Session 记录是追加式历史；`STATUS.md` 是当前状态真源。历史记录不能覆盖当前状态。
 - 任何无法安全解释的状态冲突、脏工作树、重复活动 Session 或缺失下一步，都必须停下来报告。
 

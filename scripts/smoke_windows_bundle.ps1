@@ -34,12 +34,68 @@ $bundleFull = (Resolve-Path -LiteralPath $BundleDir -ErrorAction Stop).Path
 # 1. Default directory structure on disk.
 $exePath = Join-Path $bundleFull 'PelicanTownSpecials.exe'
 $indexPath = Join-Path $bundleFull 'frontend\dist\index.html'
+$ingredientRagPath = Join-Path $bundleFull 'resources\ingredient-rag'
 if (-not (Test-Path -LiteralPath $exePath)) {
     throw "Missing executable: $exePath"
 }
 if (-not (Test-Path -LiteralPath $indexPath)) {
     throw "Missing static homepage: $indexPath"
 }
+
+$constantsPath = Join-Path $repoRoot 'backend\src\pelican_town_specials\ingredient_rag\constants.py'
+$constantsText = Get-Content -LiteralPath $constantsPath -Raw -ErrorAction Stop
+function Get-PinnedHash([string]$name) {
+    $pattern = '(?m)^' + [regex]::Escape($name) + ' = "(?<value>[A-Fa-f0-9]{64})"$'
+    $match = [regex]::Match($constantsText, $pattern)
+    if (-not $match.Success) {
+        throw "Missing fixed SHA-256 constant $name in $constantsPath"
+    }
+    return $match.Groups['value'].Value.ToUpperInvariant()
+}
+function Get-PinnedString([string]$name) {
+    $pattern = '(?m)^' + [regex]::Escape($name) + ' = "(?<value>[^"]+)"$'
+    $match = [regex]::Match($constantsText, $pattern)
+    if (-not $match.Success) {
+        throw "Missing fixed string constant $name in $constantsPath"
+    }
+    return $match.Groups['value'].Value
+}
+
+$ragAssets = @(
+    @{ Name = 'model-int8.onnx'; Hash = Get-PinnedHash 'QUANTIZED_MODEL_SHA256' },
+    @{ Name = 'sentencepiece.bpe.model'; Hash = Get-PinnedHash 'TOKENIZER_SHA256' },
+    @{ Name = 'ingredient-vectors.f32'; Hash = Get-PinnedHash 'VECTOR_INDEX_SHA256' },
+    @{ Name = 'ingredient-index.manifest.json'; Hash = $null }
+)
+$ingredientRagBytes = 0L
+foreach ($asset in $ragAssets) {
+    $assetPath = Join-Path $ingredientRagPath $asset.Name
+    if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
+        throw "Missing bundled ingredient-RAG asset: $assetPath"
+    }
+    $assetFile = Get-Item -LiteralPath $assetPath
+    $ingredientRagBytes += $assetFile.Length
+    if ($asset.Hash) {
+        $actualHash = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash.ToUpperInvariant()
+        if ($actualHash -ne $asset.Hash) {
+            throw "Bundled ingredient-RAG asset hash mismatch: $($asset.Name)"
+        }
+    }
+}
+$ingredientManifestPath = Join-Path $ingredientRagPath 'ingredient-index.manifest.json'
+$ingredientManifest = Get-Content -LiteralPath $ingredientManifestPath -Raw | ConvertFrom-Json
+if ($ingredientManifest.modelRevision -ne (Get-PinnedString 'MODEL_REVISION') -or
+    $ingredientManifest.catalogSha256 -ne (Get-PinnedHash 'CATALOG_SHA256') -or
+    $ingredientManifest.modelSha256 -ne (Get-PinnedHash 'QUANTIZED_MODEL_SHA256') -or
+    $ingredientManifest.tokenizerSha256 -ne (Get-PinnedHash 'TOKENIZER_SHA256') -or
+    $ingredientManifest.vectorSha256 -ne (Get-PinnedHash 'VECTOR_INDEX_SHA256') -or
+    $ingredientManifest.tokenizerFormat -ne 'sentencepiece' -or
+    $ingredientManifest.rowCount -ne 253 -or
+    $ingredientManifest.embeddingDimension -ne 384 -or
+    $ingredientManifest.dtype -ne 'float32') {
+    throw 'Bundled ingredient-RAG manifest does not match the fixed model/index contract.'
+}
+Write-Host "OK: pinned ingredient-RAG assets and manifest found ($ingredientRagBytes bytes)."
 
 # PyInstaller must carry the stdlib SQLite extension in the onedir tree. Do
 # this recursively because the extension may live below an architecture- or
@@ -99,10 +155,16 @@ $procB = $null
 $clientB = $null
 $telemetryDisabledWasSet = Test-Path Env:PTS_TELEMETRY_DISABLED
 $telemetryDisabledPreviousValue = $env:PTS_TELEMETRY_DISABLED
+$hfOfflineWasSet = Test-Path Env:HF_HUB_OFFLINE
+$hfOfflinePreviousValue = $env:HF_HUB_OFFLINE
+$transformersOfflineWasSet = Test-Path Env:TRANSFORMERS_OFFLINE
+$transformersOfflinePreviousValue = $env:TRANSFORMERS_OFFLINE
 # Every product process launched by this smoke, including both clean app
 # launches, inherits this gate so a configured Release resource cannot pollute
 # the production project. The original parent value is restored in finally.
 $env:PTS_TELEMETRY_DISABLED = '1'
+$env:HF_HUB_OFFLINE = '1'
+$env:TRANSFORMERS_OFFLINE = '1'
 try {
     $argumentsA = @('--no-browser', '--workspace', $workspace, '--port', $portA.ToString())
     $procA = Start-Process -FilePath $exePath -ArgumentList $argumentsA -PassThru
@@ -197,6 +259,16 @@ finally {
     } else {
         Remove-Item Env:PTS_TELEMETRY_DISABLED -ErrorAction SilentlyContinue
     }
+    if ($hfOfflineWasSet) {
+        $env:HF_HUB_OFFLINE = $hfOfflinePreviousValue
+    } else {
+        Remove-Item Env:HF_HUB_OFFLINE -ErrorAction SilentlyContinue
+    }
+    if ($transformersOfflineWasSet) {
+        $env:TRANSFORMERS_OFFLINE = $transformersOfflinePreviousValue
+    } else {
+        Remove-Item Env:TRANSFORMERS_OFFLINE -ErrorAction SilentlyContinue
+    }
 }
 
-Write-Host "OK: bundle smoke passed (exe + recursive _sqlite3 + static homepage + two clean launches + persistent registry)."
+Write-Host "OK: offline bundle smoke passed (pinned ingredient assets + exe + recursive _sqlite3 + static homepage + two clean launches + persistent registry)."

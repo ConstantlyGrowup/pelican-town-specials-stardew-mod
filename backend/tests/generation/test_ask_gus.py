@@ -11,6 +11,8 @@ import pytest
 from backend.tests.domain.factories import make_draft as make_domain_draft
 from PIL import Image
 
+from pelican_town_specials.catalog.mapping import map_ingredient
+from pelican_town_specials.catalog.models import CatalogCandidate
 from pelican_town_specials.domain.assets import AssetRef, MediaType
 from pelican_town_specials.domain.canonical import (
     CanonicalDish,
@@ -18,7 +20,7 @@ from pelican_town_specials.domain.canonical import (
     CanonicalIconMetadata,
     CanonicalRecallCandidate,
 )
-from pelican_town_specials.domain.common import DraftMode, GenerationStage
+from pelican_town_specials.domain.common import DraftMode, GenerationStage, Language
 from pelican_town_specials.domain.dish import (
     GenerationSource,
     IconReuseDecision,
@@ -29,13 +31,22 @@ from pelican_town_specials.domain.draft import (
     GenerationAttemptKind,
 )
 from pelican_town_specials.domain.errors import AppError
+from pelican_town_specials.generation import orchestrator as orchestrator_module
 from pelican_town_specials.generation.attempt_registry import AttemptRegistry
 from pelican_town_specials.generation.orchestrator import (
+    DEFAULT_INGREDIENT_RETRIEVAL_BACKEND,
     GenerationCommand,
     GenerationOrchestrator,
+    IngredientRetrievalBackend,
+    _build_candidates,
+    _map_gameplay,
 )
 from pelican_town_specials.images import downscale_for_vision
 from pelican_town_specials.images.vision_input import EDIT_MIN_PIXELS
+from pelican_town_specials.ingredient_rag.errors import (
+    IngredientRagNoMatch,
+    IngredientRagUnavailable,
+)
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.providers.contracts import (
     CanonicalMatchResponse,
@@ -972,6 +983,230 @@ async def test_egg_plus_two_unmatched_ingredients_keep_unique_item_ids(
     ]
     assert len(fallbacks) == 2
     assert len({ingredient.item_id for ingredient in fallbacks}) == 2
+
+
+def test_ingredient_rag_is_not_the_default_backend(
+    catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert DEFAULT_INGREDIENT_RETRIEVAL_BACKEND is IngredientRetrievalBackend.LEGACY
+
+    def unexpected_rag_access(*_args, **_kwargs):
+        raise AssertionError("default Ask Gus mapping must not load ingredient RAG")
+
+    monkeypatch.setattr(
+        orchestrator_module, "_get_default_ingredient_rag_retriever", unexpected_rag_access
+    )
+
+    mapped = _map_gameplay(core_fixture(), catalog, language=Language.ZH_CN)
+
+    assert len(mapped.ingredients) == 2
+    assert len({ingredient.item_id for ingredient in mapped.ingredients}) == 2
+
+
+def test_legacy_candidate_sequence_and_default_mapping_are_unchanged(catalog) -> None:
+    egg = SemanticRecipeIngredient(name="Egg", normalizedName="egg")
+    expected_candidates = catalog.search_ingredients("egg", limit=5)
+
+    candidates = _build_candidates(
+        egg, catalog, used_item_ids=frozenset({"176"})
+    )
+    repeated_egg = map_ingredient(
+        egg,
+        candidates,
+        catalog,
+        used_item_ids=frozenset({"176"}),
+        language=Language.ZH_CN,
+    )
+    mapped = _map_gameplay(core_fixture(), catalog, language=Language.ZH_CN)
+
+    assert [candidate.item_id for candidate in candidates] == [
+        item.item_id for item in expected_candidates
+    ]
+    assert repeated_egg.item_id == "176"
+    assert [ingredient.item_id for ingredient in mapped.ingredients] == [
+        "176",
+        "399",
+    ]
+
+
+def test_rag_candidates_remove_previously_used_ids_before_mapper(
+    catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class RepeatingRetriever:
+        def __init__(self) -> None:
+            self.used_ids: list[frozenset[str]] = []
+
+        def retrieve(self, query, *, used_item_ids):
+            del query
+            self.used_ids.append(used_item_ids)
+            candidates = [CatalogCandidate(item_id="176", score=1.0)]
+            if "176" in used_item_ids:
+                candidates.append(CatalogCandidate(item_id="16", score=0.5))
+            return candidates
+
+    retriever = RepeatingRetriever()
+    monkeypatch.setattr(
+        orchestrator_module,
+        "_get_default_ingredient_rag_retriever",
+        lambda _catalog: retriever,
+    )
+
+    mapped = _map_gameplay(
+        core_fixture(),
+        catalog,
+        language=Language.ZH_CN,
+        retrieval_backend=IngredientRetrievalBackend.RAG,
+    )
+
+    assert retriever.used_ids == [frozenset(), frozenset({"176"})]
+    assert len(mapped.ingredients) == 2
+    assert len({ingredient.item_id for ingredient in mapped.ingredients}) == 2
+    assert mapped.ingredients[1].item_id == "16"
+
+
+@pytest.mark.parametrize("retrieval_result", ["failure", "all-used-candidates"])
+def test_rag_fallback_preserves_unfiltered_legacy_candidates(
+    catalog, monkeypatch: pytest.MonkeyPatch, retrieval_result: str
+) -> None:
+    class UnavailableRetriever:
+        def retrieve(self, _query, *, used_item_ids):
+            if retrieval_result == "failure":
+                raise IngredientRagUnavailable("rag_query_failed")
+            assert used_item_ids == frozenset({"176"})
+            return [CatalogCandidate(item_id="176", score=1.0)]
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "_get_default_ingredient_rag_retriever",
+        lambda _catalog: UnavailableRetriever(),
+    )
+
+    egg = SemanticRecipeIngredient(name="Egg", normalizedName="egg")
+    candidates = _build_candidates(
+        egg,
+        catalog,
+        used_item_ids=frozenset({"176"}),
+        backend=IngredientRetrievalBackend.RAG,
+    )
+
+    assert [candidate.item_id for candidate in candidates] == [
+        item.item_id for item in catalog.search_ingredients("egg", limit=5)
+    ]
+    assert candidates[0].item_id == "176"
+
+
+def test_healthy_rag_no_match_bypasses_legacy_and_uses_catalog_fallback(
+    catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class NoMatchRetriever:
+        def retrieve(self, _query, *, used_item_ids):
+            del used_item_ids
+            raise IngredientRagNoMatch(semantic_family="land_animal_meat", evidence=None)
+
+    def unexpected_legacy_search(*_args, **_kwargs):
+        raise AssertionError("semantic no-match must not retry legacy retrieval")
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "_get_default_ingredient_rag_retriever",
+        lambda _catalog: NoMatchRetriever(),
+    )
+    monkeypatch.setattr(type(catalog), "search_ingredients", unexpected_legacy_search)
+
+    semantic = SemanticRecipeIngredient(name="beef", normalizedName="beef")
+    candidates = _build_candidates(
+        semantic,
+        catalog,
+        backend=IngredientRetrievalBackend.RAG,
+    )
+    mapped = map_ingredient(semantic, candidates, catalog, language=Language.ZH_CN)
+
+    assert candidates == []
+    assert mapped.item_id == "176"
+    assert mapped.mapping_reason.startswith("catalog fallback:")
+
+
+def test_rag_unknown_catalog_id_still_fails_mapper_validation(
+    catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class UnknownIdRetriever:
+        def retrieve(self, _query, *, used_item_ids):
+            del used_item_ids
+            return [CatalogCandidate(item_id="not-a-catalog-item", score=1.0)]
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "_get_default_ingredient_rag_retriever",
+        lambda _catalog: UnknownIdRetriever(),
+    )
+
+    with pytest.raises(AppError) as caught:
+        _map_gameplay(
+            core_fixture(),
+            catalog,
+            language=Language.ZH_CN,
+            retrieval_backend=IngredientRetrievalBackend.RAG,
+        )
+
+    assert caught.value.code == "PTS_VALIDATION_INGREDIENT_ID_UNKNOWN"
+
+
+def test_rag_unusable_catalog_id_still_uses_mapper_fallback(
+    catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class UnusableIdRetriever:
+        def retrieve(self, _query, *, used_item_ids):
+            del used_item_ids
+            return [CatalogCandidate(item_id="-5", score=1.0)]
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "_get_default_ingredient_rag_retriever",
+        lambda _catalog: UnusableIdRetriever(),
+    )
+
+    mapped = _map_gameplay(
+        core_fixture(),
+        catalog,
+        language=Language.ZH_CN,
+        retrieval_backend=IngredientRetrievalBackend.RAG,
+    )
+
+    assert all(
+        ingredient.mapping_reason.startswith("catalog fallback:")
+        for ingredient in mapped.ingredients
+    )
+    assert len({ingredient.item_id for ingredient in mapped.ingredients}) == 2
+
+
+@pytest.mark.parametrize(
+    "reason_code", ["rag_query_failed", "rag_tokenizer_input_unsupported"]
+)
+def test_rag_failure_fails_open_to_the_legacy_candidate_path(
+    catalog, monkeypatch: pytest.MonkeyPatch, reason_code: str
+) -> None:
+    class UnavailableRetriever:
+        def retrieve(self, _query, *, used_item_ids):
+            del used_item_ids
+            raise IngredientRagUnavailable(reason_code)
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "_get_default_ingredient_rag_retriever",
+        lambda _catalog: UnavailableRetriever(),
+    )
+
+    legacy = _map_gameplay(
+        core_fixture(), catalog, language=Language.ZH_CN
+    )
+    degraded = _map_gameplay(
+        core_fixture(),
+        catalog,
+        language=Language.ZH_CN,
+        retrieval_backend=IngredientRetrievalBackend.RAG,
+    )
+
+    assert degraded == legacy
 
 
 async def test_failed_draft_retry_reaches_reviewable(

@@ -5,8 +5,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
+import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import suppress
+from enum import StrEnum
+from threading import RLock
 from time import monotonic
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -88,6 +91,11 @@ from pelican_town_specials.images.vision_input import (
     EDIT_MIN_PIXELS,
     VISION_MIN_PIXELS,
 )
+from pelican_town_specials.ingredient_rag import (
+    IngredientRagNoMatch,
+    IngredientRagRetriever,
+    IngredientRagUnavailable,
+)
 from pelican_town_specials.persistence.asset_store import (
     AssetMetadata,
     AssetNotFoundError,
@@ -108,8 +116,12 @@ from pelican_town_specials.providers.contracts import (
     ImageGenerationRequest,
     ImageMediaType,
     ImageOperation,
+    IngredientVerifierCandidate,
+    IngredientVerifierIngredient,
+    IngredientVerifierRequest,
     ModelGateway,
     ProviderImageInput,
+    validate_ingredient_verifier_response,
 )
 from pelican_town_specials.providers.prompts.analysis_v1 import (
     regeneration_instruction_section,
@@ -148,6 +160,19 @@ _ICON_SIZE = "1024x1024"
 # model reports visual similarity at or above this threshold (0.75 passes,
 # 0.749 misses). This is the raw score gate, never the rounded display value.
 _ICON_REUSE_THRESHOLD = 0.75
+
+
+class IngredientRetrievalBackend(StrEnum):
+    LEGACY = "legacy"
+    RAG = "rag"
+
+
+# M14 Task 65 packages and exposes an internal RAG selector, but the existing
+# path stays active until Task 66 completes the frozen same-set quality gate.
+DEFAULT_INGREDIENT_RETRIEVAL_BACKEND = IngredientRetrievalBackend.LEGACY
+_INGREDIENT_RAG_RETRIEVER: IngredientRagRetriever | None = None
+_INGREDIENT_RAG_LOCK = RLock()
+_LOGGER = logging.getLogger(__name__)
 
 _CANONICAL_REUSED_AUTHORITY = {
     "presentation.display_name": FieldAuthority.CACHE_REUSED,
@@ -290,11 +315,17 @@ def _map_gameplay(
     catalog: VanillaCatalog,
     *,
     language: Language,
+    retrieval_backend: IngredientRetrievalBackend = DEFAULT_INGREDIENT_RETRIEVAL_BACKEND,
 ) -> GameplaySpec:
     ingredients: list[GameIngredient] = []
     used_item_ids: set[str] = set()
     for semantic in core.ingredients:
-        candidates = _build_candidates(semantic, catalog)
+        candidates = _build_candidates(
+            semantic,
+            catalog,
+            used_item_ids=frozenset(used_item_ids),
+            backend=retrieval_backend,
+        )
         mapped = map_ingredient(
             semantic,
             candidates,
@@ -304,6 +335,18 @@ def _map_gameplay(
         )
         used_item_ids.add(mapped.item_id)
         ingredients.append(mapped)
+    return _gameplay_with_mapped_ingredients(
+        core, ingredients, catalog, language=language
+    )
+
+
+def _gameplay_with_mapped_ingredients(
+    core: GeneratedDishCore,
+    ingredients: list[GameIngredient],
+    catalog: VanillaCatalog,
+    *,
+    language: Language,
+) -> GameplaySpec:
     ingredients = ensure_main_protein(
         _dish_text(core), ingredients, catalog, language=language
     )
@@ -332,9 +375,39 @@ def _dish_text(core: GeneratedDishCore) -> str:
 
 
 def _build_candidates(
-    semantic: object, catalog: VanillaCatalog
+    semantic: object,
+    catalog: VanillaCatalog,
+    *,
+    used_item_ids: frozenset[str] = frozenset(),
+    backend: IngredientRetrievalBackend = DEFAULT_INGREDIENT_RETRIEVAL_BACKEND,
 ) -> list[CatalogCandidate]:
     name = getattr(semantic, "normalized_name", None) or getattr(semantic, "name", "")
+    if backend is IngredientRetrievalBackend.RAG:
+        try:
+            candidates = _get_default_ingredient_rag_retriever(catalog).retrieve(
+                str(name), used_item_ids=used_item_ids
+            )
+            candidates = [
+                candidate
+                for candidate in candidates
+                if candidate.item_id not in used_item_ids
+            ]
+            if candidates:
+                return candidates
+        except IngredientRagNoMatch:
+            _LOGGER.info(
+                "ingredient RAG abstained; catalog fallback selected reason=rag_no_semantic_match"
+            )
+            return []
+        except IngredientRagUnavailable as exc:
+            _LOGGER.warning(
+                "ingredient RAG disabled; legacy retrieval selected reason=%s",
+                exc.reason_code,
+            )
+        except Exception:  # noqa: BLE001 - local retrieval must fail open.
+            _LOGGER.warning(
+                "ingredient RAG disabled; legacy retrieval selected reason=rag_query_failed"
+            )
     items = catalog.search_ingredients(str(name), limit=5)
     total = sum(item.edibility or 0 for item in items) or 1
     candidates = []
@@ -344,6 +417,16 @@ def _build_candidates(
             score = score * (1.0 + (item.edibility / total))
         candidates.append(CatalogCandidate(item_id=item.item_id, score=score))
     return candidates
+
+
+def _get_default_ingredient_rag_retriever(
+    catalog: VanillaCatalog,
+) -> IngredientRagRetriever:
+    global _INGREDIENT_RAG_RETRIEVER
+    with _INGREDIENT_RAG_LOCK:
+        if _INGREDIENT_RAG_RETRIEVER is None:
+            _INGREDIENT_RAG_RETRIEVER = IngredientRagRetriever(catalog)
+        return _INGREDIENT_RAG_RETRIEVER
 
 
 def _read_source_image(asset_store: FileAssetStore, draft: DraftRecord) -> bytes:
@@ -865,6 +948,9 @@ class GenerationOrchestrator:
         personal_configured: Callable[[], bool] = lambda: False,
         canonical_repository: CanonicalRepository | None = None,
         telemetry: TelemetryRecorder | None = None,
+        ingredient_retrieval_backend: IngredientRetrievalBackend = (
+            DEFAULT_INGREDIENT_RETRIEVAL_BACKEND
+        ),
     ) -> None:
         self._drafts = draft_repository
         self._attempts = attempt_repository
@@ -881,6 +967,7 @@ class GenerationOrchestrator:
         self._telemetry = (
             telemetry if telemetry is not None else NoopTelemetryRecorder()
         )
+        self._ingredient_retrieval_backend = ingredient_retrieval_backend
 
     def run(self, command: GenerationCommand) -> AsyncIterator[GenerationEvent]:
         # The attempt id is created up front so the slot can be attributed to
@@ -2024,6 +2111,139 @@ class GenerationOrchestrator:
             ),
         )
 
+    async def _map_gameplay_with_provider_verifier(
+        self, state: _RunState
+    ) -> GameplaySpec:
+        """Use one batched verifier call, falling back atomically to local RAG."""
+
+        assert state.core is not None
+        core = state.core
+        language = state.draft.source.language
+        try:
+            retriever = _get_default_ingredient_rag_retriever(self._catalog)
+        except Exception:  # noqa: BLE001 - keep the established RAG degradation path.
+            return _map_gameplay(
+                core,
+                self._catalog,
+                language=language,
+                retrieval_backend=IngredientRetrievalBackend.RAG,
+            )
+
+        used_item_ids: set[str] = set()
+        verifier_ingredients: list[IngredientVerifierIngredient] = []
+        local_ingredients: list[GameIngredient] = []
+
+        for index, semantic in enumerate(core.ingredients):
+            name = semantic.normalized_name or semantic.name
+            local_no_match = False
+            try:
+                evidence = retriever.retrieve_with_evidence(
+                    name, used_item_ids=frozenset(used_item_ids)
+                )
+                candidates = list(evidence.candidates)
+            except IngredientRagNoMatch:
+                candidates = []
+                local_no_match = True
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 - retain the v2 local/lexical fallback.
+                return _map_gameplay(
+                    core,
+                    self._catalog,
+                    language=language,
+                    retrieval_backend=IngredientRetrievalBackend.RAG,
+                )
+
+            # Run the v2 mapper first and keep its complete result as the
+            # all-or-nothing fallback if the Provider response is unusable.
+            provisional = map_ingredient(
+                semantic,
+                candidates,
+                self._catalog,
+                used_item_ids=frozenset(used_item_ids),
+                language=language,
+            )
+            used_item_ids.add(provisional.item_id)
+            local_ingredients.append(provisional)
+
+            request_candidates = [] if local_no_match else candidates
+            verifier_ingredients.append(
+                IngredientVerifierIngredient(
+                    index=index,
+                    name=name,
+                    candidates=[
+                        IngredientVerifierCandidate(
+                            itemId=candidate.item_id,
+                            displayNameEn=self._catalog.require(
+                                candidate.item_id
+                            ).display_name_en,
+                            displayNameZh=self._catalog.require(
+                                candidate.item_id
+                            ).display_name_zh,
+                        )
+                        for candidate in request_candidates
+                    ],
+                )
+            )
+
+        local_gameplay = _gameplay_with_mapped_ingredients(
+            core, local_ingredients, self._catalog, language=language
+        )
+        if not any(ingredient.candidates for ingredient in verifier_ingredients):
+            return local_gameplay
+
+        try:
+            request = IngredientVerifierRequest(
+                dishName=core.presentation.display_name,
+                ingredients=verifier_ingredients,
+                requestId=state.command.request_id,
+            )
+        except Exception:  # noqa: BLE001 - malformed local protocol data uses v2.
+            return local_gameplay
+
+        # Gateway selection remains the same per-attempt boundary used by the
+        # other generation stages. Trial reservation/profile semantics stay
+        # centralized in _ensure_gateway.
+        gateway = self._ensure_gateway(state)
+        state.provider_started = True
+        try:
+            response = await gateway.verify_ingredient_candidates(request)
+            response = validate_ingredient_verifier_response(request, response)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 - never partially apply a failed verdict.
+            return local_gameplay
+
+        selections = {selection.index: selection for selection in response.items}
+        reserved_item_ids = {
+            selection.selected_item_id
+            for selection in response.items
+            if selection.selected_item_id is not None
+        }
+        final_used_item_ids = set(reserved_item_ids)
+        mapped_ingredients: list[GameIngredient] = []
+        for semantic, request_item in zip(
+            core.ingredients, verifier_ingredients, strict=True
+        ):
+            selected_id = selections[request_item.index].selected_item_id
+            selected_candidates = (
+                [CatalogCandidate(item_id=selected_id, score=1.0)]
+                if selected_id is not None
+                else []
+            )
+            mapped = map_ingredient(
+                semantic,
+                selected_candidates,
+                self._catalog,
+                used_item_ids=frozenset(final_used_item_ids),
+                language=language,
+            )
+            final_used_item_ids.add(mapped.item_id)
+            mapped_ingredients.append(mapped)
+        return _gameplay_with_mapped_ingredients(
+            core, mapped_ingredients, self._catalog, language=language
+        )
+
     async def _execute_stage(self, state: _RunState, stage: GenerationStage) -> None:
         draft = state.draft
         if stage is GenerationStage.INPUT_VALIDATION:
@@ -2075,9 +2295,18 @@ class GenerationOrchestrator:
         elif stage is GenerationStage.INGREDIENT_MAPPING:
             if state.canonical is None:
                 assert state.core is not None
-                state.gameplay = _map_gameplay(
-                    state.core, self._catalog, language=draft.source.language
-                )
+                if (
+                    draft.mode is DraftMode.ASK_GUS
+                    and self._ingredient_retrieval_backend
+                    is IngredientRetrievalBackend.RAG
+                ):
+                    state.gameplay = await self._map_gameplay_with_provider_verifier(
+                        state
+                    )
+                else:
+                    state.gameplay = _map_gameplay(
+                        state.core, self._catalog, language=draft.source.language
+                    )
             else:
                 assert state.gameplay is not None
             self._update_candidate(state, gameplay=state.gameplay)

@@ -1,0 +1,249 @@
+{
+  "schema_version": "m14-ingredient-query-v1",
+  "catalog_version": "stardew-1.6.15-v1",
+  "game_version": "stardew-1.6.15",
+  "dish_count_minimum": 20,
+  "query_count_minimum": 60,
+  "dishes": [
+    {
+      "dish_id": "d01",
+      "name_en": "Tomato and egg stir-fry",
+      "name_zh": "西红柿炒蛋",
+      "ingredients": [
+        {"query_id": "d01-i01", "name": "西红柿", "normalized_name": "西红柿", "acceptable_item_ids": ["256"], "gold_note": "Exact Chinese catalog alias for Tomato."},
+        {"query_id": "d01-i02", "name": "egg", "normalized_name": "egg", "acceptable_item_ids": ["176"], "gold_note": "The plain vanilla Egg object is the direct ingredient."},
+        {"query_id": "d01-i03", "name": "garlic", "normalized_name": "garlic", "acceptable_item_ids": ["248"], "gold_note": "Garlic is a plausible aromatic in this stir-fry."}
+      ]
+    },
+    {
+      "dish_id": "d02",
+      "name_en": "Carp rice bowl",
+      "name_zh": "鲤鱼盖饭",
+      "ingredients": [
+        {"query_id": "d02-i01", "name": "Carp", "normalized_name": "Carp", "acceptable_item_ids": ["142"], "gold_note": "Species-specific raw Carp; prepared Carp Surprise is not the ingredient."},
+        {"query_id": "d02-i02", "name": "white rice", "normalized_name": "white rice", "acceptable_item_ids": ["423"], "gold_note": "Rice is the uncooked pantry ingredient; prepared rice dishes are not equivalent."},
+        {"query_id": "d02-i03", "name": "green onion", "normalized_name": "green onion", "acceptable_item_ids": ["399"], "gold_note": "Spring Onion is the closest vanilla allium garnish; algae and beans are not equivalents."}
+      ]
+    },
+    {
+      "dish_id": "d03",
+      "name_en": "Cherry tomato mushroom omelet",
+      "name_zh": "樱桃番茄蘑菇煎蛋",
+      "ingredients": [
+        {"query_id": "d03-i01", "name": "cherry tomatoes", "normalized_name": "cherry tomatoes", "acceptable_item_ids": ["256"], "gold_note": "Tomato is the vanilla tomato ingredient; Cherry is a different fruit."},
+        {"query_id": "d03-i02", "name": "button mushroom", "normalized_name": "button mushroom", "acceptable_item_ids": ["404"], "gold_note": "Common Mushroom is a reasonable generic mushroom counterpart; a finished fried dish is not raw mushroom."},
+        {"query_id": "d03-i03", "name": "egg", "normalized_name": "egg", "acceptable_item_ids": ["176"], "gold_note": "Egg is the direct omelet ingredient."}
+      ]
+    },
+    {
+      "dish_id": "d04",
+      "name_en": "Salmon with potatoes",
+      "name_zh": "三文鱼土豆拼盘",
+      "ingredients": [
+        {"query_id": "d04-i01", "name": "salmon", "normalized_name": "salmon", "acceptable_item_ids": ["139"], "gold_note": "Salmon is the direct fish ingredient; Salmonberry is a fruit."},
+        {"query_id": "d04-i02", "name": "potato", "normalized_name": "potato", "acceptable_item_ids": ["192"], "gold_note": "Potato is the direct vegetable ingredient."},
+        {"query_id": "d04-i03", "name": "cooking oil", "normalized_name": "cooking oil", "acceptable_item_ids": ["247"], "gold_note": "Oil is the vanilla cooking-fat ingredient."}
+      ]
+    },
+    {
+      "dish_id": "d05",
+      "name_en": "Blueberry pancakes",
+      "name_zh": "蓝莓松饼",
+      "ingredients": [
+        {"query_id": "d05-i01", "name": "blueberry", "normalized_name": "blueberry", "acceptable_item_ids": ["258"], "gold_note": "Blueberry is the direct fruit ingredient; a prepared tart is not equivalent."},
+        {"query_id": "d05-i02", "name": "wheat flour", "normalized_name": "wheat flour", "acceptable_item_ids": ["246"], "gold_note": "Wheat Flour is the vanilla baking staple."},
+        {"query_id": "d05-i03", "name": "egg", "normalized_name": "egg", "acceptable_item_ids": ["176"], "gold_note": "Egg is a standard pancake binder."}
+      ]
+    },
+    {
+      "dish_id": "d06",
+      "name_en": "Cranberry rice pudding",
+      "name_zh": "蔓越莓米布丁",
+      "ingredients": [
+        {"query_id": "d06-i01", "name": "cranberries", "normalized_name": "cranberries", "acceptable_item_ids": ["282"], "gold_note": "Cranberries are the fruit ingredient; sauce and candy are prepared foods."},
+        {"query_id": "d06-i02", "name": "rice", "normalized_name": "rice", "acceptable_item_ids": ["423"], "gold_note": "Rice is the grain ingredient; Rice Pudding is a prepared dish."},
+        {"query_id": "d06-i03", "name": "milk", "normalized_name": "milk", "acceptable_item_ids": ["184", "186"], "gold_note": "Regular and large Milk are both plausible vanilla milk ingredients."}
+      ]
+    },
+    {
+      "dish_id": "d07",
+      "name_en": "Salmon rice bowl",
+      "name_zh": "鲑鱼饭碗",
+      "ingredients": [
+        {"query_id": "d07-i01", "name": "鲑鱼", "normalized_name": "鲑鱼", "acceptable_item_ids": ["139"], "gold_note": "Exact Chinese catalog alias for Salmon."},
+        {"query_id": "d07-i02", "name": "大米", "normalized_name": "大米", "acceptable_item_ids": ["423"], "gold_note": "Exact Chinese catalog alias for Rice."},
+        {"query_id": "d07-i03", "name": "ginger", "normalized_name": "ginger", "acceptable_item_ids": ["829"], "gold_note": "Ginger is the direct aromatic; Ginger Ale is a drink."}
+      ]
+    },
+    {
+      "dish_id": "d08",
+      "name_en": "Eel rice bowl",
+      "name_zh": "鳗鱼饭",
+      "ingredients": [
+        {"query_id": "d08-i01", "name": "eel", "normalized_name": "eel", "acceptable_item_ids": ["148"], "gold_note": "Eel is the direct fish ingredient; the cooked fish dish is not equivalent."},
+        {"query_id": "d08-i02", "name": "rice", "normalized_name": "rice", "acceptable_item_ids": ["423"], "gold_note": "Rice is the grain ingredient."},
+        {"query_id": "d08-i03", "name": "大葱", "normalized_name": "大葱", "acceptable_item_ids": ["399"], "gold_note": "Exact Chinese catalog alias for Spring Onion."}
+      ]
+    },
+    {
+      "dish_id": "d09",
+      "name_en": "Aubergine tomato stew",
+      "name_zh": "茄子番茄炖菜",
+      "ingredients": [
+        {"query_id": "d09-i01", "name": "aubergine", "normalized_name": "aubergine", "acceptable_item_ids": ["272"], "gold_note": "Aubergine is a regional synonym for Eggplant."},
+        {"query_id": "d09-i02", "name": "tomato", "normalized_name": "tomato", "acceptable_item_ids": ["256"], "gold_note": "Tomato is the direct vegetable ingredient."},
+        {"query_id": "d09-i03", "name": "garlic", "normalized_name": "garlic", "acceptable_item_ids": ["248"], "gold_note": "Garlic is a plausible stew aromatic."}
+      ]
+    },
+    {
+      "dish_id": "d10",
+      "name_en": "Mushroom leek soup",
+      "name_zh": "蘑菇韭葱汤",
+      "ingredients": [
+        {"query_id": "d10-i01", "name": "mushroom", "normalized_name": "mushroom", "acceptable_item_ids": ["404"], "gold_note": "Common Mushroom is the closest generic vanilla mushroom ingredient."},
+        {"query_id": "d10-i02", "name": "韭葱", "normalized_name": "韭葱", "acceptable_item_ids": ["20"], "gold_note": "Exact Chinese catalog alias for Leek."},
+        {"query_id": "d10-i03", "name": "牛奶", "normalized_name": "牛奶", "acceptable_item_ids": ["184", "186"], "gold_note": "Exact Chinese catalog alias for Milk."}
+      ]
+    },
+    {
+      "dish_id": "d11",
+      "name_en": "Cauliflower cheese bake",
+      "name_zh": "奶酪烤花椰菜",
+      "ingredients": [
+        {"query_id": "d11-i01", "name": "cauliflower", "normalized_name": "cauliflower", "acceptable_item_ids": ["190"], "gold_note": "Cauliflower is the direct vegetable ingredient."},
+        {"query_id": "d11-i02", "name": "cheese", "normalized_name": "cheese", "acceptable_item_ids": ["424", "426"], "gold_note": "Cheese and Goat Cheese are both plausible cheeses for a bake."},
+        {"query_id": "d11-i03", "name": "milk", "normalized_name": "milk", "acceptable_item_ids": ["184", "186"], "gold_note": "Vanilla Milk is a plausible dairy ingredient."}
+      ]
+    },
+    {
+      "dish_id": "d12",
+      "name_en": "Strawberry milkshake",
+      "name_zh": "草莓奶昔",
+      "ingredients": [
+        {"query_id": "d12-i01", "name": "草莓", "normalized_name": "草莓", "acceptable_item_ids": ["400"], "gold_note": "Exact Chinese catalog alias for Strawberry."},
+        {"query_id": "d12-i02", "name": "milk", "normalized_name": "milk", "acceptable_item_ids": ["184", "186"], "gold_note": "Milk is the direct beverage base."},
+        {"query_id": "d12-i03", "name": "sugar", "normalized_name": "sugar", "acceptable_item_ids": ["245"], "gold_note": "Sugar is a plausible sweetener."}
+      ]
+    },
+    {
+      "dish_id": "d13",
+      "name_en": "Apple tart",
+      "name_zh": "苹果挞",
+      "ingredients": [
+        {"query_id": "d13-i01", "name": "苹果", "normalized_name": "苹果", "acceptable_item_ids": ["613"], "gold_note": "Exact Chinese catalog alias for Apple."},
+        {"query_id": "d13-i02", "name": "egg", "normalized_name": "egg", "acceptable_item_ids": ["176"], "gold_note": "Egg is a plausible baking binder."},
+        {"query_id": "d13-i03", "name": "wheat flour", "normalized_name": "wheat flour", "acceptable_item_ids": ["246"], "gold_note": "Wheat Flour is the vanilla pastry staple."}
+      ]
+    },
+    {
+      "dish_id": "d14",
+      "name_en": "Eel and ginger soup",
+      "name_zh": "姜汁鳗鱼汤",
+      "ingredients": [
+        {"query_id": "d14-i01", "name": "eel", "normalized_name": "eel", "acceptable_item_ids": ["148"], "gold_note": "Eel is the direct fish ingredient."},
+        {"query_id": "d14-i02", "name": "姜", "normalized_name": "姜", "acceptable_item_ids": ["829"], "gold_note": "Exact Chinese catalog alias for Ginger."},
+        {"query_id": "d14-i03", "name": "韭葱", "normalized_name": "韭葱", "acceptable_item_ids": ["20"], "gold_note": "Exact Chinese catalog alias for Leek."}
+      ]
+    },
+    {
+      "dish_id": "d15",
+      "name_en": "Fiddlehead risotto",
+      "name_zh": "蕨菜烩饭",
+      "ingredients": [
+        {"query_id": "d15-i01", "name": "蕨菜", "normalized_name": "蕨菜", "acceptable_item_ids": ["259"], "gold_note": "Exact Chinese catalog alias for Fiddlehead Fern."},
+        {"query_id": "d15-i02", "name": "rice", "normalized_name": "rice", "acceptable_item_ids": ["423"], "gold_note": "Rice is the grain ingredient, not Rice Pudding."},
+        {"query_id": "d15-i03", "name": "cheese", "normalized_name": "cheese", "acceptable_item_ids": ["424", "426"], "gold_note": "Cheese or Goat Cheese is a plausible risotto dairy ingredient."}
+      ]
+    },
+    {
+      "dish_id": "d16",
+      "name_en": "Corn chowder",
+      "name_zh": "玉米浓汤",
+      "ingredients": [
+        {"query_id": "d16-i01", "name": "玉米", "normalized_name": "玉米", "acceptable_item_ids": ["270"], "gold_note": "Exact Chinese catalog alias for Corn."},
+        {"query_id": "d16-i02", "name": "牛奶", "normalized_name": "牛奶", "acceptable_item_ids": ["184", "186"], "gold_note": "Exact Chinese catalog alias for Milk."},
+        {"query_id": "d16-i03", "name": "potato", "normalized_name": "potato", "acceptable_item_ids": ["192"], "gold_note": "Potato is a plausible chowder vegetable."}
+      ]
+    },
+    {
+      "dish_id": "d17",
+      "name_en": "Salmonberry tart",
+      "name_zh": "美洲大树莓挞",
+      "ingredients": [
+        {"query_id": "d17-i01", "name": "美洲大树莓", "normalized_name": "美洲大树莓", "acceptable_item_ids": ["296"], "gold_note": "Exact Chinese catalog alias for Salmonberry, not Salmon fish."},
+        {"query_id": "d17-i02", "name": "wheat flour", "normalized_name": "wheat flour", "acceptable_item_ids": ["246"], "gold_note": "Wheat Flour is the vanilla baking staple."},
+        {"query_id": "d17-i03", "name": "egg", "normalized_name": "egg", "acceptable_item_ids": ["176"], "gold_note": "Egg is a plausible baking binder."}
+      ]
+    },
+    {
+      "dish_id": "d18",
+      "name_en": "Artichoke cheese dip",
+      "name_zh": "奶酪洋蓟蘸酱",
+      "ingredients": [
+        {"query_id": "d18-i01", "name": "洋蓟", "normalized_name": "洋蓟", "acceptable_item_ids": ["274"], "gold_note": "Exact Chinese catalog alias for Artichoke."},
+        {"query_id": "d18-i02", "name": "cheese", "normalized_name": "cheese", "acceptable_item_ids": ["424", "426"], "gold_note": "Cheese and Goat Cheese are plausible dairy ingredients."},
+        {"query_id": "d18-i03", "name": "蒜", "normalized_name": "蒜", "acceptable_item_ids": ["248"], "gold_note": "Exact Chinese catalog alias for Garlic."}
+      ]
+    },
+    {
+      "dish_id": "d19",
+      "name_en": "Rainbow trout with kale",
+      "name_zh": "虹鳟配羽衣甘蓝",
+      "ingredients": [
+        {"query_id": "d19-i01", "name": "虹鳟鱼", "normalized_name": "虹鳟鱼", "acceptable_item_ids": ["138"], "gold_note": "Exact Chinese catalog alias for Rainbow Trout."},
+        {"query_id": "d19-i02", "name": "甘蓝菜", "normalized_name": "甘蓝菜", "acceptable_item_ids": ["250"], "gold_note": "Exact Chinese catalog alias for Kale."},
+        {"query_id": "d19-i03", "name": "油", "normalized_name": "油", "acceptable_item_ids": ["247"], "gold_note": "Exact Chinese catalog alias for Oil."}
+      ]
+    },
+    {
+      "dish_id": "d20",
+      "name_en": "Tuna cabbage wraps",
+      "name_zh": "金枪鱼卷心菜卷",
+      "ingredients": [
+        {"query_id": "d20-i01", "name": "金枪鱼", "normalized_name": "金枪鱼", "acceptable_item_ids": ["130"], "gold_note": "Exact Chinese catalog alias for Tuna."},
+        {"query_id": "d20-i02", "name": "红叶卷心菜", "normalized_name": "红叶卷心菜", "acceptable_item_ids": ["266"], "gold_note": "Exact Chinese catalog alias for Red Cabbage."},
+        {"query_id": "d20-i03", "name": "chili pepper", "normalized_name": "chili pepper", "acceptable_item_ids": ["260"], "gold_note": "Hot Pepper is the closest vanilla fresh chili ingredient; prepared pepper dishes are not equivalent."}
+      ]
+    },
+    {
+      "dish_id": "d21",
+      "name_en": "Parsnip soup",
+      "name_zh": "防风草汤",
+      "ingredients": [
+        {"query_id": "d21-i01", "name": "防风草", "normalized_name": "防风草", "acceptable_item_ids": ["24"], "gold_note": "Exact Chinese catalog alias for Parsnip."},
+        {"query_id": "d21-i02", "name": "milk", "normalized_name": "milk", "acceptable_item_ids": ["184", "186"], "gold_note": "Milk is a plausible soup dairy base."},
+        {"query_id": "d21-i03", "name": "garlic", "normalized_name": "garlic", "acceptable_item_ids": ["248"], "gold_note": "Garlic is a plausible soup aromatic."}
+      ]
+    },
+    {
+      "dish_id": "d22",
+      "name_en": "Peach and orange fruit salad",
+      "name_zh": "桃子橙子水果沙拉",
+      "ingredients": [
+        {"query_id": "d22-i01", "name": "peach", "normalized_name": "peach", "acceptable_item_ids": ["636"], "gold_note": "Peach is the direct fruit ingredient."},
+        {"query_id": "d22-i02", "name": "orange", "normalized_name": "orange", "acceptable_item_ids": ["635"], "gold_note": "Orange is the direct fruit ingredient."},
+        {"query_id": "d22-i03", "name": "strawberry", "normalized_name": "strawberry", "acceptable_item_ids": ["400"], "gold_note": "Strawberry is a plausible fruit salad ingredient."}
+      ]
+    },
+    {
+      "dish_id": "d23",
+      "name_en": "Pineapple pepper stir-fry",
+      "name_zh": "菠萝甜椒炒菜",
+      "ingredients": [
+        {"query_id": "d23-i01", "name": "菠萝", "normalized_name": "菠萝", "acceptable_item_ids": ["832"], "gold_note": "Exact Chinese catalog alias for Pineapple."},
+        {"query_id": "d23-i02", "name": "hot pepper", "normalized_name": "hot pepper", "acceptable_item_ids": ["260"], "gold_note": "Hot Pepper is the direct chili ingredient."},
+        {"query_id": "d23-i03", "name": "ginger", "normalized_name": "ginger", "acceptable_item_ids": ["829"], "gold_note": "Ginger is a plausible stir-fry aromatic."}
+      ]
+    },
+    {
+      "dish_id": "d24",
+      "name_en": "Leek and potato soup",
+      "name_zh": "韭葱土豆汤",
+      "ingredients": [
+        {"query_id": "d24-i01", "name": "韭葱", "normalized_name": "韭葱", "acceptable_item_ids": ["20"], "gold_note": "Exact Chinese catalog alias for Leek."},
+        {"query_id": "d24-i02", "name": "土豆", "normalized_name": "土豆", "acceptable_item_ids": ["192"], "gold_note": "Exact Chinese catalog alias for Potato."},
+        {"query_id": "d24-i03", "name": "牛奶", "normalized_name": "牛奶", "acceptable_item_ids": ["184", "186"], "gold_note": "Exact Chinese catalog alias for Milk."}
+      ]
+    }
+  ]
+}

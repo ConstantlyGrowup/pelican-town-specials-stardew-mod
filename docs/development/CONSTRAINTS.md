@@ -6,16 +6,18 @@
 
 | 文档 | 权威范围 |
 |---|---|
-| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.15 | 本地版协议，并链接 Milestone 9/10/11、Task 36.1/36.2/49 与 Task 56 故障续作扩展 |
+| `docs/architecture/MVP_TECHNICAL_DESIGN.md` v2.15 | v1.5.6 核心本地版协议，并链接 Milestone 9/10/11、Task 36.1/36.2/49 与 Task 56 故障续作扩展 |
+| `docs/architecture/M14_INGREDIENT_RAG_TECHNICAL_DESIGN.md` v1.2 | M14 Task63 本地检索设计及 Task67 显式 RAG Provider 候选选择增量；默认仍为 LEGACY |
 | `docs/architecture/PHASE_3_CANONICAL_MEMORY_TECHNICAL_DESIGN.md` v1.1 | Milestone 9 SQLite、领域/端口、候选算法、matcher、复用、登记、计时、失败与验收协议；用户已验收并授权实施 |
 | `docs/architecture/RELEASE_TELEMETRY_TECHNICAL_DESIGN.md` v1.2 | Milestone 10 EXE 无感后台统计、PostHog sink、字段 allowlist、事件、性能与指标协议；已实施、独立审阅并随 v1.4.0 发布 |
-| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.8 | Task 1–48 已发布，Task 49 已推送未发布；M12 Task 50–55 已完成并获用户整体验收及提交推送授权，Task 56 已提交推送 |
+| `docs/plans/MVP_IMPLEMENTATION_PLAN.md` v2.9 | Task 1–49 与 M13 Task 57–60 已随 v1.5.6 或更早版本发布；M12 Task 50–55 已验收；M14 Task 61–67 已验收并推送，默认仍为 LEGACY |
 | `docs/plans/2026-08-25-milestone-9-canonical-memory.md` v1.1 | Milestone 9 文件、依赖、Acceptance、测试、人工验收和 focused commit 计划；已验收并授权按 Task 31→36 实施 |
 | `docs/plans/2026-08-25-milestone-10-release-telemetry.md` v1.2 | Milestone 10 Task 37–39 文件、依赖、Acceptance、测试、外部配置、打包和 focused commit 计划；已实施、验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-1-source-referenced-icon.md` v1.0 | fresh/miss/full-regenerate/Blueprint 使用当前原图生成像素图标，Canonical HIT 复用历史图标；已验收并随 v1.4.0 发布 |
 | `docs/plans/2026-08-26-task-36-2-official-openai-provider-compatibility.md` v1.0 | 官方/非官方 OpenAI-compatible 端点适配：省略官方不兼容参数、按单图 `image`/多图 `image[]` 编码，并保持非官方兼容端点回归；已验收并推送 |
 | `docs/architecture/TRIAL_EXPERIENCE_TECHNICAL_DESIGN.md` v1.2 | Milestone 11 试用预留/完整成功确认、任意失败不扣、个人服务接管、结果快照及 Task 43/44；已随 v1.5.0 发布 |
 | `docs/plans/2026-08-30-milestone-11-trial-experience.md` v1.2 | Task 40–44 的依赖、Acceptance、测试、统一验收与 v1.5.0 发布结果 |
+| `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` v1.5 | M14 Task 61–67 与用户追加 Task66.1 扩样对照已完成；JEV 合理率与 Task67 Gold ID 命中率分开记录，默认仍为 LEGACY |
 | `最初设计功能清点/StarValleyCook_项目顶层规划_v3.0.md` | 现行五期路线与阶段边界；第三期记忆、第四期在线后端、第五期管理端 |
 | `最初设计功能清点/第三期-全局生成记忆与Canonical召回-规划锚点_v3.0.md` v3.3 | 当前第三期产品/机制真源；Milestone 9 已验收并授权实施 |
 | `design docs/PelicanTownSpecials_一期顶层设计_v2.2.docx` | 一期产品定义与 Ask Gus 三操作 / 并列入口（Git ignored） |
@@ -119,3 +121,15 @@ M12 v1.1 调序：Task 50 先实现全部必要脚本/记录模板/Current 与�
 ## 2026-09-04 M12 验收完成
 
 Task50–55 全部完成并经用户整体验收，用户授权提交推送 MVP 分支及状态文档更新。此前逐阶段前置和暂停记录保留为历史。当前无需再等照片、人审、Provider 配置或费用数据；已确认沿用用户独立统计的 A–F 消耗表，指标见 [M12_QUANTITATIVE_RESULTS.md](M12_QUANTITATIVE_RESULTS.md)。完整冷启动批次计时缺口如实保留，不因验收而改写实测边界。30条 synthetic 记忆及 CPU 模型文件已按授权清除，真实记忆和结果证据保留；其余数据不自动删除。M12 为评测里程碑，不触发 installer/tag/Release；正式版本仍 v1.5.4。
+
+## 2026-09-23 Milestone 14 规划边界
+
+用户已确认本 Milestone 的六步方向；Task 61–66 的当前完成状态以 `STATUS.md` 为准。计划细节见 `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md`。原料 RAG 是新任务，M12“Embedding 只用于开发期评测、不得进入生产包”的限制只约束已关闭的 M12，不能阻止经 M14 设计/评测后获准的本地产品重构。
+
+M14 的 PostHog 看板使用预置数据演示 10–15 个匿名安装、每安装最多 5 次试用的使用路径；底层事件与开发记录保留来源，看板不显示永久说明，未来真实事件仍进入同一看板，但任何归因分析须按来源区分；不把预置数值当作真实观测或因果证明。真正的原料质量结论须以冻结 Query 集、JEV 结构化全量评测和同集对照为依据。JEV 不输出理由；人工只作抽样或争议复核。目录缺少对应物的原料在评测样本冻结前排除，兜底率不作为改善指标。当前正式安装包为 v1.5.6。原先 Task61 阶段未授权的真实模型费用，已由用户随后对 Task64、Task66 的明确评测授权覆盖；Task66 用户明确授权发送限定字段至 OpenRouter Decisions API、最多 72 次，本轮实际 8 次。该授权不包含自动切换产品默认、push、main/tag 或 Release。
+
+用户随后明确授权 Task66.1 新 96 道菜同集盲评，OpenRouter Decisions API 最多 576 次计费请求，只发送菜名、现实原料、最终游戏目录项与固定 rubric，不发送 Gold、方案标签、候选分数或 Key；实际 311 次成功请求、220 次精确同状态复用，usage 汇总费用 `$0.007338282`。新集仍为策划题集，旧侧 45 个 fallback 对应的现实原料均有预冻结合法 Gold，不能据此称游戏没有该物品，也不能把 fallback 率当效果 KPI；产品默认切换、push/main/tag/Release 未获此授权。
+
+## 2026-09-24 Task67 当前边界
+
+Task67 的完整离线评测和显式 RAG Provider 候选选择已获用户验收，并随 `7b45e1a` 推送至 `feat/mvp-implementation`。仅显式选择内部 RAG 时，链路才在本地 Top 5 召回后按菜调用一次文本 Provider，从候选中选择目录 ID 或拒匹配；默认产品链路仍为 LEGACY。人审简版报告记录的 Gold 主指标为 120 道菜全菜正确 56/120→94/120、单原料正确 264/360→327/360；仅本地 RAG 中间结果为 84/120。此前 JEV 事后修正结果 65/120→92/120 是不同评测指标，不能与 Gold 命中率合并。Task67 未执行真实产品路径或 JEV 复测，正式 Release 仍为 v1.5.6。

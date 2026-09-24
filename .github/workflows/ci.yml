@@ -1,26 +1,123 @@
-# CI: verify the MVP build end-to-end and produce a release candidate.
-#
-# CI runs on every push/PR and never publishes. The verified pipeline lives in
-# the reusable .github/workflows/build.yml (full tests → PyInstaller bundle →
-# bundle smoke → Inno installer → installer smoke → artifacts); release.yml
-# reuses the same pipeline on v* tags / manual dispatch and is the only path
-# that can create a GitHub Release.
+# Fast checks run on every branch push and pull request. Windows packaging is
+# kept in the Release-only reusable workflow; PRs and main add the full
+# integration suite and Playwright fake E2E after the fast checks pass.
 name: ci
 
 on:
   push:
     branches:
-      - feat/mvp-implementation
-      - main
+      - '**'
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  verify-and-build:
-    uses: ./.github/workflows/build.yml
-    # Do not pass telemetry inputs here. The reusable workflow defaults all
-    # Release-only values to empty/false, so ordinary CI remains config-free.
-    secrets:
-      PTS_TRIAL_API_KEY: ${{ secrets.PTS_TRIAL_API_KEY }}
+  backend-fast:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend dependencies (per pyproject.toml)
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev -e .
+
+      - name: Ruff lint
+        run: python -m ruff check backend
+
+      - name: Mypy type check
+        run: python -m mypy backend/src
+
+      - name: Backend and repository unit tests
+        run: python -m pytest backend/tests tests/repo -q
+
+      - name: Fake collector telemetry integration tests
+        run: python -m pytest tests/integration/test_task39_telemetry_e2e.py -q
+
+      - name: Product copy gate
+        run: python scripts/check_product_copy.py
+
+      - name: Frontend locale gate
+        run: python scripts/check_frontend_locale.py
+
+  frontend-fast:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install frontend dependencies (per pnpm-lock.yaml)
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend unit tests
+        run: pnpm --dir frontend test:run
+
+      - name: Frontend lint
+        run: pnpm --dir frontend lint
+
+      - name: Frontend build
+        run: pnpm --dir frontend build
+
+  pr-main-integration:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    needs: [backend-fast, frontend-fast]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install backend dependencies (per pyproject.toml)
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev -e .
+
+      - name: Install frontend dependencies (per pnpm-lock.yaml)
+        run: pnpm install --frozen-lockfile
+
+      - name: OpenAPI generate and drift check
+        run: pwsh -NoProfile -File scripts/check_openapi_drift.ps1
+
+      - name: Full integration tests
+        run: python -m pytest tests/integration -q
+
+      - name: Install Playwright browser
+        run: pnpm --dir frontend exec playwright install chromium
+
+      - name: Playwright fake E2E
+        run: pnpm --dir frontend e2e

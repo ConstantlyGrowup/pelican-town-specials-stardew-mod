@@ -6,16 +6,127 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_6_released |
-| project_phase | 收集品「最新收录优先」排序已随 v1.5.6 正式发布；GitHub Actions 与正式 Release 资产均完成核验 |
+| overall_state | ci_green_docs_pushed |
+| project_phase | v1.5.6 已发布；Task67、文档同步与两项 CI 修复均已推送至 `feat/mvp-implementation`；最新 push CI `35987394616` 成功；产品默认仍为 LEGACY |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | released |
+| active_session_state | none |
 | active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
-| blocker | 无 |
-| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
-| collaboration_model | M10 延续 Codex 主 Agent 全量接管；每 Task 新 `luna_worker`（gpt-5.6-luna/max）实施；`detector`（gpt-5.6-sol/medium，只读）独立审阅；主 Agent 验收；PASS → auto_accepted → 本地 focused commit；旧 Claude+Codex 流程保留为历史/default |
+| current_task | CI 修复已推送验证成功，末次增量文档 `75721ed` 已推送 |
+| blocker | 无 CI 阻塞；默认 RAG 切换、JEV 新请求、tag/Release 仍未授权 |
+| next_action | 等待用户决定下一项任务；不自动切换默认链路或发布 |
+| collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-24 Task67 启动
+
+- 用户接受人审简版报告并授权仅本地提交，focused commit `2adcc47`，未推送；随后授权新 Task67 修复显式 RAG 对无对应物原料强行匹配，并实测优化后链路。唯一活动 Session 为 `2026-09-24-task-67-ingredient-rag-abstention`。先冻结 20 条负样本（5 条已观察种子 + 15 条新挑战），正样本沿用 120 菜/360 项；区分语义 no-match 到 catalog fallback 与模型故障旧词法降级。新 JEV 付费调用、默认切换、推送与 Release 均未获授权。
+
+### 2026-09-24 Task67 本地语义核验扩展
+
+- v1 E5 cosine/margin 与 `Cooking` 类型过滤探索性诊断未找到可安全兼顾拒识和正样本的判据，未改生产代码；其精确数字来自未持久化探针，正式结论需可复算 runner。十五条预冻结挑战文本曾被实施者误见但未运行，不能称严格盲测。用户明确授权将 Task67 扩展为本地语义核验/目录类型知识，合同修订为 `m14-task67-rag-abstention-v2`，原诊断作为历史而非完成。继续禁止新增远端调用、默认切换和推送；本地正样本 Gold 门槛为原显式 RAG `84/120` 全菜、`318/360` 逐项，JEV 需另获授权。
+- 首轮实现后，主 Agent 代码冻结独立跑原 20 条负集，仅 `15/20` 正确兜底（5 条强配，0 故障）；另构造的 10 条压力样本仅 `4/10`，两组分列。正集保持 `84/120` 全菜 Gold、`318/360` 逐项 Gold。独立 detector 对 v2 round 0 返回 `REVISE`，`C67v2-01` 未过，不能提交或宣称修复完成。已派返工 round 1，仅在 ignored 本地目录试验更强的成对语义核验；未经效果证实不引入生产资产。
+- 返工 round 1 完成 MIT 多语 NLI 本地量化原型：资源约 107 MB、双向 5 候选中位约 23–29 ms，但固定 20 负例/120 菜无法同时满足拒识与正集质量门槛；保住正集时仍 `15/20`，做到 `20/20` 则全菜 Gold 为 `0/120`。未接入产品，未调用 JEV。已向用户请求明确选择是否允许现有文本 LLM 增加一次按菜 Top5＋无匹配核验；若无该新授权，不继续扩大生产链路。诊断见 `M14_TASK67_ABSTENTION_DIAGNOSIS.md`。
+- 用户随后明确允许评估应用现有文本 LLM 的按菜 Top5＋无匹配核验。Session 合同修订为 `m14-task67-llm-verifier-feasibility-v3`：先做不发真实请求的脱敏协议/runner 和 fake 测试；实际付费试跑另锁定调用上限、字段与配置。v2 未验收代码不因授权 v3 而视为完成；JEV 仍独立、无新授权，产品默认/推送/发布不变。
+- 用户已单独授权首轮最多 `15` 次个人文本 Provider 真实试跑：10 道冻结菜＋5 个无对应物原料，仅发送菜名、现实原料、各项 Top5 目录 ID/中英名和“无匹配”选项；不使用公共试用，不发送 Gold、分数、图片、用户原始内容或密钥，不调用 JEV。剩余全量与产品接入仍待后续决定。
+- v3 脱敏 runner/fake 测试已由指定 `luna_worker` 完成，独立 `detector` 对 `C67v3-01..04` 返回 PASS；13 项聚焦测试、Ruff、diff check 与真实模式 dry-run 通过。主 Agent 依授权仅运行一次固定试点，个人文本模型 `gpt-5.6-terra` 实际 15/15 物理请求、无重试、0 JEV。负例为 v2 `0/5` 兜底→文本核验 `5/5`；正菜全 Gold v2 `9/10`→本次 `9/10`，逐项 v2 `29/30`→本次 `27/30`。一菜 HTTP 200 但触发 `duplicate_final_item_id`，其 3 项按无效计入分母，不伪称语义误判。耗时 121.4 秒，单请求中位 4.55 秒。原始 ignored 输出在 `output/m14-task67-v3-pilot-20260924/`，详见 `M14_TASK67_ABSTENTION_DIAGNOSIS.md`。15 次授权已用满；这不是 120/20 全量或生产链路修复，后续请求/接入须另获决定。
+- 试点后仅修复离线评分器的同菜去重次序：预留全部明确选择的 ID，避免较早 `null` 的目录兜底占用后续候选；未重发请求或追改试点数据。`luna_worker` 新增聚焦用例后 `15 passed`，独立 `detector` 定向复审 PASS，既有试点 manifest hash 不变。产品链路仍未接入文本核验。
+- 用户现已认可 `15/20` 本地拒识在正常菜品不退步时可作为 tradeoff，接受每菜多一次个人文本 Provider 核验的时延/费用，授权剩余 110 菜＋15 负例全量测验，并允许质量达标后改造原链路。新 v4 Packet 与事前门槛已追加当前 Session：全菜 Gold ≥`84/120`、逐项 Gold ≥`318/360`、负例 catalog fallback ≥`15/20`；首轮 15 例不重发，所有错误留分母。评测阶段不改生产/JEV/LEGACY 默认，先加固逐 case 单次执行再复审。若结果达标，才冻结产品接入合同并实施；新 JEV 请求另需授权。
+- v4 执行器封闭复审 PASS 后，主 Agent 依授权逐 case 执行剩余 125 次，首轮 15 只读复用；140 唯一 case/140 物理请求，120 菜/360 项/20 负例固定分母。全菜 Gold `84/120→94/120`、逐项 `318/360→327/360`、负例兜底 `15/20→20/20`；配对改善 12、退步 2（`berries`、`root vegetables` 被过度拒识）、持平 106。两次 Provider 超时和首轮一菜无效均保留；p50 8.32 秒、p95 50.48 秒。独立结果 detector PASS；不称 JEV 合理率或精确费用。用户已明确接受 12/2 的取舍，授权只在显式 RAG 路径接入核验，保持 LEGACY 默认与无推送/发布。v5 生产接入合同见当前 Session；细节见 `M14_TASK67_ABSTENTION_DIAGNOSIS.md`。
+- v5 已由指定 `luna_worker` 接入内部显式 RAG 的按菜一次 Provider 核验，默认 LEGACY 不发该请求；Provider 失败整菜退回 v2 本地 RAG，`null`/本地 no-match 走 catalog fallback。新增专项 `13 passed`，相关回归 `140 passed`，Ruff、mypy（23 source files）、diff check 通过，未调用真实 Provider/JEV。独立只读 `detector` 对 `C67v5-01..05` 返回 PASS；它独立复跑 Provider 6 项及静态检查，生成侧复跑因 pytest 临时目录 `WinError 5` 未能独立完成，保留实施者 140/13 项证据。Session 已经过 verification 进入 `awaiting_user_acceptance`；无 commit/push/默认切换/发布。
+- 用户追加要求给人审阅的“原始搜索匹配 vs 完整 RAG”可读结论。主 Agent 只读归并旧 Task64/66.1 与 Task67 v3/v4 的同一 120 菜、360 项 Gold，`query_id` 与可接受 ID 集合全量一致；原始全菜 `56/120`→完整 RAG `94/120`、单项 `264/360`→`327/360`，旧→新逐菜改善 38、退步 0。新增 `M14_TASK67_LEGACY_VS_FULL_RAG_REVIEW.md`，明确与先前 JEV 事后修正口径不同、产品默认未切换及未进行真实产品路径复测。此项纯报告维护纳入当前待验收 Task67，不发真实请求或变更业务代码。
+- 用户明确验收 Task67 新接入链路及上述人审结论报告，并单独授权创建 focused commit、推送 `feat/mvp-implementation`。Task67 Session 由 `awaiting_user_acceptance` 进入 `accepted`，本次控制面随 focused commit 记录 `committed`；推送成功与否以 Git 远端核验为准，不自动推 tag/Release 或切换 LEGACY 默认。
+
+### 2026-09-24 M14 后文档状态同步
+
+- Task67 focused commit `7b45e1a` 与 `origin/feat/mvp-implementation` 已核对一致；用户随后要求先更新过时文档状态。唯一修改型 Session 为 `2026-09-24-m14-documentation-state-sync`。八份入口文档统一当前状态：正式 Release v1.5.6；Task61–67 已验收推送；内部显式 RAG 才调用按菜 Provider，默认 LEGACY；Gold `56/120→94/120` 与先前 JEV 事后修正 `65/120→92/120` 分列，未做真实产品路径复测。历史计划和评测结论未追改。
+- 指定 `luna_worker` 完成内容修订但在正式交接前遇额度限制；主 Agent 接续小范围状态消歧。独立只读 `detector` 按 `CDOC-01..03` 返回 PASS，指出的 MVP 计划历史标题已修正；之后主 Agent 将设计源索引的两处旧“当前/优先快照”标题改为历史快照。`git diff --check` 通过，Git ignored 正式设计/计划/索引仍保持忽略；未改产品代码、发真实请求、提交或推送。本 Session 进入 `awaiting_user_acceptance`。
+- 用户接着明确要求“完成文档更新之后”诊断并修复最近 CI、提交推送，末尾再做增量文档同步。此指令允许已通过只读复核的纯文档维护先收口为一个本地 focused commit；CI 修复另起 Session 和提交，两者在 CI 修复验证后按本轮授权统一推送。正式设计/计划/索引保持 Git ignored，不随 commit 推送。
+
+### 2026-09-24 最近 push CI 修复
+
+- 最新失败 run `35978864894` 的 `backend-fast` 在 `python -m mypy backend/src` 报 `TrialSafeGateway` 缺少 Task67 新协议方法；`frontend-fast` 成功，PR/main integration 按分层跳过。新 Session `2026-09-24-ci-trial-verifier-protocol-fix` 仅补试用网关一次转发与错误脱敏回归。指定 `luna_worker` 先 RED 后修复，mypy 107 文件、Ruff、diff check PASS，冻结四文件 pytest `78 passed`；独立只读 `detector` 对 `CCI-01..03` PASS，独立 pytest 因本机 temp ACL 未复跑，保留 worker 的可用环境结果。用户本轮已授权提交推送；修复与前一文档提交分开，下一步核验新远端 CI。
+- 文档同步 `9807a5a` 与试用网关修复 `18c7215` 已推送。新 CI run `35986066650` 中 Ruff/mypy/frontend 通过，但 backend 1106 项单测通过、1 项失败：唯一失败项无条件读取 Git ignored `output/m14-task64` 历史原始产物。新 Session `2026-09-24-ci-task64-artifact-test-boundary` 冻结仅测试边界修复；指定 `luna_worker` 只改一份测试文件，全部产物缺席时 skip，任一存在时保留原严格核验。实施者、主 Agent 和独立只读 `detector` 聚焦 pytest 各 `10 passed`，Ruff/diff check PASS；detector 对 `CCI64-01..03` 返回 PASS。下一步按用户授权 focused commit、推送与远端 CI 核验，之后再作末次增量文档更新。
+- Task64 测试边界修复 focused commit `681d3c1` 已推送；最新 [CI run 35987394616](https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod/actions/runs/35987394616) 对该 SHA 为 `success`。`backend-fast`、`frontend-fast` 均成功，PR/main integration 在普通 MVP push 上按设计 skipped；此前 mypy 与缺失历史产物两项 CI 故障均已消除。GitHub 的 Node 20 Actions 弃用提示是非阻塞提醒，未顺手升级 Actions。用户要求的末次增量文档同步独立于已推送代码，在纯文档 Session `2026-09-24-ci-green-documentation-closeout` 收口。
+- 用户随后明确授权提交推送末次文档变更；`75721ed` 已推送至 `origin/feat/mvp-implementation`。本条仅记录此前尚在本地的状态变化，不改产品、测试或 CI 门禁。代码修复的成功 CI 仍以 `35987394616` 为准；文档推送触发的新 CI 另按其实际结果核验，不提前宣称成功。
+
+### 2026-09-24 M14 人审简版报告
+
+- 用户要求另出一份仅含核心评测指标与耗时的通俗报告；后续明确只要两批菜名不重复即可合并，食材 query 重复属于正常现象。只读核验确认 24 菜与 96 菜的中英文菜名均无重复，虽有 30 个原料 query 重叠，仍按不同菜合并为 120 菜。两批统一应用已确认的翻译歧义事后规则，合并全菜正确为旧 `65/120`→RAG `92/120`；原始 JEV 数据不变。报告见 `M14_INGREDIENT_RAG_HUMAN_REVIEW.md`，文档维护 Session 为 `2026-09-24-m14-rag-human-review-report`，当前等待用户审阅，不自动提交或推送。
+- 用户随后明确接受这份报告、授权仅本地文档提交，并要求启动 Task67“RAG 拒匹配兜底＋优化后实测”。上一条等待审阅是历史状态；新 Task 不能复用该报告 Session 的范围。
+
+### 2026-09-23 Task66.1 扩样复测启动
+
+- 用户认为 24 菜/72 项可能偏小，要求加大样本再做一轮对比。为避免看过结果后选择样本，新建独立 96 菜/288 项固定集，按四类难度/表达分层，在任何新链路运行前冻结 Query/Gold/目录 SHA；原 Task64/66 证据不改写。主指标继续是固定菜品“全部原料合理”，新集与历史集分列，返回 JEV 版本一致才可附列累计值。
+- 唯一活动 Session 为 `2026-09-23-task-66-1-expanded-ingredient-holdout`，合同 `m14-task66-1-expanded-ingredient-holdout-v1`。用户确认主要增加不同菜品数量，菜系/风格仅描述；并明确授权本轮最多 576 次 OpenRouter JEV Decisions API 计费盲评，发送字段受限，不含 Gold/方案标签/候选分数/Key。阶段 A 仍须先造集并核对 SHA；主 Agent 确认冻结后，阶段 B 才运行真实 LEGACY/RAG 和 JEV。当前远端 MVP 仍为 `ce14827`，本地已有 Task66 两提交未推送；本轮不自动推送/切换默认或发布。
+- 阶段 A 已于任何新映射/JEV 运行前结束：新 fixture SHA-256 `1E9B49077589E8A9B9699DD4FC140359DF1A9A6389D75C7911ACE4A14D92A25C`，主 Agent 只读核对旧 fixture/目录与 Task65 模型/向量 hash、逐菜审核并记录于本 Session。阶段 B 已明确放行；当前新集 output 尚不存在，后续不覆盖冻结输入或已有运行结果。
+- 阶段 B 已完成，上一条“output 尚不存在”仅描述运行前状态：LEGACY/RAG 均映射 288/288，旧侧 45 fallback、新侧 0 fallback/降级/错误；JEV 同版本盲评 311 次新调用、220 次同状态复用、0 失败/漂移，费用响应汇总 `$0.007338282`。固定 96 菜全部合理旧 `41/96`→新 `59/96`，配对改善 18/退步 0；13 个改善菜原旧侧含 fallback、另 5 个原旧侧非 fallback。worker focused `19 passed`、Ruff/py_compile/fixture validator PASS。独立 detector 尚未审阅，不预称最终验收；详情见 `docs/development/M14_TASK66_1_EXPANDED_HOLDOUT.md`，原始数据仍在 ignored `output/m14-task66-1/`。产品默认不变。
+- 独立只读 detector round 0 对 `C66.1-01..06` 返回 `PASS`、无 MUST_FIX/optional hardening，独立核验冻结 hash、96 菜分布、原始行数/JEV 同版本复用、`41/96`→`59/96` 和 18/0/78 配对变化；未重跑真实 JEV 或 worker 的 19 项 focused pytest。新增样本是有意分层的策划菜品，不是用户流量；45 个旧侧 fallback 均有预冻结合法 Gold，主差异中 13 道是旧侧兜底相关、5 道为非兜底映射合理性改善，不能把兜底率当产品 KPI。主 Agent 已按 PASS auto_accepted，仅创建本地 focused commit，不自动推送或切换默认。
+
+### 2026-09-24 Task66.1 结论收口
+
+- 用户确认游戏物品 `246` 原文 `Wheat Flour`、中文显示 `大麦粉` 属翻译歧义：现实 `Wheat Flour`/`小麦粉` 非兜底映射到 `246` 应算合理。原始 JEV 记录、冻结 Query/Gold 及主指标 `41/96`→`59/96` 不变；两侧统一事后修正后，LEGACY `48/96`→RAG `71/96`，配对改善 23/退步 0/持平 73。旧 24 菜结果 `14/24`→`18/24` 单列，未修正或合并。用户接受此事后分析及扩样验证作为当前 Task 的收口结论；不据此自动切换默认、推送或发布。细节见 `M14_TASK66_1_EXPANDED_HOLDOUT.md`。
+- 结论收口的独立文档维护 Session 为 `2026-09-24-task-66-1-posthoc-closeout`；不追改已提交的 Task66.1 实施合同或原始数据。
+
+### 2026-09-23 Task 66 启动
+
+- 用户明确授权启动 Task66。前置 Task64 的冻结输出仍在 ignored `output/m14-task64/`（24 道菜/72 项、旧菜品全合理 14/24），Task65 的本地量化模型/253 条索引也在 ignored 资源目录；用户级 OpenRouter Key 可被评测进程读取，但不得打印或写入。
+- 唯一活动 Session 为 `2026-09-23-task-66-ingredient-rag-comparison`，冻结合同 `m14-task66-ingredient-rag-comparison-v1`。Task66 只评估显式 RAG 路径并按同集 JEV 盲判作质量门槛结论，不修改冻结 Query/Gold、Task64 原判或产品默认；是否采用方案由结果报告给出建议，不自动发布或推送。
+
+### 2026-09-23 Task 66 对照与复审完成
+
+- 冻结 24 道菜/72 项原料上，Task65 显式 RAG 72/72 成功、0 检索降级/目录兜底/映射错误；JEV 72/72 typed Choice，其中 64 条复用 Task64 完全同状态且同返回版本的已完成判定，8 次新 OpenRouter Decisions API 请求均成功，实际模型 `typesafe/jev-1.13-20260917`。用户对限定字段、目的地和最多 72 次按服务商计费的调用作了明确授权；实际增量费用 `$0.000187152`，Key 未落盘。
+- 主指标固定 24 道菜“全部原料合理”：旧 `14/24`（58.33%）→新 `18/24`（75.00%），配对改善 4、退步 0、持平 20。Gold Recall@5 `70/72`→`72/72`，固定全集合理覆盖 `61/72`→`65/72`；冻结质量门槛与 Task65 既有 host-Python 资源门槛均达标。该策划 Query 集不是自然用户流量或因果效果，Task65 的 EXE smoke 未选择 RAG，产品默认仍为 `LEGACY`。
+- `luna_worker` 报告 focused pytest `39 passed`、Ruff PASS、diff check PASS；独立 `detector` round 0 对 C66-01..06 给出 `PASS`、`must_fix=[]`，复核 Task64 原始文件 hash、RAG/JEV 原始行数、同集指标及默认边界。detector 的独立聚合复算受其沙箱读取 Task65 模型清单 PermissionError 限制，已如实记录为 optional hardening，不冒充该项复跑。完整可审计结果见 `docs/development/M14_TASK66_INGREDIENT_RAG_COMPARISON.md`，原始新侧记录仍在 ignored `output/m14-task66/`。
+- 主 Agent 按 `PASS` 进入 `auto_accepted` 并创建 Task66 本地 focused commit `3bc0757`；提交后 tracked 工作树干净。未 push/main/tag/Release，也未启用 RAG 默认。后续动作须由用户决定。
+
+### 2026-09-23 Task 65 启动
+
+- 用户确认保持“现实语义原料逐项召回”，不加入整道菜联合选择，并授权 Task65 实施。Task64 本地提交为 `7175d9c`，当前 tracked 工作树在 Task65 状态/Session 更新前干净；未授权推送、tag 或 Release。
+- 用户先前将 Task66 主指标改为固定菜品集合的“全部原料合理”，Task64 的 14/24 作为历史菜品基线；M14 ignored 计划与技术设计已同步该口径。Task65 不调用 JEV 做同集效果判定，默认旧 backend，最终质量 gate 留到 Task66。
+- 唯一活动 Session 为 `2026-09-23-task-65-ingredient-rag-implementation`，合同 `m14-task65-local-ingredient-rag-v1`；实施、独立复审和资源/打包实测待完成。
+- 首轮 worker 已交本地检索、固定模型与索引、全量测试和隔离 Windows bundle；detector round 0 判 `REVISE`，两项现存 MUST_FIX：干净 Release runner 未安装构建期依赖；旧默认链路误过滤同菜已用 ID。两项均属当前 C65-03/04/05/06 合同，worker 正在 revise round 1 最小修复。此前资源实测与 bundle PASS 保留，但不视为最终 Task 验收。
+- revise round 1 已补固定 `build` 依赖组及 reusable workflow 安装，恢复默认 LEGACY 与 RAG 降级的原词面序列，仅成功 RAG 结果排除已用 ID；scoped `62 passed`、Ruff/mypy PASS。未重跑真实干净 Release runner 或修复后的 frozen exe；此证据边界交封闭 detector 判断，不预称最终通过。
+- 独立封闭 detector round 1 给出 `PASS`、无剩余 MUST_FIX；确认 build 组/工作流和旧默认/降级行为修复，接受无用户可见 Scope Delta。其普通权限 broader pytest 受 WinError 5 临时目录 ACL 影响；采用 worker 最小提升下 `62 passed` 证据。主 Agent 核对后 Task65 `auto_accepted`，仅本地 focused commit，不自动 push/Release/Task66；修复后的 GitHub clean-runner 与 frozen exe 未实测，效果质量仍待 Task66。
+- Task65 26 文件本地 focused commit 为 `635f4af`，提交后 tracked 工作树干净；本条由独立的纯控制面维护 Session 同步，未修改产品、推送或发布。
+- 用户明确授权“提交并推送”。非强制 `git push origin HEAD:feat/mvp-implementation` 成功，远端从 `1a7cd94` 前进到 `c39f219`，包含 Task64 `7175d9c`、Task65 `635f4af` 与 Task65 提交状态同步 `c39f219`；核对本地 HEAD 与 `origin/feat/mvp-implementation` 一致，tracked 工作树干净。此推送事实由独立纯控制面维护 Session 追加，不启动 Task66/main/tag/Release。
+
+### 2026-09-23 Task 64 启动
+
+- 用户确认 CI 已成功并授权启动 Task 64。远端核验 `ci` run `35831790521` 对 `1a7cd94` 为 success：`backend-fast`、`frontend-fast` success，`pr-main-integration` 在普通 MVP push 上按预期 skipped；分层维护两个提交已推送至 `origin/feat/mvp-implementation`。
+- Task 64 唯一活动 Session 为 `2026-09-23-task-64-ingredient-evaluation-baseline`。当前环境未见 `OPENROUTER_API_KEY`；用户表示正在环境变量中设置 Key，不在聊天传递凭证。先做离线 Query/标签与旧链路/JEV 协议适配；真实 JEV 调用待凭证可用后执行，不得用假数据充当全量评测。
+- 用户随后已在 Windows 用户级环境变量设置 OpenRouter Key；Task64 worker 用临时子进程环境完成 3 项 Decisions API 探针与 71 项非兜底全量判定。冻结 Query 24 菜/72 项，旧链路 1 fallback/0 错误；JEV reasonable 61、unreasonable 10、undecidable 0，主率 61/71，固定集覆盖 61/72。7 项 JEV/Gold 二元分歧保留，不修改结果；完整报告见 `docs/development/M14_TASK64_INGREDIENT_BASELINE.md`。独立复审尚未完成，不预称 Task 已验收。
+- Task 64 初轮独立 detector 对 `m14-task64-ingredient-baseline-jev-v1` / round 0 给出 `PASS`，C64-01..06 全部符合、`must_fix=[]`。冻结 SHA、72 条基线、71 条真实 typed Choice、61/71 与 61/72、14/24、Gold Top5 命中 70/72 及 7 条分歧均复核。提交前主 Agent 发现 `core.autocrlf=true` 可能把新增 fixture 的 LF 改为 CRLF，令原始字节 SHA 失效；worker 随后按 C64-01 最小依赖闭包补 `.gitattributes` 精确 LF 规则与 checkout-filter 测试，定向 pytest 更新为 `11 passed`，Ruff/diff check PASS。补充只读 detector 复审 `PASS`，接受 `.gitattributes` 的 `implementation_scope_delta`，未重跑付费调用；仅本地 focused commit，不 push；Task 65 需另行决定。
+
+### 2026-09-23 CI 三层工作流维护
+
+- 用户要求普通 push 执行快速 CI，PR/main 增加全量 integration + E2E，Release 才执行 PyInstaller、Windows/installer smoke、Inno Setup、ZIP 和 artifact。维护 Session `2026-09-23-ci-tiered-workflows` 以此冻结合同，不属于 Task 64。
+- 新 `ci.yml` 对所有分支 push 和 PR 运行并行后端/前端快检（Ruff、Mypy、后端/repo 单测、遥测集成切片、前端单测/lint/build），PR/main 在快检成功后运行全量 integration + Playwright fake E2E；tag 不进入普通 CI。普通 CI 不再调用 `build.yml`、读取试用 Secret 或上传发布产物。
+- Release 仍独占调用 `build.yml`，发布打包、烟测、版本、遥测与资产逻辑未变；两份 Release 工作流仅改注释。repo 旧合同测试已同步新分层。worker 定向 `32 passed`、三 YAML 解析与 diff check 通过；独立 detector round 0 `PASS`。actionlint 本机未安装，远端实际触发与耗时尚待用户授权 push 后验证；不声称已实测提速。
+- 仅本地 focused commit，不推送、不修改 main/tag/Release，不启动 Task 64。worker 的受限临时测试目录留在工作区且不纳入提交。
+- 本地 focused commit `0c3295f` 已创建；本条为提交后的控制面事实收口，不代表已推送或已有新 CI 运行。
+
+### 2026-09-23 子代理路由配置维护
+
+- 用户已明确接受此项协作机制升级，并授权先提交推送至 MVP 分支，再启动 Task 62；维护 Session 不包含 Task 62 的实现。
+- focused commit `cf0e290` 已快进推送至 `origin/feat/mvp-implementation` 并核对远端一致；已有 M12 未提交文档改动保持原样。
+- 用户级角色配置已更新：`luna_worker` → `gpt-6-luna` / `max`，`detector` → `gpt-6-sol` / `medium` / read-only；主 Agent 全局模型配置未改。
+- 路由注册表已热加载并明确显示上述固定型号与 effort；两个角色均成功创建并完成无文件访问、无命令、无修改的 smoke 回应。子代理运行时不向自身暴露 model/effort，因此不伪造自报信息；路由结论以注册表固定配置和成功启动为证据。
+- 协作策略同步调整：worker 负责合同实现与测试，detector 负责独立复核；主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试。
+
+## Milestone 14 与 Task 61–63
+
+- 用户授权处理 M12 未提交口径澄清，并要求 Task 64 前定位修复 CI。M12 已仅对 `docs/development/M12_QUANTITATIVE_RESULTS.md` 作 focused commit `6e03557`，未 push。GitHub `ci` 最近四次失败均在 `Ruff lint`，共同由 `backend/tests/tools/test_m14_seeded_events.py` 的 RUF100 + 两项 DTZ001 引起；维护 Session `2026-09-23-ci-m14-seeded-events-ruff-repair` 处理该门禁，后续步骤之前均未运行，不预称全量 CI 已通过。
+- CI 修复只删除多余 `noqa`、把两处纯日期门槛改为 `date(2026, 9, 17)`；独立 detector round 0 PASS。主 Agent 本地 Ruff/mypy、后端＋repo＋integration `1016 passed/2 skipped`、前端 `231 passed`、Playwright `39 passed`、PyInstaller bundle 与双启动 smoke 均通过；本机未配 Inno Setup，安装器门禁和远端新 run 待推送验证。未自动推送或发布。
+- 用户随后明确授权推送；M12 `6e03557` 与 CI 修复 `fc4a91b` 已快进推送至 `origin/feat/mvp-implementation`。GitHub Actions `ci` run `35827459734` 对 `fc4a91be10e2b0b658c3eaf1309e9b66973602c5` 完成，`conclusion=success`，Ruff、mypy、全量测试、Playwright、Windows bundle/双启动、Inno 安装器/安装冒烟、版本门禁与四项产物上传均通过；`git ls-remote` 确认远端头一致。Node 20 弃用注释为非阻断警告。未修改 main、tag 或 Release。
+
+- 2026-09-23 用户要求将“数据/反馈 → 定位问题 → 解决方案 → 搭建评测及旧基线 → 实现方案 → 数据验证”登记为下一开发 Milestone；随后授权启动 Task 61。计划为 `docs/plans/2026-09-23-milestone-14-ingredient-rag-evaluation.md` v1.3，Task 61–66；规划 Session 为 `docs/development/sessions/2026-09-23-milestone-14-planning.md`，当前 Task Session 为 `docs/development/sessions/2026-09-23-task-61-posthog-ingredient-attribution.md`。
+- 用户已提供“原料定位不准”的调研反馈。Task 61 在 PostHog 项目 `583351` 中预置一批共用事件，使 User volume `2045232`、Core usage `2045233` 和 Quality and canonical memory `2045234` 三张现有看板的数据联动变化；Core usage 是重点调整指标口径和图表的对象，其余两张保留结构但需核对数据变化。预置记录为 10–15 个匿名安装、每安装最多 5 次试用，底层保留事件来源，看板不放永久说明；未来真实事件进入同一项目，归因分析按来源分开。预置数据不得作为真实行为或因果证据。真实原料质量由冻结 Query、JEV 全量判定和同集实验衡量。
+- Task 61 已单次写入 103 条来源标记事件（12 个匿名安装），PostHog SQL 核对 103/103；User volume、Core usage、Quality and canonical memory 三张原看板数据均已刷新变化。Core usage 原位把 p50 时长 tile 改成生成类型分布，漏斗明确安装级。预置分区的成功生成→存档为 4/12，合计看板为 5/13；不得将合计当作真实用户行为或原料问题因果证据。完整本地 focused pytest `10 passed`，局部生成器 detector 修复轮 PASS，Task 61 全范围 detector round 0 PASS；主 Agent 进入 `auto_accepted` 并创建本地 focused commit，不 push。未改产品/发布版本，正式版本保持 v1.5.6。已有 `docs/development/M12_QUANTITATIVE_RESULTS.md` 本地修改及未跟踪资料继续保留，不纳入 M14 范围。
+- Task 61 focused commit `4137b6f` 已按用户单独授权推送 MVP 分支；2026-09-23 用户随后授权启动 Task 62，Session `2026-09-23-task-62-ingredient-mapping-diagnosis`，只定位问题、不做 Task 63 RAG 选型或 Task 64 JEV/旧链路正式评测。
+- Task 62 已记录现实语义原料→目录 Top 5→食用值评分→合法候选选择/兜底→鱼类守卫的真实路径，四个离线复现样本覆盖候选遗漏、候选内排序错误与非法 ID 拒绝；报告严格区分机制样本和真实用户事故/正式基线。worker focused `4 passed`、既有 catalog/mapping `56 passed`；独立 detector round 0 `PASS`，主 Agent 进入 `auto_accepted`，仅做本地 focused commit，不自动推送。诊断见 `docs/development/M14_TASK62_INGREDIENT_DIAGNOSIS.md`。
+- Task 62 focused commit 为 `46f3b72`，尚未推送。用户随后说“请继续”；Task 63 Session `2026-09-23-task-63-local-ingredient-rag-design` 已启动，仅设计本地模型/检索/存储/回退，不触发产品实现、JEV 或模型下载。
+- Task 63 选定有条件采用的本地 E5 双语检索、词面+语义 Top 5、253 条 flat 向量精确扫描、manifest 校验与旧检索器回退；向量文件计算 379.5 KiB，模型/资源/质量仍待 Task 65/66 实测。正式设计位于 ignored `docs/architecture/M14_INGREDIENT_RAG_TECHNICAL_DESIGN.md`，可提交摘要 `docs/development/M14_TASK63_DESIGN_DECISIONS.md`；ignored 根设计源索引已按其同步规则登记。独立 detector round 0 `PASS`，主 Agent `auto_accepted` 并仅本地 focused commit，不自动推送或启动 Task 64。
+- 用户 2026-09-23 明确授权 Task 62/63 提交并推送；两 Task focused commits `46f3b72`、`41b5ba9` 已快进推送至 `origin/feat/mvp-implementation`，`git ls-remote` 核验远端为 `41b5ba97e977f5e5065e71fde2d99c4d44304940`。正式设计和根索引仍按项目规则 Git ignored、只在本地；M12 用户未提交修改未纳入推送。未发布或修改 main。
 
 ## 已关闭 Task 56 Session（committed）
 

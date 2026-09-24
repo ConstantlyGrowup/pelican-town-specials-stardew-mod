@@ -30,6 +30,10 @@ class ModelGateway(Protocol):
         self, request: AskGusDesignRequest, *, json_only: bool = False
     ) -> GeneratedDishCore: ...
 
+    async def verify_ingredient_candidates(
+        self, request: IngredientVerifierRequest
+    ) -> IngredientVerifierResponse: ...
+
     async def match_canonical(
         self,
         request: CanonicalMatchRequest,
@@ -168,6 +172,94 @@ class SemanticRecipeIngredient(StrictModel):
     name: str = Field(min_length=1, max_length=80)
     normalized_name: str = Field(alias="normalizedName", min_length=1, max_length=80)
     quantity_hint: str | None = Field(default=None, alias="quantityHint", max_length=120)
+
+
+class IngredientVerifierCandidate(StrictModel):
+    """The minimal bilingual catalog identity sent for one ingredient choice."""
+
+    item_id: str = Field(alias="itemId", min_length=1, max_length=40)
+    display_name_en: str = Field(alias="displayNameEn", min_length=1, max_length=100)
+    display_name_zh: str = Field(alias="displayNameZh", min_length=1, max_length=100)
+
+
+class IngredientVerifierIngredient(StrictModel):
+    """One real-world ingredient and its locally retrieved Top 5."""
+
+    index: int = Field(ge=0, le=7)
+    name: str = Field(min_length=1, max_length=80)
+    candidates: list[IngredientVerifierCandidate] = Field(max_length=5)
+
+    @model_validator(mode="after")
+    def _candidate_ids_are_unique(self) -> IngredientVerifierIngredient:
+        ids = [candidate.item_id for candidate in self.candidates]
+        if len(ids) != len(set(ids)):
+            raise ValueError("ingredient verifier candidates must be unique")
+        return self
+
+
+class IngredientVerifierRequest(StrictModel):
+    """One batched, internal ingredient verification call for a dish."""
+
+    dish_name: str = Field(alias="dishName", min_length=1, max_length=120)
+    ingredients: list[IngredientVerifierIngredient] = Field(min_length=1, max_length=8)
+    request_id: UUID = Field(alias="requestId")
+
+    @field_validator("request_id", mode="before")
+    @classmethod
+    def _validate_uuid4(cls, value: object) -> object:
+        if isinstance(value, UUID):
+            return ensure_uuid4(value)
+        if isinstance(value, str):
+            return ensure_uuid4(UUID(value))
+        return value
+
+    @model_validator(mode="after")
+    def _ingredient_indices_are_contiguous(self) -> IngredientVerifierRequest:
+        indices = [ingredient.index for ingredient in self.ingredients]
+        if indices != list(range(len(self.ingredients))):
+            raise ValueError("ingredient verifier request indices must be contiguous")
+        return self
+
+
+class IngredientVerifierSelection(StrictModel):
+    """Provider choice for one indexed ingredient; null means abstain."""
+
+    index: int = Field(ge=0, le=7)
+    selected_item_id: str | None = Field(alias="selectedItemId", max_length=40)
+
+
+class IngredientVerifierResponse(StrictModel):
+    """Strict structured output for a batched ingredient verification call."""
+
+    items: list[IngredientVerifierSelection] = Field(min_length=1, max_length=8)
+
+
+def validate_ingredient_verifier_response(
+    request: IngredientVerifierRequest,
+    response: IngredientVerifierResponse,
+) -> IngredientVerifierResponse:
+    """Reject missing, foreign, or repeated Provider selections as a whole."""
+
+    if len(response.items) != len(request.ingredients):
+        raise ValueError("ingredient verifier response count mismatch")
+    selections = {selection.index: selection for selection in response.items}
+    if len(selections) != len(response.items) or set(selections) != set(
+        range(len(request.ingredients))
+    ):
+        raise ValueError("ingredient verifier response indices mismatch")
+
+    chosen_ids: list[str] = []
+    for ingredient in request.ingredients:
+        selection = selections[ingredient.index]
+        if selection.selected_item_id is None:
+            continue
+        allowed_ids = {candidate.item_id for candidate in ingredient.candidates}
+        if selection.selected_item_id not in allowed_ids:
+            raise ValueError("ingredient verifier selected a non-candidate item")
+        chosen_ids.append(selection.selected_item_id)
+    if len(chosen_ids) != len(set(chosen_ids)):
+        raise ValueError("ingredient verifier selected duplicate catalog items")
+    return response
 
 
 class GeneratedDishCore(StrictModel):
