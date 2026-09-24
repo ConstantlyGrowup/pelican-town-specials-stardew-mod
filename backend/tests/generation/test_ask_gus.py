@@ -43,7 +43,10 @@ from pelican_town_specials.generation.orchestrator import (
 )
 from pelican_town_specials.images import downscale_for_vision
 from pelican_town_specials.images.vision_input import EDIT_MIN_PIXELS
-from pelican_town_specials.ingredient_rag.errors import IngredientRagUnavailable
+from pelican_town_specials.ingredient_rag.errors import (
+    IngredientRagNoMatch,
+    IngredientRagUnavailable,
+)
 from pelican_town_specials.persistence.asset_store import FileAssetStore
 from pelican_town_specials.providers.contracts import (
     CanonicalMatchResponse,
@@ -1090,6 +1093,37 @@ def test_rag_fallback_preserves_unfiltered_legacy_candidates(
         item.item_id for item in catalog.search_ingredients("egg", limit=5)
     ]
     assert candidates[0].item_id == "176"
+
+
+def test_healthy_rag_no_match_bypasses_legacy_and_uses_catalog_fallback(
+    catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class NoMatchRetriever:
+        def retrieve(self, _query, *, used_item_ids):
+            del used_item_ids
+            raise IngredientRagNoMatch(semantic_family="land_animal_meat", evidence=None)
+
+    def unexpected_legacy_search(*_args, **_kwargs):
+        raise AssertionError("semantic no-match must not retry legacy retrieval")
+
+    monkeypatch.setattr(
+        orchestrator_module,
+        "_get_default_ingredient_rag_retriever",
+        lambda _catalog: NoMatchRetriever(),
+    )
+    monkeypatch.setattr(type(catalog), "search_ingredients", unexpected_legacy_search)
+
+    semantic = SemanticRecipeIngredient(name="beef", normalizedName="beef")
+    candidates = _build_candidates(
+        semantic,
+        catalog,
+        backend=IngredientRetrievalBackend.RAG,
+    )
+    mapped = map_ingredient(semantic, candidates, catalog, language=Language.ZH_CN)
+
+    assert candidates == []
+    assert mapped.item_id == "176"
+    assert mapped.mapping_reason.startswith("catalog fallback:")
 
 
 def test_rag_unknown_catalog_id_still_fails_mapper_validation(

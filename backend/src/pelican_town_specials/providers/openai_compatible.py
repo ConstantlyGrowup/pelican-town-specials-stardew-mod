@@ -33,6 +33,9 @@ from pelican_town_specials.providers.contracts import (
     ImageGenerationRequest,
     ImageMediaType,
     ImageOperation,
+    IngredientVerifierRequest,
+    IngredientVerifierResponse,
+    validate_ingredient_verifier_response,
 )
 from pelican_town_specials.providers.prompts.analysis_v1 import (
     analysis_prompt_for,
@@ -45,6 +48,9 @@ from pelican_town_specials.providers.prompts.canonical_match_v1 import (
 )
 from pelican_town_specials.providers.prompts.icon_similarity_v1 import (
     icon_similarity_prompt_for,
+)
+from pelican_town_specials.providers.prompts.ingredient_verifier_v1 import (
+    ingredient_verifier_prompt,
 )
 from pelican_town_specials.providers.retry import RetryPolicy
 from pelican_town_specials.providers.safe_download import (
@@ -171,6 +177,45 @@ class OpenAICompatibleGateway:
             language=request.language,
         )
         return content
+
+    async def verify_ingredient_candidates(
+        self, request: IngredientVerifierRequest
+    ) -> IngredientVerifierResponse:
+        """Verify one dish in a single text request without repair or retry."""
+
+        self._require_model(self._settings.text_model, "text_model")
+        prompt, json_instruction = ingredient_verifier_prompt(request)
+        body = self._chat_body(
+            model=self._settings.text_model,
+            prompt=prompt,
+            json_instruction=json_instruction,
+            image_data_urls=None,
+            use_json_schema=True,
+            target_type=IngredientVerifierResponse,
+        )
+        response = await self._request(
+            method="POST",
+            url=self._url("chat/completions"),
+            request_id=request.request_id,
+            timeout=self._settings.chat_timeout_seconds,
+            max_retries=0,
+            json=body,
+        )
+        if response.status_code >= 400:
+            raise self._provider_error(response)
+        try:
+            content = _extract_chat_text(response)
+            result = validate_structured(IngredientVerifierResponse, content)
+        except StructuredOutputValidationFailed as exc:
+            raise self._invalid_structured_output_error(exc.issues) from exc
+        except StructuredOutputError as exc:
+            raise self._invalid_structured_output_error([]) from exc
+        try:
+            return validate_ingredient_verifier_response(request, result)
+        except ValueError as exc:
+            raise self._invalid_structured_output_error(
+                [{"loc": ["items"], "type": "invalid_verifier_selection"}]
+            ) from exc
 
     async def match_canonical(
         self,
@@ -461,6 +506,7 @@ class OpenAICompatibleGateway:
         url: str,
         request_id: UUID,
         timeout: int,
+        max_retries: int | None = None,
         **kwargs: Any,
     ) -> httpx.Response:
         secret = self._secret_store.get_api_key()
@@ -469,6 +515,11 @@ class OpenAICompatibleGateway:
         headers = dict(kwargs.pop("headers", {}))
         headers["X-Request-ID"] = str(request_id)
         headers["Authorization"] = f"Bearer {secret.get_secret_value()}"
+        retry = (
+            self._retry
+            if max_retries is None
+            else RetryPolicy(max_retries=max_retries)
+        )
         attempt = 0
         while True:
             try:
@@ -476,8 +527,8 @@ class OpenAICompatibleGateway:
                     method, url, headers=headers, timeout=timeout, **kwargs
                 )
             except (httpx.TimeoutException, httpx.TransportError) as exc:
-                if self._retry.should_retry(attempt=attempt, retryable=True):
-                    await self._sleep(self._retry.delay_for(attempt))
+                if retry.should_retry(attempt=attempt, retryable=True):
+                    await self._sleep(retry.delay_for(attempt))
                     attempt += 1
                     continue
                 raise self._unavailable_error(
@@ -491,8 +542,8 @@ class OpenAICompatibleGateway:
                 or response.status_code == 429
                 or 500 <= response.status_code <= 599
             ):
-                if self._retry.should_retry(attempt=attempt, retryable=True):
-                    await self._sleep(self._retry.delay_for(attempt))
+                if retry.should_retry(attempt=attempt, retryable=True):
+                    await self._sleep(retry.delay_for(attempt))
                     attempt += 1
                     continue
                 if response.status_code == 429:

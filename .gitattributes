@@ -8,3 +8,4 @@
 backend/tests/golden/**/*.json text eol=lf
 tests/fixtures/m14_ingredient_queries.json text eol=lf
 tests/fixtures/m14_ingredient_holdout_queries.json text eol=lf
+tests/fixtures/m14_ingredient_no_match_queries.json text eol=lf

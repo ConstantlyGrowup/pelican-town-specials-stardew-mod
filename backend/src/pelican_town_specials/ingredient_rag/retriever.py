@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unicodedata
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
 from typing import Protocol
@@ -15,13 +16,24 @@ from pelican_town_specials.catalog.repository import VanillaCatalog
 
 from . import constants
 from .encoder import OnnxE5Encoder
-from .errors import IngredientRagUnavailable
+from .errors import IngredientRagNoMatch, IngredientRagUnavailable
 from .index import StaticIngredientIndex, load_static_index
 from .resources import catalog_resource_path, ingredient_rag_resource_dir
+from .semantic_types import classify_catalog_family, classify_ingredient_family
 
 
 class _TextEncoder(Protocol):
     def encode(self, text: str) -> np.ndarray: ...
+
+
+@dataclass(frozen=True, slots=True)
+class IngredientRetrievalEvidence:
+    """Auditable retrieval signals kept separate from the mapper rank score."""
+
+    candidates: tuple[CatalogCandidate, ...]
+    semantic_hits: tuple[tuple[str, float], ...]
+    lexical_item_ids: tuple[str, ...]
+    exact_item_ids: tuple[str, ...]
 
 
 class IngredientRagRetriever:
@@ -64,6 +76,17 @@ class IngredientRagRetriever:
         *,
         used_item_ids: frozenset[str] = frozenset(),
     ) -> list[CatalogCandidate]:
+        return list(
+            self.retrieve_with_evidence(query, used_item_ids=used_item_ids).candidates
+        )
+
+    def retrieve_with_evidence(
+        self,
+        query: str,
+        *,
+        used_item_ids: frozenset[str] = frozenset(),
+    ) -> IngredientRetrievalEvidence:
+        """Return the production ranking plus raw lexical/cosine evidence."""
         with self._lock:
             if self._disabled_reason is not None:
                 raise IngredientRagUnavailable(self._disabled_reason)
@@ -79,19 +102,44 @@ class IngredientRagRetriever:
             assert self._index is not None
             assert self._encoder is not None
             try:
-                return rank_candidates(
+                evidence = rank_candidate_evidence(
                     query,
                     self._catalog,
                     self._index,
                     self._encoder.encode,
                     used_item_ids=used_item_ids,
                 )
+                self._verify_catalog_semantic_support(query, evidence)
+                return evidence
+            except IngredientRagNoMatch:
+                raise
             except IngredientRagUnavailable as exc:
                 self._disabled_reason = exc.reason_code
                 raise
             except Exception as exc:
                 self._disabled_reason = "rag_query_failed"
                 raise IngredientRagUnavailable(self._disabled_reason) from exc
+
+    def _verify_catalog_semantic_support(
+        self,
+        query: str,
+        evidence: IngredientRetrievalEvidence,
+    ) -> None:
+        """Reject only when an explicit local ontology proves the family absent."""
+        semantic_family = classify_ingredient_family(query)
+        if semantic_family is None:
+            return
+        supported_ids = tuple(
+            item.item_id
+            for item in self._catalog.ingredients
+            if classify_catalog_family(item) == semantic_family
+        )
+        if supported_ids:
+            return
+        raise IngredientRagNoMatch(
+            semantic_family=semantic_family,
+            evidence=evidence,
+        )
 
     def _ensure_loaded(self) -> None:
         if self._index is not None and self._encoder is not None:
@@ -124,9 +172,29 @@ def rank_candidates(
     used_item_ids: frozenset[str] = frozenset(),
 ) -> list[CatalogCandidate]:
     """Fuse the catalog's lexical order and exact E5 cosine Top 5."""
+    return list(
+        rank_candidate_evidence(
+            query,
+            catalog,
+            index,
+            encode_query,
+            used_item_ids=used_item_ids,
+        ).candidates
+    )
+
+
+def rank_candidate_evidence(
+    query: str,
+    catalog: VanillaCatalog,
+    index: StaticIngredientIndex,
+    encode_query: Callable[[str], np.ndarray],
+    *,
+    used_item_ids: frozenset[str] = frozenset(),
+) -> IngredientRetrievalEvidence:
+    """Fuse candidates while retaining original E5 and lexical evidence."""
     normalized_query = normalize_ingredient_name(query)
     if not normalized_query:
-        return []
+        return IngredientRetrievalEvidence((), (), (), ())
     query_vector = encode_query(f"{constants.QUERY_PREFIX}{normalized_query}")
     semantic_hits = index.search(
         query_vector,
@@ -139,6 +207,7 @@ def rank_candidates(
         for item in catalog.ingredients
         if _is_exact_name_or_alias(item, normalized_query)
     }
+    lexical_item_ids = tuple(item.item_id for item in lexical_items)
     unique_exact_id = next(iter(exact_ids)) if len(exact_ids) == 1 else None
     lexical_rank = {item.item_id: rank for rank, item in enumerate(lexical_items)}
     semantic_score = {item_id: score for item_id, score in semantic_hits}
@@ -172,10 +241,16 @@ def rank_candidates(
         )
 
     ordered_ids = sorted(items, key=rank_key)[: constants.TOP_K]
-    return [
-        CatalogCandidate(item_id=item_id, score=1.0 - index / constants.TOP_K)
-        for index, item_id in enumerate(ordered_ids)
-    ]
+    candidates = tuple(
+        CatalogCandidate(item_id=item_id, score=1.0 - rank / constants.TOP_K)
+        for rank, item_id in enumerate(ordered_ids)
+    )
+    return IngredientRetrievalEvidence(
+        candidates=candidates,
+        semantic_hits=tuple(semantic_hits),
+        lexical_item_ids=lexical_item_ids,
+        exact_item_ids=tuple(sorted(exact_ids, key=_item_id_sort_key)),
+    )
 
 
 def normalize_ingredient_name(value: str) -> str:

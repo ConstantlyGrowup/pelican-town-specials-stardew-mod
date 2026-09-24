@@ -16,3 +16,14 @@ class IngredientRagUnavailable(RuntimeError):
             raise ValueError("invalid ingredient RAG reason code")
         super().__init__(reason_code)
         self.reason_code = reason_code
+
+
+class IngredientRagNoMatch(RuntimeError):
+    """Healthy retrieval found a semantic family absent from the catalog."""
+
+    reason_code = "rag_no_semantic_match"
+
+    def __init__(self, *, semantic_family: str, evidence: object) -> None:
+        super().__init__(self.reason_code)
+        self.semantic_family = semantic_family
+        self.evidence = evidence

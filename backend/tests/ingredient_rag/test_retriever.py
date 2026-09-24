@@ -9,13 +9,21 @@ import pytest
 
 from pelican_town_specials.catalog.repository import VanillaCatalog
 from pelican_town_specials.ingredient_rag import retriever as retriever_module
-from pelican_town_specials.ingredient_rag.errors import IngredientRagUnavailable
+from pelican_town_specials.ingredient_rag.errors import (
+    IngredientRagNoMatch,
+    IngredientRagUnavailable,
+)
 from pelican_town_specials.ingredient_rag.index import StaticIngredientIndex
 from pelican_town_specials.ingredient_rag.retriever import (
     IngredientRagRetriever,
     build_passage,
     normalize_ingredient_name,
     rank_candidates,
+)
+from pelican_town_specials.ingredient_rag.semantic_types import (
+    catalog_family_item_ids,
+    classify_catalog_family,
+    classify_ingredient_family,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -191,6 +199,52 @@ def test_model_load_failure_uses_model_reason_code(
 
     assert caught.value.reason_code == "rag_model_unavailable"
     assert retriever.disabled_reason == "rag_model_unavailable"
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["鸡肉", "牛肉", "羊肉", "猪肉", "chicken meat", "beef", "lamb", "pork"],
+)
+def test_unavailable_land_meat_family_is_a_semantic_no_match(
+    catalog: VanillaCatalog, query: str
+) -> None:
+    class StubEncoder:
+        def encode(self, _text: str) -> np.ndarray:
+            return np.eye(1, 384, 0, dtype=np.float32)[0]
+
+    retriever = IngredientRagRetriever(
+        catalog,
+        encoder=StubEncoder(),
+        index=_index_with_one_semantic_hit(catalog),
+    )
+
+    with pytest.raises(IngredientRagNoMatch) as caught:
+        retriever.retrieve(query)
+
+    assert caught.value.reason_code == "rag_no_semantic_match"
+    assert caught.value.semantic_family == "land_animal_meat"
+    assert caught.value.evidence.semantic_hits
+    assert retriever.disabled_reason is None
+
+
+def test_prepared_soy_family_is_distinct_from_raw_bean_and_not_catalog_backed(
+    catalog: VanillaCatalog,
+) -> None:
+    assert classify_ingredient_family("豆腐") == "prepared_soy"
+    assert classify_ingredient_family("tofu") == "prepared_soy"
+    assert catalog_family_item_ids(catalog.ingredients, "prepared_soy") == ()
+    assert catalog_family_item_ids(catalog.ingredients, "land_animal_meat") == ()
+    assert classify_catalog_family(catalog.require("442")) is None
+    assert classify_catalog_family(catalog.require("426")) is None
+
+
+def test_unrecognized_and_catalog_backed_queries_remain_retrievable(
+    catalog: VanillaCatalog,
+) -> None:
+    assert classify_ingredient_family("salmon") is None
+    assert classify_ingredient_family("potato") is None
+    assert classify_ingredient_family("豆腐皮") is None
+    assert classify_ingredient_family("fish meat") is None
 
 
 def test_query_encoding_failure_uses_query_reason_code(

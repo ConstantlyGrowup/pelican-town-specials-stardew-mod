@@ -6,16 +6,35 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_human_review_report_accepted |
-| project_phase | v1.5.6 已发布；M14 Task61–66 与 Task66.1 扩样均已完成，翻译歧义事后分析已收口；本地提交未推送，产品默认仍为 LEGACY |
+| overall_state | m14_task67_committed |
+| project_phase | v1.5.6 已发布；M14 Task61–67 的本地开发和 Task67 人审对比报告已验收；当前 focused commit 与推送结果以 Git 核验，产品默认仍为 LEGACY |
 | product_implementation_started | true |
-| active_session_id | 无 |
-| active_session_state | 无 |
-| active_session_type | 无 |
-| current_task | M14 原料 RAG 人审简版报告已接受；准备启动 Task67 拒匹配兜底与优化后实测 |
-| blocker | 无 |
-| next_action | 先完成已接受的人审简版报告本地 focused 提交，然后启动 Task67 冻结合同与实现；推送及启用 RAG 默认仍需单独授权 |
+| active_session_id | none |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | 无活动 Task；Task67 已验收，产品默认 LEGACY 不变 |
+| blocker | 无；默认 RAG 切换、JEV 新请求、tag/Release 均未获授权 |
+| next_action | 核验 Task67 focused commit 与本次获授权的分支推送；其后仅按用户新任务继续，不自动切换默认或发布 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-24 Task67 启动
+
+- 用户接受人审简版报告并授权仅本地提交，focused commit `2adcc47`，未推送；随后授权新 Task67 修复显式 RAG 对无对应物原料强行匹配，并实测优化后链路。唯一活动 Session 为 `2026-09-24-task-67-ingredient-rag-abstention`。先冻结 20 条负样本（5 条已观察种子 + 15 条新挑战），正样本沿用 120 菜/360 项；区分语义 no-match 到 catalog fallback 与模型故障旧词法降级。新 JEV 付费调用、默认切换、推送与 Release 均未获授权。
+
+### 2026-09-24 Task67 本地语义核验扩展
+
+- v1 E5 cosine/margin 与 `Cooking` 类型过滤探索性诊断未找到可安全兼顾拒识和正样本的判据，未改生产代码；其精确数字来自未持久化探针，正式结论需可复算 runner。十五条预冻结挑战文本曾被实施者误见但未运行，不能称严格盲测。用户明确授权将 Task67 扩展为本地语义核验/目录类型知识，合同修订为 `m14-task67-rag-abstention-v2`，原诊断作为历史而非完成。继续禁止新增远端调用、默认切换和推送；本地正样本 Gold 门槛为原显式 RAG `84/120` 全菜、`318/360` 逐项，JEV 需另获授权。
+- 首轮实现后，主 Agent 代码冻结独立跑原 20 条负集，仅 `15/20` 正确兜底（5 条强配，0 故障）；另构造的 10 条压力样本仅 `4/10`，两组分列。正集保持 `84/120` 全菜 Gold、`318/360` 逐项 Gold。独立 detector 对 v2 round 0 返回 `REVISE`，`C67v2-01` 未过，不能提交或宣称修复完成。已派返工 round 1，仅在 ignored 本地目录试验更强的成对语义核验；未经效果证实不引入生产资产。
+- 返工 round 1 完成 MIT 多语 NLI 本地量化原型：资源约 107 MB、双向 5 候选中位约 23–29 ms，但固定 20 负例/120 菜无法同时满足拒识与正集质量门槛；保住正集时仍 `15/20`，做到 `20/20` 则全菜 Gold 为 `0/120`。未接入产品，未调用 JEV。已向用户请求明确选择是否允许现有文本 LLM 增加一次按菜 Top5＋无匹配核验；若无该新授权，不继续扩大生产链路。诊断见 `M14_TASK67_ABSTENTION_DIAGNOSIS.md`。
+- 用户随后明确允许评估应用现有文本 LLM 的按菜 Top5＋无匹配核验。Session 合同修订为 `m14-task67-llm-verifier-feasibility-v3`：先做不发真实请求的脱敏协议/runner 和 fake 测试；实际付费试跑另锁定调用上限、字段与配置。v2 未验收代码不因授权 v3 而视为完成；JEV 仍独立、无新授权，产品默认/推送/发布不变。
+- 用户已单独授权首轮最多 `15` 次个人文本 Provider 真实试跑：10 道冻结菜＋5 个无对应物原料，仅发送菜名、现实原料、各项 Top5 目录 ID/中英名和“无匹配”选项；不使用公共试用，不发送 Gold、分数、图片、用户原始内容或密钥，不调用 JEV。剩余全量与产品接入仍待后续决定。
+- v3 脱敏 runner/fake 测试已由指定 `luna_worker` 完成，独立 `detector` 对 `C67v3-01..04` 返回 PASS；13 项聚焦测试、Ruff、diff check 与真实模式 dry-run 通过。主 Agent 依授权仅运行一次固定试点，个人文本模型 `gpt-5.6-terra` 实际 15/15 物理请求、无重试、0 JEV。负例为 v2 `0/5` 兜底→文本核验 `5/5`；正菜全 Gold v2 `9/10`→本次 `9/10`，逐项 v2 `29/30`→本次 `27/30`。一菜 HTTP 200 但触发 `duplicate_final_item_id`，其 3 项按无效计入分母，不伪称语义误判。耗时 121.4 秒，单请求中位 4.55 秒。原始 ignored 输出在 `output/m14-task67-v3-pilot-20260924/`，详见 `M14_TASK67_ABSTENTION_DIAGNOSIS.md`。15 次授权已用满；这不是 120/20 全量或生产链路修复，后续请求/接入须另获决定。
+- 试点后仅修复离线评分器的同菜去重次序：预留全部明确选择的 ID，避免较早 `null` 的目录兜底占用后续候选；未重发请求或追改试点数据。`luna_worker` 新增聚焦用例后 `15 passed`，独立 `detector` 定向复审 PASS，既有试点 manifest hash 不变。产品链路仍未接入文本核验。
+- 用户现已认可 `15/20` 本地拒识在正常菜品不退步时可作为 tradeoff，接受每菜多一次个人文本 Provider 核验的时延/费用，授权剩余 110 菜＋15 负例全量测验，并允许质量达标后改造原链路。新 v4 Packet 与事前门槛已追加当前 Session：全菜 Gold ≥`84/120`、逐项 Gold ≥`318/360`、负例 catalog fallback ≥`15/20`；首轮 15 例不重发，所有错误留分母。评测阶段不改生产/JEV/LEGACY 默认，先加固逐 case 单次执行再复审。若结果达标，才冻结产品接入合同并实施；新 JEV 请求另需授权。
+- v4 执行器封闭复审 PASS 后，主 Agent 依授权逐 case 执行剩余 125 次，首轮 15 只读复用；140 唯一 case/140 物理请求，120 菜/360 项/20 负例固定分母。全菜 Gold `84/120→94/120`、逐项 `318/360→327/360`、负例兜底 `15/20→20/20`；配对改善 12、退步 2（`berries`、`root vegetables` 被过度拒识）、持平 106。两次 Provider 超时和首轮一菜无效均保留；p50 8.32 秒、p95 50.48 秒。独立结果 detector PASS；不称 JEV 合理率或精确费用。用户已明确接受 12/2 的取舍，授权只在显式 RAG 路径接入核验，保持 LEGACY 默认与无推送/发布。v5 生产接入合同见当前 Session；细节见 `M14_TASK67_ABSTENTION_DIAGNOSIS.md`。
+- v5 已由指定 `luna_worker` 接入内部显式 RAG 的按菜一次 Provider 核验，默认 LEGACY 不发该请求；Provider 失败整菜退回 v2 本地 RAG，`null`/本地 no-match 走 catalog fallback。新增专项 `13 passed`，相关回归 `140 passed`，Ruff、mypy（23 source files）、diff check 通过，未调用真实 Provider/JEV。独立只读 `detector` 对 `C67v5-01..05` 返回 PASS；它独立复跑 Provider 6 项及静态检查，生成侧复跑因 pytest 临时目录 `WinError 5` 未能独立完成，保留实施者 140/13 项证据。Session 已经过 verification 进入 `awaiting_user_acceptance`；无 commit/push/默认切换/发布。
+- 用户追加要求给人审阅的“原始搜索匹配 vs 完整 RAG”可读结论。主 Agent 只读归并旧 Task64/66.1 与 Task67 v3/v4 的同一 120 菜、360 项 Gold，`query_id` 与可接受 ID 集合全量一致；原始全菜 `56/120`→完整 RAG `94/120`、单项 `264/360`→`327/360`，旧→新逐菜改善 38、退步 0。新增 `M14_TASK67_LEGACY_VS_FULL_RAG_REVIEW.md`，明确与先前 JEV 事后修正口径不同、产品默认未切换及未进行真实产品路径复测。此项纯报告维护纳入当前待验收 Task67，不发真实请求或变更业务代码。
+- 用户明确验收 Task67 新接入链路及上述人审结论报告，并单独授权创建 focused commit、推送 `feat/mvp-implementation`。Task67 Session 由 `awaiting_user_acceptance` 进入 `accepted`，本次控制面随 focused commit 记录 `committed`；推送成功与否以 Git 远端核验为准，不自动推 tag/Release 或切换 LEGACY 默认。
 
 ### 2026-09-24 M14 人审简版报告
 
