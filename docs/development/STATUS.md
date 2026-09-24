@@ -6,16 +6,21 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task66_1_conclusion_recorded |
+| overall_state | m14_human_review_report_accepted |
 | project_phase | v1.5.6 已发布；M14 Task61–66 与 Task66.1 扩样均已完成，翻译歧义事后分析已收口；本地提交未推送，产品默认仍为 LEGACY |
 | product_implementation_started | true |
 | active_session_id | 无 |
 | active_session_state | 无 |
 | active_session_type | 无 |
-| current_task | Task66.1 扩样对照与事后翻译歧义分析已收口；等待用户决定推送与后续产品切换范围 |
+| current_task | M14 原料 RAG 人审简版报告已接受；准备启动 Task67 拒匹配兜底与优化后实测 |
 | blocker | 无 |
-| next_action | 等待用户是否授权把未推送的 Task66/66.1 及结论文档提交同步到 MVP 分支；启用 RAG 默认、正式包验证与 Release 仍需单独任务及授权 |
+| next_action | 先完成已接受的人审简版报告本地 focused 提交，然后启动 Task67 冻结合同与实现；推送及启用 RAG 默认仍需单独授权 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-24 M14 人审简版报告
+
+- 用户要求另出一份仅含核心评测指标与耗时的通俗报告；后续明确只要两批菜名不重复即可合并，食材 query 重复属于正常现象。只读核验确认 24 菜与 96 菜的中英文菜名均无重复，虽有 30 个原料 query 重叠，仍按不同菜合并为 120 菜。两批统一应用已确认的翻译歧义事后规则，合并全菜正确为旧 `65/120`→RAG `92/120`；原始 JEV 数据不变。报告见 `M14_INGREDIENT_RAG_HUMAN_REVIEW.md`，文档维护 Session 为 `2026-09-24-m14-rag-human-review-report`，当前等待用户审阅，不自动提交或推送。
+- 用户随后明确接受这份报告、授权仅本地文档提交，并要求启动 Task67“RAG 拒匹配兜底＋优化后实测”。上一条等待审阅是历史状态；新 Task 不能复用该报告 Session 的范围。
 
 ### 2026-09-23 Task66.1 扩样复测启动
 
