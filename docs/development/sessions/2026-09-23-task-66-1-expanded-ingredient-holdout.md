@@ -126,3 +126,7 @@ worker 验证：focused pytest `19 passed`（Windows temp ACL 下最小提升）
 独立只读 `detector / gpt-6-sol / medium` 按合同 round 0 返回 `PASS`，`C66.1-01..06`、`R66.1-01..05` 均核对，`must_fix: []`、`optional_hardening: []`、`scope_delta: none`、`implementation_scope_delta: none`。审阅者独立核验冻结 fixture 工作树/Git blob 与六份 ignored 产物哈希、冻结时间先于映射、96/288/四层/Query 新颖度/语言/Gold 分布；复算两侧各 288 项、旧/新 fallback 45/0、JEV 311 新调用+220 同状态复用+45 未调用、全量返回模型同版；按逐菜原始记录独立复算旧 `41/96`→新 `59/96`、改善 18/退步 0/持平 78，并核对复用 state hash/判定/版本。只读 validator、Ruff、diff check PASS；worker 的 19 项 focused pytest未由 detector 重跑，已如实保留证据边界。审阅未发 API、未写文件。
 
 主 Agent 已核对 handoff、报告、敏感性拆分与 detector PASS，按项目普通 Task 自动路径进入 `auto_accepted`。本 Task 只增离线扩样 fixture、runner、测试、报告与 ignored 原始记录；不切换产品默认，不改原 Task64/66 证据，不 push/main/tag/Release。完成本地 focused commit 后等待用户决定推送或后续产品化。
+
+### 用户确认的事后结论（2026-09-24）
+
+原冻结评测和 focused commit 已完成。用户指出原版物品 `246` 英文 `Wheat Flour` 对应的中文目录名为 `大麦粉`；现实 `Wheat Flour`/`小麦粉` 非兜底映射到 `246` 应算合理。用户接受在保留原始 JEV 与冻结主指标的前提下，另列统一作用于两侧的事后翻译歧义修正：旧侧 `48/96`、RAG `71/96`，配对 23 改善/0 退步/73 持平；原始主指标仍为 `41/96`→`59/96`。旧 24 菜原始结果单列，不合并为修正后累计。详见扩样报告；原合同、Gold、raw JEV、模型、产品默认与 Release 均不改变。用户明确表示当前 Task 可以结尾；本追加记录不追改原验收合同。

@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | m14_task66_1_committed |
-| project_phase | v1.5.6 已发布；M14 Task61–66 与 Task66.1 扩样均已完成，Task66/66.1 的本地提交未推送；产品默认仍为 LEGACY |
+| overall_state | m14_task66_1_conclusion_recorded |
+| project_phase | v1.5.6 已发布；M14 Task61–66 与 Task66.1 扩样均已完成，翻译歧义事后分析已收口；本地提交未推送，产品默认仍为 LEGACY |
 | product_implementation_started | true |
 | active_session_id | 无 |
 | active_session_state | 无 |
 | active_session_type | 无 |
-| current_task | Task66.1 扩样对照完成；等待用户决定推送与后续产品切换范围 |
+| current_task | Task66.1 扩样对照与事后翻译歧义分析已收口；等待用户决定推送与后续产品切换范围 |
 | blocker | 无 |
-| next_action | 等待用户是否授权把未推送的 Task66/66.1 提交同步到 MVP 分支；启用 RAG 默认、正式包验证与 Release 仍需单独任务及授权 |
+| next_action | 等待用户是否授权把未推送的 Task66/66.1 及结论文档提交同步到 MVP 分支；启用 RAG 默认、正式包验证与 Release 仍需单独任务及授权 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-23 Task66.1 扩样复测启动
@@ -24,6 +24,11 @@
 - 阶段 A 已于任何新映射/JEV 运行前结束：新 fixture SHA-256 `1E9B49077589E8A9B9699DD4FC140359DF1A9A6389D75C7911ACE4A14D92A25C`，主 Agent 只读核对旧 fixture/目录与 Task65 模型/向量 hash、逐菜审核并记录于本 Session。阶段 B 已明确放行；当前新集 output 尚不存在，后续不覆盖冻结输入或已有运行结果。
 - 阶段 B 已完成，上一条“output 尚不存在”仅描述运行前状态：LEGACY/RAG 均映射 288/288，旧侧 45 fallback、新侧 0 fallback/降级/错误；JEV 同版本盲评 311 次新调用、220 次同状态复用、0 失败/漂移，费用响应汇总 `$0.007338282`。固定 96 菜全部合理旧 `41/96`→新 `59/96`，配对改善 18/退步 0；13 个改善菜原旧侧含 fallback、另 5 个原旧侧非 fallback。worker focused `19 passed`、Ruff/py_compile/fixture validator PASS。独立 detector 尚未审阅，不预称最终验收；详情见 `docs/development/M14_TASK66_1_EXPANDED_HOLDOUT.md`，原始数据仍在 ignored `output/m14-task66-1/`。产品默认不变。
 - 独立只读 detector round 0 对 `C66.1-01..06` 返回 `PASS`、无 MUST_FIX/optional hardening，独立核验冻结 hash、96 菜分布、原始行数/JEV 同版本复用、`41/96`→`59/96` 和 18/0/78 配对变化；未重跑真实 JEV 或 worker 的 19 项 focused pytest。新增样本是有意分层的策划菜品，不是用户流量；45 个旧侧 fallback 均有预冻结合法 Gold，主差异中 13 道是旧侧兜底相关、5 道为非兜底映射合理性改善，不能把兜底率当产品 KPI。主 Agent 已按 PASS auto_accepted，仅创建本地 focused commit，不自动推送或切换默认。
+
+### 2026-09-24 Task66.1 结论收口
+
+- 用户确认游戏物品 `246` 原文 `Wheat Flour`、中文显示 `大麦粉` 属翻译歧义：现实 `Wheat Flour`/`小麦粉` 非兜底映射到 `246` 应算合理。原始 JEV 记录、冻结 Query/Gold 及主指标 `41/96`→`59/96` 不变；两侧统一事后修正后，LEGACY `48/96`→RAG `71/96`，配对改善 23/退步 0/持平 73。旧 24 菜结果 `14/24`→`18/24` 单列，未修正或合并。用户接受此事后分析及扩样验证作为当前 Task 的收口结论；不据此自动切换默认、推送或发布。细节见 `M14_TASK66_1_EXPANDED_HOLDOUT.md`。
+- 结论收口的独立文档维护 Session 为 `2026-09-24-task-66-1-posthoc-closeout`；不追改已提交的 Task66.1 实施合同或原始数据。
 
 ### 2026-09-23 Task 66 启动
 
