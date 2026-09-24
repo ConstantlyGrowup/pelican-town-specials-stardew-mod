@@ -6,15 +6,15 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | ci_task64_artifact_test_boundary_verified |
-| project_phase | v1.5.6 已发布；Task67、文档同步 `9807a5a` 与试用网关修复 `18c7215` 已推送；新 CI mypy 已通过，但 Task64 本地历史产物单测在干净 runner 失败；产品默认仍为 LEGACY |
+| overall_state | ci_green_docs_local_closeout |
+| project_phase | v1.5.6 已发布；Task67、文档同步与两项 CI 修复均已推送至 `feat/mvp-implementation`；最新 push CI `35987394616` 成功；产品默认仍为 LEGACY |
 | product_implementation_started | true |
-| active_session_id | 2026-09-24-ci-task64-artifact-test-boundary |
-| active_session_state | verification |
-| active_session_type | implementation |
-| current_task | Task64 历史产物测试边界已修复并独立复核，待提交推送与远端 CI |
-| blocker | 修复后需推送并核验 CI；默认 RAG 切换、JEV 新请求、tag/Release 仍未授权 |
-| next_action | focused commit 并推送测试边界修复，核验新 CI；成功后再做增量文档更新 |
+| active_session_id | none |
+| active_session_state | none |
+| active_session_type | none |
+| current_task | CI 修复已推送验证成功，末次增量文档已本地收口 |
+| blocker | 无 CI 阻塞；默认 RAG 切换、JEV 新请求、tag/Release 仍未授权 |
+| next_action | 等待用户决定下一项任务；如需远端同步末次纯文档提交，另行授权推送 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
 
 ### 2026-09-24 Task67 启动
@@ -46,6 +46,7 @@
 
 - 最新失败 run `35978864894` 的 `backend-fast` 在 `python -m mypy backend/src` 报 `TrialSafeGateway` 缺少 Task67 新协议方法；`frontend-fast` 成功，PR/main integration 按分层跳过。新 Session `2026-09-24-ci-trial-verifier-protocol-fix` 仅补试用网关一次转发与错误脱敏回归。指定 `luna_worker` 先 RED 后修复，mypy 107 文件、Ruff、diff check PASS，冻结四文件 pytest `78 passed`；独立只读 `detector` 对 `CCI-01..03` PASS，独立 pytest 因本机 temp ACL 未复跑，保留 worker 的可用环境结果。用户本轮已授权提交推送；修复与前一文档提交分开，下一步核验新远端 CI。
 - 文档同步 `9807a5a` 与试用网关修复 `18c7215` 已推送。新 CI run `35986066650` 中 Ruff/mypy/frontend 通过，但 backend 1106 项单测通过、1 项失败：唯一失败项无条件读取 Git ignored `output/m14-task64` 历史原始产物。新 Session `2026-09-24-ci-task64-artifact-test-boundary` 冻结仅测试边界修复；指定 `luna_worker` 只改一份测试文件，全部产物缺席时 skip，任一存在时保留原严格核验。实施者、主 Agent 和独立只读 `detector` 聚焦 pytest 各 `10 passed`，Ruff/diff check PASS；detector 对 `CCI64-01..03` 返回 PASS。下一步按用户授权 focused commit、推送与远端 CI 核验，之后再作末次增量文档更新。
+- Task64 测试边界修复 focused commit `681d3c1` 已推送；最新 [CI run 35987394616](https://github.com/ConstantlyGrowup/pelican-town-specials-stardew-mod/actions/runs/35987394616) 对该 SHA 为 `success`。`backend-fast`、`frontend-fast` 均成功，PR/main integration 在普通 MVP push 上按设计 skipped；此前 mypy 与缺失历史产物两项 CI 故障均已消除。GitHub 的 Node 20 Actions 弃用提示是非阻塞提醒，未顺手升级 Actions。用户要求的末次增量文档同步独立于已推送代码，在纯文档 Session `2026-09-24-ci-green-documentation-closeout` 收口。
 
 ### 2026-09-24 M14 人审简版报告
 
