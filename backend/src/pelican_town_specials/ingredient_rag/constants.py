@@ -45,4 +45,11 @@ BUILDER_VERSION = "m14-ingredient-rag-builder-v2"
 # Filled from the generated, pinned quantized artifact before delivery. These
 # constants make an accidental resource replacement fail closed at runtime.
 QUANTIZED_MODEL_SHA256 = "739C8F25BBE6D8A6001CD2F048701DA9879140CC67D4E9327716111E869DD717"
-VECTOR_INDEX_SHA256 = "D640532CBD3316EED3A6831939A7289858D492E025D3223ECCFA7D93D8D4EC58"
+# The flat vector file is a *computed* artifact: ONNX Runtime CPU inference
+# differs in the last float bits across CPU kernels, so a bit-exact pin is not
+# reproducible between build machines (it broke the CI smoke on a runner CPU).
+# Leave it empty to skip the cross-machine pin; provenance is still enforced
+# through the pinned catalog/model/tokenizer hashes, the builder and library
+# versions recorded in the manifest, and manifest.vectorSha256 matching the
+# shipped file byte for byte.
+VECTOR_INDEX_SHA256 = ""
