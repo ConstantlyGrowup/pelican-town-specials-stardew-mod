@@ -66,7 +66,7 @@ function Get-PinnedString([string]$name) {
 $ragAssets = @(
     @{ Name = 'model-int8.onnx'; Hash = Get-PinnedHash 'QUANTIZED_MODEL_SHA256' },
     @{ Name = 'sentencepiece.bpe.model'; Hash = Get-PinnedHash 'TOKENIZER_SHA256' },
-    @{ Name = 'ingredient-vectors.f32'; Hash = Get-PinnedHash 'VECTOR_INDEX_SHA256' },
+    @{ Name = 'ingredient-vectors.f32'; Hash = $null },
     @{ Name = 'ingredient-index.manifest.json'; Hash = $null }
 )
 $ingredientRagBytes = 0L
@@ -84,13 +84,17 @@ foreach ($asset in $ragAssets) {
         }
     }
 }
+# The vector file is computed at build time, so it is checked against the hash
+# recorded in the manifest rather than against a fixed constant.
+$vectorPath = Join-Path $ingredientRagPath 'ingredient-vectors.f32'
+$vectorHash = (Get-FileHash -LiteralPath $vectorPath -Algorithm SHA256).Hash.ToUpperInvariant()
 $ingredientManifestPath = Join-Path $ingredientRagPath 'ingredient-index.manifest.json'
 $ingredientManifest = Get-Content -LiteralPath $ingredientManifestPath -Raw | ConvertFrom-Json
 if ($ingredientManifest.modelRevision -ne (Get-PinnedString 'MODEL_REVISION') -or
     $ingredientManifest.catalogSha256 -ne (Get-PinnedHash 'CATALOG_SHA256') -or
     $ingredientManifest.modelSha256 -ne (Get-PinnedHash 'QUANTIZED_MODEL_SHA256') -or
     $ingredientManifest.tokenizerSha256 -ne (Get-PinnedHash 'TOKENIZER_SHA256') -or
-    $ingredientManifest.vectorSha256 -ne (Get-PinnedHash 'VECTOR_INDEX_SHA256') -or
+    $ingredientManifest.vectorSha256 -ne $vectorHash -or
     $ingredientManifest.tokenizerFormat -ne 'sentencepiece' -or
     $ingredientManifest.rowCount -ne 253 -or
     $ingredientManifest.embeddingDimension -ne 384 -or
