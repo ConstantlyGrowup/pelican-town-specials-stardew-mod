@@ -16,7 +16,10 @@ from pelican_town_specials.generation.orchestrator import (
     GenerationOrchestrator,
     IngredientRetrievalBackend,
 )
-from pelican_town_specials.ingredient_rag.errors import IngredientRagNoMatch
+from pelican_town_specials.ingredient_rag.errors import (
+    IngredientRagNoMatch,
+    IngredientRagUnavailable,
+)
 from pelican_town_specials.ingredient_rag.retriever import IngredientRetrievalEvidence
 from pelican_town_specials.providers.contracts import (
     IngredientVerifierCandidate,
@@ -324,17 +327,17 @@ async def test_verifier_cancellation_propagates_to_attempt_rollback(
     assert orchestrator.drafts.get(saved.draft_id).status is DraftStatus.READY
 
 
-async def test_legacy_default_does_not_call_verifier(
+async def test_legacy_fallback_does_not_call_verifier(
     harness: GenerationHarness, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    assert DEFAULT_INGREDIENT_RETRIEVAL_BACKEND is IngredientRetrievalBackend.LEGACY
+    assert DEFAULT_INGREDIENT_RETRIEVAL_BACKEND is IngredientRetrievalBackend.RAG
+
+    def _disabled(_catalog):
+        raise IngredientRagUnavailable("rag_resources_missing")
+
+    monkeypatch.setattr(orchestrator_module, "_get_default_ingredient_rag_retriever", _disabled)
     gateway = _VerifierGateway(_selected_response)
     harness.gateway = gateway
-    monkeypatch.setattr(
-        orchestrator_module,
-        "_get_default_ingredient_rag_retriever",
-        lambda _catalog: pytest.fail("default path must not load RAG"),
-    )
     original = put_original_image(harness)
     draft = make_draft(mode=DraftMode.ASK_GUS, status=DraftStatus.READY)
     saved = harness.orchestrator.drafts.save(
