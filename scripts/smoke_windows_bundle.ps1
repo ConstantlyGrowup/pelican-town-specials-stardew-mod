@@ -43,7 +43,9 @@ if (-not (Test-Path -LiteralPath $indexPath)) {
 }
 
 $constantsPath = Join-Path $repoRoot 'backend\src\pelican_town_specials\ingredient_rag\constants.py'
-$constantsText = Get-Content -LiteralPath $constantsPath -Raw -ErrorAction Stop
+# constants.py lands with CRLF endings on Windows runners (core.autocrlf);
+# .NET's multiline "$" does not match before a carriage return, so strip CR first.
+$constantsText = (Get-Content -LiteralPath $constantsPath -Raw -ErrorAction Stop) -replace "`r", ""
 function Get-PinnedHash([string]$name) {
     $pattern = '(?m)^' + [regex]::Escape($name) + ' = "(?<value>[A-Fa-f0-9]{64})"$'
     $match = [regex]::Match($constantsText, $pattern)
