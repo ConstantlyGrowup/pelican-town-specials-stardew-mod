@@ -1,0 +1,4093 @@
+{
+  "fixture_id": "m14-ingredient-expanded-holdout-v1",
+  "catalog_version": "stardew-1.6.15-v1",
+  "dishes": [
+    {
+      "dish_id": "h66-direct_name-01",
+      "name_en": "Anchovy and Ginger Rice Bowl",
+      "name_zh": "姜香鳀鱼饭",
+      "stratum": "direct_name",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-01-i01",
+          "name": "Anchovy",
+          "normalized_name": "Anchovy",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "129"
+          ],
+          "gold_note": "Anchovy is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-01-i02",
+          "name": "大米",
+          "normalized_name": "大米",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-01-i03",
+          "name": "Ginger",
+          "normalized_name": "Ginger",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "Ginger is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-02",
+      "name_en": "Sardine and Radish Soup",
+      "name_zh": "沙丁鱼萝卜汤",
+      "stratum": "direct_name",
+      "dish_family": "soup",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-02-i01",
+          "name": "沙丁鱼",
+          "normalized_name": "沙丁鱼",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "131"
+          ],
+          "gold_note": "Sardine is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-02-i02",
+          "name": "Radish",
+          "normalized_name": "Radish",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "264"
+          ],
+          "gold_note": "Radish is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-02-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "Garlic is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-03",
+      "name_en": "Bream with Leek and Oil",
+      "name_zh": "韭葱油煎鲷鱼",
+      "stratum": "direct_name",
+      "dish_family": "pan-fried fish",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-03-i01",
+          "name": "Bream",
+          "normalized_name": "Bream",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "132"
+          ],
+          "gold_note": "Bream is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-03-i02",
+          "name": "韭葱",
+          "normalized_name": "韭葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "20"
+          ],
+          "gold_note": "Leek is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-03-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "Oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-04",
+      "name_en": "Largemouth Bass with Kale",
+      "name_zh": "甘蓝菜配大嘴鲈鱼",
+      "stratum": "direct_name",
+      "dish_family": "skillet",
+      "cuisine_style": "Southern American",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-04-i01",
+          "name": "Largemouth Bass",
+          "normalized_name": "Largemouth Bass",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "136"
+          ],
+          "gold_note": "Largemouth Bass is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-04-i02",
+          "name": "甘蓝菜",
+          "normalized_name": "甘蓝菜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "250"
+          ],
+          "gold_note": "Kale is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-04-i03",
+          "name": "Vinegar",
+          "normalized_name": "Vinegar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "419"
+          ],
+          "gold_note": "Vinegar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-05",
+      "name_en": "Smallmouth Bass Corn Cakes",
+      "name_zh": "小嘴鲈鱼玉米饼",
+      "stratum": "direct_name",
+      "dish_family": "savory cake",
+      "cuisine_style": "American",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-05-i01",
+          "name": "小嘴鲈鱼",
+          "normalized_name": "小嘴鲈鱼",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "137"
+          ],
+          "gold_note": "Smallmouth Bass is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-05-i02",
+          "name": "Corn",
+          "normalized_name": "Corn",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "270"
+          ],
+          "gold_note": "Corn is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-05-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-06",
+      "name_en": "Walleye Potato Skillet",
+      "name_zh": "大眼鱼土豆煎锅",
+      "stratum": "direct_name",
+      "dish_family": "skillet",
+      "cuisine_style": "Nordic",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-06-i01",
+          "name": "Walleye",
+          "normalized_name": "Walleye",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "140"
+          ],
+          "gold_note": "Walleye is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-06-i02",
+          "name": "土豆",
+          "normalized_name": "土豆",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "Potato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-06-i03",
+          "name": "Spring Onion",
+          "normalized_name": "Spring Onion",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "Spring Onion is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-07",
+      "name_en": "Perch and Tomato Ragout",
+      "name_zh": "番茄炖河鲈",
+      "stratum": "direct_name",
+      "dish_family": "stew",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-07-i01",
+          "name": "Perch",
+          "normalized_name": "Perch",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "141"
+          ],
+          "gold_note": "Perch is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-07-i02",
+          "name": "西红柿",
+          "normalized_name": "西红柿",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "Tomato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-07-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "Garlic is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-08",
+      "name_en": "Catfish with Amaranth Greens",
+      "name_zh": "苋菜鲶鱼盘",
+      "stratum": "direct_name",
+      "dish_family": "grilled fish",
+      "cuisine_style": "Southern American",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-08-i01",
+          "name": "鲶鱼",
+          "normalized_name": "鲶鱼",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "143"
+          ],
+          "gold_note": "Catfish is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-08-i02",
+          "name": "Amaranth",
+          "normalized_name": "Amaranth",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "300"
+          ],
+          "gold_note": "Amaranth is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-08-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "Oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-09",
+      "name_en": "Pike Parsnip Potage",
+      "name_zh": "狗鱼防风草浓汤",
+      "stratum": "direct_name",
+      "dish_family": "soup",
+      "cuisine_style": "Eastern European",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-09-i01",
+          "name": "Pike",
+          "normalized_name": "Pike",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "144"
+          ],
+          "gold_note": "Pike is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-09-i02",
+          "name": "防风草",
+          "normalized_name": "防风草",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "24"
+          ],
+          "gold_note": "Parsnip is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-09-i03",
+          "name": "Potato",
+          "normalized_name": "Potato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "Potato is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-10",
+      "name_en": "Sunfish and Dandelion Salad",
+      "name_zh": "蒲公英太阳鱼沙拉",
+      "stratum": "direct_name",
+      "dish_family": "salad",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-10-i01",
+          "name": "Sunfish",
+          "normalized_name": "Sunfish",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "145"
+          ],
+          "gold_note": "Sunfish is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-10-i02",
+          "name": "蒲公英",
+          "normalized_name": "蒲公英",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "22"
+          ],
+          "gold_note": "Dandelion is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-10-i03",
+          "name": "Vinegar",
+          "normalized_name": "Vinegar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "419"
+          ],
+          "gold_note": "Vinegar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-11",
+      "name_en": "Red Mullet with Grape Relish",
+      "name_zh": "葡萄酱红鲻鱼",
+      "stratum": "direct_name",
+      "dish_family": "grilled fish",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-11-i01",
+          "name": "红鲻鱼",
+          "normalized_name": "红鲻鱼",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "146"
+          ],
+          "gold_note": "Red Mullet is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-11-i02",
+          "name": "Grape",
+          "normalized_name": "Grape",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "398"
+          ],
+          "gold_note": "Grape is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-11-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "Oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-12",
+      "name_en": "Herring and Beet Salad",
+      "name_zh": "甜菜鲱鱼沙拉",
+      "stratum": "direct_name",
+      "dish_family": "salad",
+      "cuisine_style": "Nordic",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-12-i01",
+          "name": "Herring",
+          "normalized_name": "Herring",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "147"
+          ],
+          "gold_note": "Herring is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-12-i02",
+          "name": "甜菜",
+          "normalized_name": "甜菜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "284"
+          ],
+          "gold_note": "Beet is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-direct_name-12-i03",
+          "name": "Vinegar",
+          "normalized_name": "Vinegar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "419"
+          ],
+          "gold_note": "Vinegar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-13",
+      "name_en": "Pineapple Tomato Pepper Chutney",
+      "name_zh": "菠萝番茄辣椒酱",
+      "stratum": "direct_name",
+      "dish_family": "chutney",
+      "cuisine_style": "South Asian",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-13-i01",
+          "name": "Pineapple",
+          "normalized_name": "Pineapple",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "832"
+          ],
+          "gold_note": "Pineapple is a real fruit ingredient in a sweet-hot chutney."
+        },
+        {
+          "query_id": "h66-direct_name-13-i02",
+          "name": "辣椒",
+          "normalized_name": "辣椒",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "260"
+          ],
+          "gold_note": "Hot pepper supplies the heat in the pineapple chutney."
+        },
+        {
+          "query_id": "h66-direct_name-13-i03",
+          "name": "Tomato",
+          "normalized_name": "Tomato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "Tomato is a common savory base for a fruit-and-pepper chutney."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-14",
+      "name_en": "Summer-Squash Ginger Soup",
+      "name_zh": "西葫芦姜汁奶汤",
+      "stratum": "direct_name",
+      "dish_family": "cream soup",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-14-i01",
+          "name": "Summer Squash",
+          "normalized_name": "Summer Squash",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "SummerSquash"
+          ],
+          "gold_note": "Summer squash is the main vegetable in this creamy soup."
+        },
+        {
+          "query_id": "h66-direct_name-14-i02",
+          "name": "姜",
+          "normalized_name": "姜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "Ginger adds a conventional aromatic note to pumpkin soup."
+        },
+        {
+          "query_id": "h66-direct_name-14-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk provides the creamy base for the pumpkin soup."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-15",
+      "name_en": "Carrot and Parsnip Mash",
+      "name_zh": "胡萝卜防风草奶油泥",
+      "stratum": "direct_name",
+      "dish_family": "vegetable mash",
+      "cuisine_style": "British",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-15-i01",
+          "name": "Carrot",
+          "normalized_name": "Carrot",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "Carrot"
+          ],
+          "gold_note": "Carrot is one of the two root vegetables in the mash."
+        },
+        {
+          "query_id": "h66-direct_name-15-i02",
+          "name": "防风草",
+          "normalized_name": "防风草",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "24"
+          ],
+          "gold_note": "Parsnip is the second root vegetable in the mash."
+        },
+        {
+          "query_id": "h66-direct_name-15-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk is a common ingredient for loosening and enriching root-vegetable mash."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-16",
+      "name_en": "Potato-Parsnip Cakes",
+      "name_zh": "土豆防风草蛋饼",
+      "stratum": "direct_name",
+      "dish_family": "vegetable cake",
+      "cuisine_style": "Polish",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-16-i01",
+          "name": "Potato",
+          "normalized_name": "Potato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "Potato is the starchy base of these savory cakes."
+        },
+        {
+          "query_id": "h66-direct_name-16-i02",
+          "name": "防风草",
+          "normalized_name": "防风草",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "24"
+          ],
+          "gold_note": "Parsnip adds a complementary root vegetable to the cakes."
+        },
+        {
+          "query_id": "h66-direct_name-16-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg binds the shredded vegetables into patties."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-17",
+      "name_en": "Apricot Flour Galette",
+      "name_zh": "杏子小麦粉薄饼",
+      "stratum": "direct_name",
+      "dish_family": "fruit galette",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-17-i01",
+          "name": "Apricot",
+          "normalized_name": "Apricot",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "634"
+          ],
+          "gold_note": "Apricot is the fruit filling for this galette."
+        },
+        {
+          "query_id": "h66-direct_name-17-i02",
+          "name": "小麦粉",
+          "normalized_name": "小麦粉",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat flour is the pastry base for the galette."
+        },
+        {
+          "query_id": "h66-direct_name-17-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "Sugar lightly sweetens the apricot filling."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-18",
+      "name_en": "Pineapple Rice Pudding",
+      "name_zh": "菠萝大米布丁",
+      "stratum": "direct_name",
+      "dish_family": "rice pudding",
+      "cuisine_style": "Thai",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-18-i01",
+          "name": "Pineapple",
+          "normalized_name": "Pineapple",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "832"
+          ],
+          "gold_note": "Pineapple provides the fruit in this rice pudding."
+        },
+        {
+          "query_id": "h66-direct_name-18-i02",
+          "name": "大米",
+          "normalized_name": "大米",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is the grain base of the pudding."
+        },
+        {
+          "query_id": "h66-direct_name-18-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk cooks the rice into a creamy pudding."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-19",
+      "name_en": "Tomato and Leek Noodles",
+      "name_zh": "番茄韭葱面",
+      "stratum": "direct_name",
+      "dish_family": "noodle bowl",
+      "cuisine_style": "Italian",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-19-i01",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat flour provides the noodle component."
+        },
+        {
+          "query_id": "h66-direct_name-19-i02",
+          "name": "西红柿",
+          "normalized_name": "西红柿",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "Tomato is the sauce base for the noodles."
+        },
+        {
+          "query_id": "h66-direct_name-19-i03",
+          "name": "Leek",
+          "normalized_name": "Leek",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "20"
+          ],
+          "gold_note": "Leek is a suitable aromatic vegetable in tomato noodles."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-20",
+      "name_en": "Red Cabbage and Spring Onion Rice",
+      "name_zh": "紫甘蓝大葱米饭",
+      "stratum": "direct_name",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-20-i01",
+          "name": "Red Cabbage",
+          "normalized_name": "Red Cabbage",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "266"
+          ],
+          "gold_note": "Red cabbage adds color and crunch to the rice dish."
+        },
+        {
+          "query_id": "h66-direct_name-20-i02",
+          "name": "大葱",
+          "normalized_name": "大葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "Spring onion is a conventional rice seasoning."
+        },
+        {
+          "query_id": "h66-direct_name-20-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is the staple base of this bowl."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-21",
+      "name_en": "Parsnip Potato Soup",
+      "name_zh": "防风草土豆汤",
+      "stratum": "direct_name",
+      "dish_family": "soup",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-21-i01",
+          "name": "Parsnip",
+          "normalized_name": "Parsnip",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "24"
+          ],
+          "gold_note": "Parsnip is one of the soup's root vegetables."
+        },
+        {
+          "query_id": "h66-direct_name-21-i02",
+          "name": "土豆",
+          "normalized_name": "土豆",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "Potato gives the soup body and starch."
+        },
+        {
+          "query_id": "h66-direct_name-21-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-22",
+      "name_en": "Fiddlehead Fern and Spring Onion Omelet",
+      "name_zh": "蕨菜大葱煎蛋",
+      "stratum": "direct_name",
+      "dish_family": "omelet",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-22-i01",
+          "name": "Fiddlehead Fern",
+          "normalized_name": "Fiddlehead Fern",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "259"
+          ],
+          "gold_note": "Fiddlehead fern is the seasonal vegetable in the cakes."
+        },
+        {
+          "query_id": "h66-direct_name-22-i02",
+          "name": "大葱",
+          "normalized_name": "大葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "Spring onion is a savory aromatic in the omelet."
+        },
+        {
+          "query_id": "h66-direct_name-22-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is the main omelet binding and protein ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-23",
+      "name_en": "Corn and Pepper Flatbread",
+      "name_zh": "玉米辣椒薄饼",
+      "stratum": "direct_name",
+      "dish_family": "flatbread",
+      "cuisine_style": "Mexican",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-23-i01",
+          "name": "Corn",
+          "normalized_name": "Corn",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "270"
+          ],
+          "gold_note": "Corn contributes the main grain and sweetness."
+        },
+        {
+          "query_id": "h66-direct_name-23-i02",
+          "name": "辣椒",
+          "normalized_name": "辣椒",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "260"
+          ],
+          "gold_note": "Hot pepper adds heat to the flatbread topping."
+        },
+        {
+          "query_id": "h66-direct_name-23-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat flour is the base for the flatbread."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-direct_name-24",
+      "name_en": "Broccoli Cheese Gratin",
+      "name_zh": "西蓝花奶酪焗烤",
+      "stratum": "direct_name",
+      "dish_family": "gratin",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-direct_name-24-i01",
+          "name": "Broccoli",
+          "normalized_name": "Broccoli",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "Broccoli"
+          ],
+          "gold_note": "Broccoli is the vegetable base of the gratin."
+        },
+        {
+          "query_id": "h66-direct_name-24-i02",
+          "name": "奶酪",
+          "normalized_name": "奶酪",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "424",
+            "426"
+          ],
+          "gold_note": "Cheese melts over the broccoli in a gratin."
+        },
+        {
+          "query_id": "h66-direct_name-24-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk forms part of the creamy gratin sauce."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-01",
+      "name_en": "Aubergine Tomato Flatbread",
+      "name_zh": "番茄茄子薄饼",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "flatbread",
+      "cuisine_style": "Italian",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-01-i01",
+          "name": "aubergine",
+          "normalized_name": "aubergine",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "272"
+          ],
+          "gold_note": "aubergine is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-01-i02",
+          "name": "番茄",
+          "normalized_name": "番茄",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "tomato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-01-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat flour provides the flatbread base for the aubergine and tomato topping."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-02",
+      "name_en": "Scallion Taro Cakes",
+      "name_zh": "青葱芋头饼",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "savory cake",
+      "cuisine_style": "Chinese",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-02-i01",
+          "name": "scallion",
+          "normalized_name": "scallion",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "scallion is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-02-i02",
+          "name": "芋头",
+          "normalized_name": "芋头",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "830"
+          ],
+          "gold_note": "Taro Root is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-02-i03",
+          "name": "Ginger",
+          "normalized_name": "Ginger",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "Ginger is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-03",
+      "name_en": "Zucchini Radish Salad",
+      "name_zh": "西葫芦萝卜沙拉",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "salad",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-03-i01",
+          "name": "zucchini",
+          "normalized_name": "zucchini",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "SummerSquash"
+          ],
+          "gold_note": "zucchini is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-03-i02",
+          "name": "萝卜",
+          "normalized_name": "萝卜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "264"
+          ],
+          "gold_note": "Radish is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-03-i03",
+          "name": "vegetable oil",
+          "normalized_name": "vegetable oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "vegetable oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-04",
+      "name_en": "Prickly Pear Orange Cooler",
+      "name_zh": "仙人掌果柑橘饮",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "beverage",
+      "cuisine_style": "Mexican",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-04-i01",
+          "name": "prickly pear",
+          "normalized_name": "prickly pear",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "90"
+          ],
+          "gold_note": "prickly pear is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-04-i02",
+          "name": "柑橘",
+          "normalized_name": "柑橘",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "635"
+          ],
+          "gold_note": "mandarin orange is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-04-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "Sugar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-05",
+      "name_en": "Sultana Wheat Porridge",
+      "name_zh": "葡萄干小麦粥",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "porridge",
+      "cuisine_style": "British",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-05-i01",
+          "name": "sultanas",
+          "normalized_name": "sultanas",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "Raisins"
+          ],
+          "gold_note": "sultanas is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-05-i02",
+          "name": "小麦粉",
+          "normalized_name": "小麦粉",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-05-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-06",
+      "name_en": "Pak Choi Carrot Soup",
+      "name_zh": "小白菜胡萝卜汤",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "soup",
+      "cuisine_style": "Chinese",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-06-i01",
+          "name": "pak choi",
+          "normalized_name": "pak choi",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "278"
+          ],
+          "gold_note": "pak choi is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-06-i02",
+          "name": "胡萝卜",
+          "normalized_name": "胡萝卜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "Carrot"
+          ],
+          "gold_note": "Carrot is a common root vegetable for a pak choi soup."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-06-i03",
+          "name": "Ginger",
+          "normalized_name": "Ginger",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "Ginger is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-07",
+      "name_en": "Beetroot and Goat Milk Bake",
+      "name_zh": "甜菜根羊奶烤盘",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "bake",
+      "cuisine_style": "Eastern European",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-07-i01",
+          "name": "beetroot",
+          "normalized_name": "beetroot",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "284"
+          ],
+          "gold_note": "beetroot is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-07-i02",
+          "name": "羊奶",
+          "normalized_name": "羊奶",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "436",
+            "438"
+          ],
+          "gold_note": "Goat milk matches the named ingredient in this beetroot bake."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-07-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "Oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-08",
+      "name_en": "Chili Tomato Rice",
+      "name_zh": "辣椒番茄饭",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Mexican",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-08-i01",
+          "name": "chili",
+          "normalized_name": "chili",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "260"
+          ],
+          "gold_note": "chili is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-08-i02",
+          "name": "番茄",
+          "normalized_name": "番茄",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "tomato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-08-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-09",
+      "name_en": "Mandarin Spring-Onion Fish",
+      "name_zh": "柑橘小葱鱼",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "baked fish",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-09-i01",
+          "name": "mandarin orange",
+          "normalized_name": "mandarin orange",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "635"
+          ],
+          "gold_note": "mandarin orange is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-09-i02",
+          "name": "小葱",
+          "normalized_name": "小葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "young onion is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-09-i03",
+          "name": "fish",
+          "normalized_name": "fish",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "129",
+            "130",
+            "131",
+            "132",
+            "136",
+            "137",
+            "138",
+            "139",
+            "140",
+            "141",
+            "142",
+            "143",
+            "144",
+            "145",
+            "146",
+            "147",
+            "148",
+            "150",
+            "267",
+            "698",
+            "699",
+            "701",
+            "705",
+            "708"
+          ],
+          "gold_note": "fish is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-10",
+      "name_en": "Sea-Green Flour Cakes",
+      "name_zh": "海藻小麦饼",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "savory cake",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-10-i01",
+          "name": "海藻",
+          "normalized_name": "海藻",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "152"
+          ],
+          "gold_note": "sea plant is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-10-i02",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-10-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-11",
+      "name_en": "Dandelion-Green Potato Hash",
+      "name_zh": "蒲公英叶土豆煎饼",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "hash",
+      "cuisine_style": "American",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-11-i01",
+          "name": "dandelion greens",
+          "normalized_name": "dandelion greens",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "22"
+          ],
+          "gold_note": "dandelion greens is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-11-i02",
+          "name": "土豆",
+          "normalized_name": "土豆",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "Potato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-11-i03",
+          "name": "vegetable oil",
+          "normalized_name": "vegetable oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "vegetable oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-12",
+      "name_en": "Edible-Fern Ginger Bowl",
+      "name_zh": "蕨菜姜香饭",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-12-i01",
+          "name": "edible fern",
+          "normalized_name": "edible fern",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "259"
+          ],
+          "gold_note": "edible fern is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-12-i02",
+          "name": "生姜",
+          "normalized_name": "生姜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "ginger root is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-12-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-13",
+      "name_en": "Wild-Plum Cheese Toast",
+      "name_zh": "野梅奶酪吐司",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "toast",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-13-i01",
+          "name": "Wild Plum",
+          "normalized_name": "Wild Plum",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "406"
+          ],
+          "gold_note": "Wild Plum is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-13-i02",
+          "name": "奶酪",
+          "normalized_name": "奶酪",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "424",
+            "426"
+          ],
+          "gold_note": "Cheese is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-13-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-14",
+      "name_en": "Pomegranate Beet Salad",
+      "name_zh": "石榴甜菜沙拉",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "salad",
+      "cuisine_style": "Levantine",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-14-i01",
+          "name": "Pomegranate",
+          "normalized_name": "Pomegranate",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "637"
+          ],
+          "gold_note": "Pomegranate is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-14-i02",
+          "name": "甜菜根",
+          "normalized_name": "甜菜根",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "284"
+          ],
+          "gold_note": "beetroot is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-14-i03",
+          "name": "vegetable oil",
+          "normalized_name": "vegetable oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "vegetable oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-15",
+      "name_en": "Carrot and Yam Stew",
+      "name_zh": "胡萝卜山药炖菜",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "stew",
+      "cuisine_style": "Indian-inspired",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-15-i01",
+          "name": "Carrot",
+          "normalized_name": "Carrot",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "Carrot"
+          ],
+          "gold_note": "Carrot is a common root vegetable suitable for a hearty stew."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-15-i02",
+          "name": "山药",
+          "normalized_name": "山药",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "280"
+          ],
+          "gold_note": "Yam is a starchy root that pairs plausibly with carrot in stew."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-15-i03",
+          "name": "Tomato",
+          "normalized_name": "Tomato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "Tomato is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-16",
+      "name_en": "Spice-Berry Apple Compote",
+      "name_zh": "香味浆果苹果酱",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "compote",
+      "cuisine_style": "Nordic",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-16-i01",
+          "name": "香味浆果",
+          "normalized_name": "香味浆果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "396"
+          ],
+          "gold_note": "spice berry is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-16-i02",
+          "name": "Apple",
+          "normalized_name": "Apple",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "613"
+          ],
+          "gold_note": "Apple is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-16-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "Sugar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-17",
+      "name_en": "Blackberry Cream-Cheese Tart",
+      "name_zh": "黑莓奶酪挞",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "cheese tart",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-17-i01",
+          "name": "blackberries",
+          "normalized_name": "blackberries",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "410"
+          ],
+          "gold_note": "blackberries is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-17-i02",
+          "name": "奶酪",
+          "normalized_name": "奶酪",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "424",
+            "426"
+          ],
+          "gold_note": "Cream cheese gives the berry tart a plausible creamy filling."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-17-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-18",
+      "name_en": "Forest-Mushroom Leek Pasta",
+      "name_zh": "野蘑菇韭葱面",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "pasta",
+      "cuisine_style": "Italian",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-18-i01",
+          "name": "forest mushroom",
+          "normalized_name": "forest mushroom",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "404"
+          ],
+          "gold_note": "forest mushroom is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-18-i02",
+          "name": "韭葱",
+          "normalized_name": "韭葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "20"
+          ],
+          "gold_note": "Leek is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-18-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "Oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-19",
+      "name_en": "Green-Tea and Melon Cooler",
+      "name_zh": "绿茶甜瓜饮",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "beverage",
+      "cuisine_style": "Chinese",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-19-i01",
+          "name": "green tea",
+          "normalized_name": "green tea",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "614"
+          ],
+          "gold_note": "Green tea is the brewed beverage base of this melon cooler."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-19-i02",
+          "name": "甜瓜",
+          "normalized_name": "甜瓜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "254"
+          ],
+          "gold_note": "sweet melon is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-19-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "Sugar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-20",
+      "name_en": "Sun-Dried-Grape Cheese Bites",
+      "name_zh": "葡萄干奶酪小食",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "snack",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-20-i01",
+          "name": "sun-dried grapes",
+          "normalized_name": "sun-dried grapes",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "Raisins"
+          ],
+          "gold_note": "sun-dried grapes is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-20-i02",
+          "name": "奶酪",
+          "normalized_name": "奶酪",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "424",
+            "426"
+          ],
+          "gold_note": "Cheese is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-20-i03",
+          "name": "Apple",
+          "normalized_name": "Apple",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "613"
+          ],
+          "gold_note": "Apple is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-21",
+      "name_en": "Ananas Hot-Pepper Salsa",
+      "name_zh": "菠萝红辣椒莎莎",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "salsa",
+      "cuisine_style": "Caribbean",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-21-i01",
+          "name": "ananas",
+          "normalized_name": "ananas",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "832"
+          ],
+          "gold_note": "ananas is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-21-i02",
+          "name": "红辣椒",
+          "normalized_name": "红辣椒",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "260"
+          ],
+          "gold_note": "red chili is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-21-i03",
+          "name": "Ginger",
+          "normalized_name": "Ginger",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "Ginger is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-22",
+      "name_en": "Taro Yam Mash",
+      "name_zh": "芋头山药泥",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "mash",
+      "cuisine_style": "Hawaiian-inspired",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-22-i01",
+          "name": "Taro Root",
+          "normalized_name": "Taro Root",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "830"
+          ],
+          "gold_note": "Taro Root is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-22-i02",
+          "name": "山药",
+          "normalized_name": "山药",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "280"
+          ],
+          "gold_note": "Yam is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-22-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-23",
+      "name_en": "Summer-Squash Kale Fritters",
+      "name_zh": "金皮西葫芦甘蓝饼",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "fritter",
+      "cuisine_style": "Greek",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-23-i01",
+          "name": "zucchini",
+          "normalized_name": "zucchini",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "SummerSquash"
+          ],
+          "gold_note": "zucchini is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-23-i02",
+          "name": "甘蓝菜",
+          "normalized_name": "甘蓝菜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "250"
+          ],
+          "gold_note": "Kale is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-23-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-bilingual_or_synonym-24",
+      "name_en": "Young-Onion Ginger Broth",
+      "name_zh": "小葱生姜清汤",
+      "stratum": "bilingual_or_synonym",
+      "dish_family": "broth",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-bilingual_or_synonym-24-i01",
+          "name": "小葱",
+          "normalized_name": "小葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "young onion is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-24-i02",
+          "name": "ginger root",
+          "normalized_name": "ginger root",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "ginger root is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-bilingual_or_synonym-24-i03",
+          "name": "sea plant",
+          "normalized_name": "sea plant",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "152"
+          ],
+          "gold_note": "sea plant is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-01",
+      "name_en": "Wild-Berry Hazelnut Crumble",
+      "name_zh": "浆果榛子碎烤甜点",
+      "stratum": "ambiguous_name",
+      "dish_family": "dessert",
+      "cuisine_style": "British",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-01-i01",
+          "name": "berries",
+          "normalized_name": "berries",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "258",
+            "282",
+            "296",
+            "400",
+            "410"
+          ],
+          "gold_note": "berries is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-01-i02",
+          "name": "榛子",
+          "normalized_name": "榛子",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "408"
+          ],
+          "gold_note": "Hazelnut is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-01-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-02",
+      "name_en": "Forest Mushroom and Carrot Stew",
+      "name_zh": "野生菌菇胡萝卜炖菜",
+      "stratum": "ambiguous_name",
+      "dish_family": "stew",
+      "cuisine_style": "Polish",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-02-i01",
+          "name": "野生菌菇",
+          "normalized_name": "野生菌菇",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "257",
+            "281",
+            "404",
+            "422",
+            "851"
+          ],
+          "gold_note": "forest mushrooms is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-02-i02",
+          "name": "Carrot",
+          "normalized_name": "Carrot",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "Carrot"
+          ],
+          "gold_note": "Carrot is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-02-i03",
+          "name": "Leek",
+          "normalized_name": "Leek",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "20"
+          ],
+          "gold_note": "Leek is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-03",
+      "name_en": "Cooking-Oil Greens",
+      "name_zh": "烹饪用油拌绿叶菜",
+      "stratum": "ambiguous_name",
+      "dish_family": "salad",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-03-i01",
+          "name": "cooking oils",
+          "normalized_name": "cooking oils",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247",
+            "432",
+            "772"
+          ],
+          "gold_note": "cooking oils is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-03-i02",
+          "name": "绿叶菜",
+          "normalized_name": "绿叶菜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "22",
+            "250",
+            "278",
+            "300"
+          ],
+          "gold_note": "leafy greens is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-03-i03",
+          "name": "Vinegar",
+          "normalized_name": "Vinegar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "419"
+          ],
+          "gold_note": "Vinegar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-04",
+      "name_en": "Egg and Tomato Rice",
+      "name_zh": "鸡蛋番茄饭",
+      "stratum": "ambiguous_name",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-04-i01",
+          "name": "eggs",
+          "normalized_name": "eggs",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182",
+            "928"
+          ],
+          "gold_note": "eggs is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-04-i02",
+          "name": "西红柿",
+          "normalized_name": "西红柿",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "Tomato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-04-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-05",
+      "name_en": "Dairy Root Gratin",
+      "name_zh": "乳制品根菜焗盘",
+      "stratum": "ambiguous_name",
+      "dish_family": "bake",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-05-i01",
+          "name": "乳制品",
+          "normalized_name": "乳制品",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "184",
+            "186",
+            "436",
+            "438",
+            "424",
+            "426"
+          ],
+          "gold_note": "dairy is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-05-i02",
+          "name": "root vegetables",
+          "normalized_name": "root vegetables",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "16",
+            "24",
+            "78",
+            "192",
+            "280",
+            "412",
+            "416",
+            "830"
+          ],
+          "gold_note": "root vegetables is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-05-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "Garlic is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-06",
+      "name_en": "Rice-Grain Fish Cakes",
+      "name_zh": "稻米鱼饼",
+      "stratum": "ambiguous_name",
+      "dish_family": "savory cake",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-06-i01",
+          "name": "rice grains",
+          "normalized_name": "rice grains",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423",
+            "271"
+          ],
+          "gold_note": "rice grains is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-06-i02",
+          "name": "鱼类",
+          "normalized_name": "鱼类",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "129",
+            "130",
+            "131",
+            "132",
+            "136",
+            "137",
+            "138",
+            "139",
+            "140",
+            "141",
+            "142",
+            "143",
+            "144",
+            "145",
+            "146",
+            "147",
+            "148",
+            "150",
+            "267",
+            "698",
+            "699",
+            "701",
+            "705",
+            "708"
+          ],
+          "gold_note": "fish is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-06-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-07",
+      "name_en": "Root-Vegetable Parsnip Pot",
+      "name_zh": "根茎蔬菜防风草锅",
+      "stratum": "ambiguous_name",
+      "dish_family": "soup",
+      "cuisine_style": "Eastern European",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-07-i01",
+          "name": "root vegetables",
+          "normalized_name": "root vegetables",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "16",
+            "24",
+            "78",
+            "192",
+            "280",
+            "412",
+            "416",
+            "830"
+          ],
+          "gold_note": "root vegetables is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-07-i02",
+          "name": "防风草",
+          "normalized_name": "防风草",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "24"
+          ],
+          "gold_note": "Parsnip is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-07-i03",
+          "name": "vegetable oil",
+          "normalized_name": "vegetable oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "vegetable oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-08",
+      "name_en": "Leafy-Green Bean Skillet",
+      "name_zh": "绿叶菜青豆煎锅",
+      "stratum": "ambiguous_name",
+      "dish_family": "skillet",
+      "cuisine_style": "Chinese",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-08-i01",
+          "name": "绿叶菜",
+          "normalized_name": "绿叶菜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "22",
+            "250",
+            "278",
+            "300"
+          ],
+          "gold_note": "leafy greens is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-08-i02",
+          "name": "Green Bean",
+          "normalized_name": "Green Bean",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "188"
+          ],
+          "gold_note": "Green Bean is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-08-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "Garlic is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-09",
+      "name_en": "Whole-Fish Ginger Plate",
+      "name_zh": "鱼类姜香蒸盘",
+      "stratum": "ambiguous_name",
+      "dish_family": "steamed plate",
+      "cuisine_style": "Chinese",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-09-i01",
+          "name": "fish",
+          "normalized_name": "fish",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "129",
+            "130",
+            "131",
+            "132",
+            "136",
+            "137",
+            "138",
+            "139",
+            "140",
+            "141",
+            "142",
+            "143",
+            "144",
+            "145",
+            "146",
+            "147",
+            "148",
+            "150",
+            "267",
+            "698",
+            "699",
+            "701",
+            "705",
+            "708"
+          ],
+          "gold_note": "fish is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-09-i02",
+          "name": "姜",
+          "normalized_name": "姜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "Ginger is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-09-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "Oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-10",
+      "name_en": "Stone-Fruit Flour Tart",
+      "name_zh": "核果小麦挞",
+      "stratum": "ambiguous_name",
+      "dish_family": "tart",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-10-i01",
+          "name": "stone fruit",
+          "normalized_name": "stone fruit",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "634",
+            "636",
+            "638"
+          ],
+          "gold_note": "stone fruit is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-10-i02",
+          "name": "小麦粉",
+          "normalized_name": "小麦粉",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-10-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-11",
+      "name_en": "Tropical-Fruit Rice Bowl",
+      "name_zh": "热带水果饭碗",
+      "stratum": "ambiguous_name",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Thai",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-11-i01",
+          "name": "热带水果",
+          "normalized_name": "热带水果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "90",
+            "91",
+            "832",
+            "834"
+          ],
+          "gold_note": "tropical fruit is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-11-i02",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-11-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "Sugar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-12",
+      "name_en": "Natural-Sweetener Berry Tea",
+      "name_zh": "天然甜味剂浆果茶",
+      "stratum": "ambiguous_name",
+      "dish_family": "beverage",
+      "cuisine_style": "Chinese",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-12-i01",
+          "name": "natural sweetener",
+          "normalized_name": "natural sweetener",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245",
+            "724"
+          ],
+          "gold_note": "natural sweetener is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-12-i02",
+          "name": "浆果",
+          "normalized_name": "浆果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "258",
+            "282",
+            "296",
+            "400",
+            "410"
+          ],
+          "gold_note": "berries is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-12-i03",
+          "name": "Green Tea",
+          "normalized_name": "Green Tea",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "614"
+          ],
+          "gold_note": "Green Tea is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-13",
+      "name_en": "Allium Potato Soup",
+      "name_zh": "葱蒜土豆汤",
+      "stratum": "ambiguous_name",
+      "dish_family": "soup",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-13-i01",
+          "name": "葱蒜类",
+          "normalized_name": "葱蒜类",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "20",
+            "248",
+            "399"
+          ],
+          "gold_note": "alliums is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-13-i02",
+          "name": "Potato",
+          "normalized_name": "Potato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "Potato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-13-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-14",
+      "name_en": "Brassica Fish Wraps",
+      "name_zh": "十字花科蔬菜鱼卷",
+      "stratum": "ambiguous_name",
+      "dish_family": "wrap",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-14-i01",
+          "name": "brassica vegetables",
+          "normalized_name": "brassica vegetables",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "190",
+            "250",
+            "266",
+            "278"
+          ],
+          "gold_note": "brassica vegetables is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-14-i02",
+          "name": "鱼类",
+          "normalized_name": "鱼类",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "129",
+            "130",
+            "131",
+            "132",
+            "136",
+            "137",
+            "138",
+            "139",
+            "140",
+            "141",
+            "142",
+            "143",
+            "144",
+            "145",
+            "146",
+            "147",
+            "148",
+            "150",
+            "267",
+            "698",
+            "699",
+            "701",
+            "705",
+            "708"
+          ],
+          "gold_note": "fish is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-14-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-15",
+      "name_en": "Orchard-Fruit Cheese Board",
+      "name_zh": "果园水果奶酪拼盘",
+      "stratum": "ambiguous_name",
+      "dish_family": "snack",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-15-i01",
+          "name": "果园水果",
+          "normalized_name": "果园水果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "613",
+            "634",
+            "635",
+            "636",
+            "637",
+            "638"
+          ],
+          "gold_note": "orchard fruit is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-15-i02",
+          "name": "Cheese",
+          "normalized_name": "Cheese",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "424",
+            "426"
+          ],
+          "gold_note": "Cheese is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-15-i03",
+          "name": "Hazelnut",
+          "normalized_name": "Hazelnut",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "408"
+          ],
+          "gold_note": "Hazelnut is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-16",
+      "name_en": "Starchy-Root Oil Cakes",
+      "name_zh": "块根油煎饼",
+      "stratum": "ambiguous_name",
+      "dish_family": "savory cake",
+      "cuisine_style": "Caribbean",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-16-i01",
+          "name": "starchy roots",
+          "normalized_name": "starchy roots",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "24",
+            "78",
+            "192",
+            "280",
+            "412",
+            "416",
+            "830"
+          ],
+          "gold_note": "starchy roots is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-16-i02",
+          "name": "蛋",
+          "normalized_name": "蛋",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-16-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "Oil is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-17",
+      "name_en": "Sea-Vegetable Rice Soup",
+      "name_zh": "海藻米汤",
+      "stratum": "ambiguous_name",
+      "dish_family": "soup",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-17-i01",
+          "name": "海藻类",
+          "normalized_name": "海藻类",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "152",
+            "153"
+          ],
+          "gold_note": "sea vegetables is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-17-i02",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-17-i03",
+          "name": "Ginger",
+          "normalized_name": "Ginger",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "Ginger is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-18",
+      "name_en": "Small-Berry Milk Pudding",
+      "name_zh": "小浆果奶布丁",
+      "stratum": "ambiguous_name",
+      "dish_family": "dessert",
+      "cuisine_style": "American",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-18-i01",
+          "name": "small berries",
+          "normalized_name": "small berries",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "258",
+            "282",
+            "296",
+            "400",
+            "410"
+          ],
+          "gold_note": "small berries is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-18-i02",
+          "name": "牛奶",
+          "normalized_name": "牛奶",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "Milk is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-18-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "Sugar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-19",
+      "name_en": "Mushroom Greens Toast",
+      "name_zh": "菌菇绿叶吐司",
+      "stratum": "ambiguous_name",
+      "dish_family": "toast",
+      "cuisine_style": "Italian",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-19-i01",
+          "name": "菌菇",
+          "normalized_name": "菌菇",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "257",
+            "281",
+            "404",
+            "422",
+            "851"
+          ],
+          "gold_note": "mushrooms is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-19-i02",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-19-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "Garlic is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-20",
+      "name_en": "Milk-Type Fruit Shake",
+      "name_zh": "奶类果昔",
+      "stratum": "ambiguous_name",
+      "dish_family": "beverage",
+      "cuisine_style": "American",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-20-i01",
+          "name": "milk",
+          "normalized_name": "milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186",
+            "436",
+            "438"
+          ],
+          "gold_note": "milk is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-20-i02",
+          "name": "果园水果",
+          "normalized_name": "果园水果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "613",
+            "634",
+            "635",
+            "636",
+            "637",
+            "638"
+          ],
+          "gold_note": "orchard fruit is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-20-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "Sugar is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-21",
+      "name_en": "Farm-Egg Fern Cakes",
+      "name_zh": "家禽蛋蕨菜饼",
+      "stratum": "ambiguous_name",
+      "dish_family": "savory cake",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-21-i01",
+          "name": "家禽蛋",
+          "normalized_name": "家禽蛋",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "farm eggs is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-21-i02",
+          "name": "Fiddlehead Fern",
+          "normalized_name": "Fiddlehead Fern",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "259"
+          ],
+          "gold_note": "Fiddlehead Fern is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-21-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "Wheat Flour is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-22",
+      "name_en": "Seaweed Squash Rice Bowl",
+      "name_zh": "海藻西葫芦饭碗",
+      "stratum": "ambiguous_name",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-22-i01",
+          "name": "sea vegetables",
+          "normalized_name": "sea vegetables",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "152",
+            "153"
+          ],
+          "gold_note": "sea vegetables is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-22-i02",
+          "name": "西葫芦",
+          "normalized_name": "西葫芦",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "SummerSquash"
+          ],
+          "gold_note": "zucchini is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-22-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "Rice is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-23",
+      "name_en": "Edible-Root Tomato Pot",
+      "name_zh": "可食根茎番茄锅",
+      "stratum": "ambiguous_name",
+      "dish_family": "stew",
+      "cuisine_style": "Indian-inspired",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-23-i01",
+          "name": "edible roots",
+          "normalized_name": "edible roots",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "16",
+            "24",
+            "78",
+            "192",
+            "280",
+            "412",
+            "416",
+            "830"
+          ],
+          "gold_note": "edible roots is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-23-i02",
+          "name": "番茄",
+          "normalized_name": "番茄",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "tomato is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-23-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "Garlic is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-ambiguous_name-24",
+      "name_en": "Grain-Staple Mushroom Fritters",
+      "name_zh": "谷物菌菇煎饼",
+      "stratum": "ambiguous_name",
+      "dish_family": "fritter",
+      "cuisine_style": "Polish",
+      "ingredients": [
+        {
+          "query_id": "h66-ambiguous_name-24-i01",
+          "name": "主食谷物",
+          "normalized_name": "主食谷物",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "246",
+            "270",
+            "423"
+          ],
+          "gold_note": "staple grains is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        },
+        {
+          "query_id": "h66-ambiguous_name-24-i02",
+          "name": "Common Mushroom",
+          "normalized_name": "Common Mushroom",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "404"
+          ],
+          "gold_note": "Common Mushroom is a plausible catalog counterpart for this dish ingredient."
+        },
+        {
+          "query_id": "h66-ambiguous_name-24-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "Egg is a plausible catalog counterpart for this dish ingredient."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-01",
+      "name_en": "Carp with Ginger Rice",
+      "name_zh": "姜香鲤鱼饭",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Chinese",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-01-i01",
+          "name": "Carp",
+          "normalized_name": "Carp",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "142"
+          ],
+          "gold_note": "The query denotes raw Carp; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-01-i02",
+          "name": "姜",
+          "normalized_name": "姜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "The query denotes raw Ginger; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-01-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "The query denotes raw Rice; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-02",
+      "name_en": "Common-Mushroom Leek Toast",
+      "name_zh": "普通蘑菇韭葱吐司",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "toast",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-02-i01",
+          "name": "普通蘑菇",
+          "normalized_name": "普通蘑菇",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "404"
+          ],
+          "gold_note": "The query denotes raw Common Mushroom; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-02-i02",
+          "name": "Leek",
+          "normalized_name": "Leek",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "20"
+          ],
+          "gold_note": "The query denotes raw Leek; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-02-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "The query denotes raw Garlic; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-03",
+      "name_en": "Mediterranean Eggplant Tomato Pot",
+      "name_zh": "地中海茄子番茄炖锅",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "stew",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-03-i01",
+          "name": "Eggplant",
+          "normalized_name": "Eggplant",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "272"
+          ],
+          "gold_note": "The query denotes raw Eggplant; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-03-i02",
+          "name": "西红柿",
+          "normalized_name": "西红柿",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "The query denotes raw Tomato; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-03-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "The query denotes raw Oil; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-04",
+      "name_en": "Rice and Seaweed Rolls",
+      "name_zh": "大米海草卷",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "roll",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-04-i01",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "The query denotes raw Rice; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-04-i02",
+          "name": "海草",
+          "normalized_name": "海草",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "152"
+          ],
+          "gold_note": "The query denotes raw Seaweed; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-04-i03",
+          "name": "Salmon",
+          "normalized_name": "Salmon",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "139"
+          ],
+          "gold_note": "The query denotes raw Salmon; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-05",
+      "name_en": "Eel with Spring Onion",
+      "name_zh": "鳗鱼大葱饭",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-05-i01",
+          "name": "Eel",
+          "normalized_name": "Eel",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "148"
+          ],
+          "gold_note": "The query denotes raw Eel; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-05-i02",
+          "name": "大葱",
+          "normalized_name": "大葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "The query denotes raw Spring Onion; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-05-i03",
+          "name": "Ginger",
+          "normalized_name": "Ginger",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "The query denotes raw Ginger; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-06",
+      "name_en": "Potato and Kale Skillet",
+      "name_zh": "土豆甘蓝煎锅",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "skillet",
+      "cuisine_style": "Nordic",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-06-i01",
+          "name": "土豆",
+          "normalized_name": "土豆",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "The query denotes raw Potato; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-06-i02",
+          "name": "Kale",
+          "normalized_name": "Kale",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "250"
+          ],
+          "gold_note": "The query denotes raw Kale; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-06-i03",
+          "name": "Oil",
+          "normalized_name": "Oil",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "247"
+          ],
+          "gold_note": "The query denotes raw Oil; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-07",
+  "name_en": "Cauliflower Goat-Cheese and Leek Gratin",
+  "name_zh": "山羊奶酪韭葱花椰菜焗烤",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "bake",
+      "cuisine_style": "British",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-07-i01",
+          "name": "Cauliflower",
+          "normalized_name": "Cauliflower",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "190"
+          ],
+          "gold_note": "The query denotes raw Cauliflower; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-07-i02",
+          "name": "奶酪",
+          "normalized_name": "奶酪",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "424",
+            "426"
+          ],
+          "gold_note": "The query denotes raw Cheese; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-07-i03",
+      "name": "leek",
+      "normalized_name": "leek",
+      "input_language": "en",
+      "acceptable_item_ids": [
+        "20"
+      ],
+      "gold_note": "Leek is a plausible aromatic vegetable in this gratin."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-08",
+      "name_en": "Parsnip Leek Soup",
+      "name_zh": "防风草韭葱汤",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "soup",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-08-i01",
+          "name": "防风草",
+          "normalized_name": "防风草",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "24"
+          ],
+          "gold_note": "The query denotes raw Parsnip; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-08-i02",
+          "name": "Leek",
+          "normalized_name": "Leek",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "20"
+          ],
+          "gold_note": "The query denotes raw Leek; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-08-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "The query denotes raw Milk; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-09",
+      "name_en": "Salmon with Potato and Garden Greens",
+      "name_zh": "鲑鱼土豆绿叶菜盘",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "baked fish",
+      "cuisine_style": "Nordic",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-09-i01",
+          "name": "Salmon",
+          "normalized_name": "Salmon",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "139"
+          ],
+          "gold_note": "The query denotes raw Salmon; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-09-i02",
+          "name": "土豆",
+          "normalized_name": "土豆",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "The query denotes raw Potato; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-09-i03",
+          "name": "leafy greens",
+          "normalized_name": "leafy greens",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "22",
+            "250",
+            "278",
+            "300"
+          ],
+          "gold_note": "leafy greens is a broad category description; acceptable catalog IDs are plausible ingredient members of that category."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-10",
+      "name_en": "Blueberry Flour Scones",
+      "name_zh": "蓝莓小麦司康",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "bake",
+      "cuisine_style": "British",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-10-i01",
+          "name": "蓝莓",
+          "normalized_name": "蓝莓",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "258"
+          ],
+          "gold_note": "The query denotes raw Blueberry; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-10-i02",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "The query denotes raw Wheat Flour; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-10-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "The query denotes raw Egg; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-11",
+      "name_en": "Cranberry Apple Relish",
+      "name_zh": "蔓越莓苹果酱",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "relish",
+      "cuisine_style": "American",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-11-i01",
+          "name": "Cranberries",
+          "normalized_name": "Cranberries",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "282"
+          ],
+          "gold_note": "The query denotes raw Cranberries; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-11-i02",
+          "name": "苹果",
+          "normalized_name": "苹果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "613"
+          ],
+          "gold_note": "The query denotes raw Apple; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-11-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "The query denotes raw Sugar; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-12",
+      "name_en": "Hot-Pepper Tomato Sauce",
+      "name_zh": "辣椒番茄酱",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "sauce",
+      "cuisine_style": "Mexican",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-12-i01",
+          "name": "辣椒",
+          "normalized_name": "辣椒",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "260"
+          ],
+          "gold_note": "The query denotes raw Hot Pepper; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-12-i02",
+          "name": "Tomato",
+          "normalized_name": "Tomato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "The query denotes raw Tomato; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-12-i03",
+          "name": "Garlic",
+          "normalized_name": "Garlic",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "The query denotes raw Garlic; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-13",
+      "name_en": "Artichoke Leek Bake",
+      "name_zh": "洋蓟韭葱烤盘",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "bake",
+      "cuisine_style": "Italian",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-13-i01",
+          "name": "Artichoke",
+          "normalized_name": "Artichoke",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "274"
+          ],
+          "gold_note": "The query denotes raw Artichoke; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-13-i02",
+          "name": "韭葱",
+          "normalized_name": "韭葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "20"
+          ],
+          "gold_note": "The query denotes raw Leek; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-13-i03",
+          "name": "Cheese",
+          "normalized_name": "Cheese",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "424",
+            "426"
+          ],
+          "gold_note": "The query denotes raw Cheese; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-14",
+      "name_en": "Mango Rice Dessert",
+      "name_zh": "芒果大米甜品",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "dessert",
+      "cuisine_style": "Thai",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-14-i01",
+          "name": "芒果",
+          "normalized_name": "芒果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "834"
+          ],
+          "gold_note": "The query denotes raw Mango; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-14-i02",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "The query denotes raw Rice; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-14-i03",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "The query denotes raw Milk; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-15",
+      "name_en": "Taro Ginger Soup",
+      "name_zh": "芋头姜汤",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "soup",
+      "cuisine_style": "Hawaiian-inspired",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-15-i01",
+          "name": "芋头",
+          "normalized_name": "芋头",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "830"
+          ],
+          "gold_note": "The query denotes raw Taro Root; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-15-i02",
+          "name": "Ginger",
+          "normalized_name": "Ginger",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "829"
+          ],
+          "gold_note": "The query denotes raw Ginger; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-15-i03",
+          "name": "Seaweed",
+          "normalized_name": "Seaweed",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "152"
+          ],
+          "gold_note": "The query denotes raw Seaweed; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-16",
+      "name_en": "Blackberry Apple Tart",
+      "name_zh": "黑莓苹果挞",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "tart",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-16-i01",
+          "name": "Blackberry",
+          "normalized_name": "Blackberry",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "410"
+          ],
+          "gold_note": "The query denotes raw Blackberry; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-16-i02",
+          "name": "苹果",
+          "normalized_name": "苹果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "613"
+          ],
+          "gold_note": "The query denotes raw Apple; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-16-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "The query denotes raw Wheat Flour; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-17",
+      "name_en": "Apple and Hazelnut Bake",
+      "name_zh": "苹果榛子烤点",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "bake",
+      "cuisine_style": "German",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-17-i01",
+          "name": "苹果",
+          "normalized_name": "苹果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "613"
+          ],
+          "gold_note": "The query denotes raw Apple; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-17-i02",
+          "name": "Hazelnut",
+          "normalized_name": "Hazelnut",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "408"
+          ],
+          "gold_note": "The query denotes raw Hazelnut; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-17-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "The query denotes raw Egg; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-18",
+      "name_en": "Tomato Garlic Flatbread",
+      "name_zh": "番茄蒜香薄饼",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "flatbread",
+      "cuisine_style": "Italian",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-18-i01",
+          "name": "Tomato",
+          "normalized_name": "Tomato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "256"
+          ],
+          "gold_note": "The query denotes raw Tomato; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-18-i02",
+          "name": "蒜",
+          "normalized_name": "蒜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "248"
+          ],
+          "gold_note": "The query denotes raw Garlic; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-18-i03",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "The query denotes raw Wheat Flour; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-19",
+      "name_en": "Sardine Beet Salad",
+      "name_zh": "沙丁鱼甜菜沙拉",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "salad",
+      "cuisine_style": "Mediterranean",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-19-i01",
+          "name": "沙丁鱼",
+          "normalized_name": "沙丁鱼",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "131"
+          ],
+          "gold_note": "The query denotes raw Sardine; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-19-i02",
+          "name": "Beet",
+          "normalized_name": "Beet",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "284"
+          ],
+          "gold_note": "The query denotes raw Beet; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-19-i03",
+          "name": "Vinegar",
+          "normalized_name": "Vinegar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "419"
+          ],
+          "gold_note": "The query denotes raw Vinegar; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-20",
+      "name_en": "Red-Cabbage Spring-Onion Bowl",
+      "name_zh": "红叶卷心菜大葱碗",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "rice bowl",
+      "cuisine_style": "Korean",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-20-i01",
+          "name": "Red Cabbage",
+          "normalized_name": "Red Cabbage",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "266"
+          ],
+          "gold_note": "The query denotes raw Red Cabbage; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-20-i02",
+          "name": "大葱",
+          "normalized_name": "大葱",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "399"
+          ],
+          "gold_note": "The query denotes raw Spring Onion; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-20-i03",
+          "name": "Rice",
+          "normalized_name": "Rice",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "423"
+          ],
+          "gold_note": "The query denotes raw Rice; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-21",
+      "name_en": "Fiddlehead Potato Cakes",
+      "name_zh": "蕨菜土豆饼",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "savory cake",
+      "cuisine_style": "Japanese",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-21-i01",
+          "name": "蕨菜",
+          "normalized_name": "蕨菜",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "259"
+          ],
+          "gold_note": "The query denotes raw Fiddlehead Fern; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-21-i02",
+          "name": "Potato",
+          "normalized_name": "Potato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "The query denotes raw Potato; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-21-i03",
+          "name": "Egg",
+          "normalized_name": "Egg",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "174",
+            "176",
+            "180",
+            "182"
+          ],
+          "gold_note": "The query denotes raw Egg; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-22",
+      "name_en": "Tuna Corn Pepper Wraps",
+      "name_zh": "金枪鱼玉米辣椒卷",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "wrap",
+      "cuisine_style": "Mexican",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-22-i01",
+          "name": "Tuna",
+          "normalized_name": "Tuna",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "130"
+          ],
+          "gold_note": "The query denotes raw Tuna; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-22-i02",
+          "name": "玉米",
+          "normalized_name": "玉米",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "270"
+          ],
+          "gold_note": "The query denotes raw Corn; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-22-i03",
+          "name": "Hot Pepper",
+          "normalized_name": "Hot Pepper",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "260"
+          ],
+          "gold_note": "The query denotes raw Hot Pepper; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-23",
+      "name_en": "Wheat-Flour Apple Galette",
+      "name_zh": "小麦粉苹果薄挞",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "galette",
+      "cuisine_style": "French",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-23-i01",
+          "name": "Wheat Flour",
+          "normalized_name": "Wheat Flour",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "246"
+          ],
+          "gold_note": "The query denotes raw Wheat Flour; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-23-i02",
+          "name": "苹果",
+          "normalized_name": "苹果",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "613"
+          ],
+          "gold_note": "The query denotes raw Apple; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-23-i03",
+          "name": "Sugar",
+          "normalized_name": "Sugar",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "245"
+          ],
+          "gold_note": "The query denotes raw Sugar; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    },
+    {
+      "dish_id": "h66-raw_vs_prepared-24",
+      "name_en": "Corn and Milk Chowder",
+      "name_zh": "玉米牛奶浓汤",
+      "stratum": "raw_vs_prepared",
+      "dish_family": "soup",
+      "cuisine_style": "American",
+      "ingredients": [
+        {
+          "query_id": "h66-raw_vs_prepared-24-i01",
+          "name": "玉米",
+          "normalized_name": "玉米",
+          "input_language": "zh",
+          "acceptable_item_ids": [
+            "270"
+          ],
+          "gold_note": "The query denotes raw Corn; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-24-i02",
+          "name": "Milk",
+          "normalized_name": "Milk",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "184",
+            "186"
+          ],
+          "gold_note": "The query denotes raw Milk; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        },
+        {
+          "query_id": "h66-raw_vs_prepared-24-i03",
+          "name": "Potato",
+          "normalized_name": "Potato",
+          "input_language": "en",
+          "acceptable_item_ids": [
+            "192"
+          ],
+          "gold_note": "The query denotes raw Potato; the Gold ID is the ingredient object, not a similarly named prepared dish."
+        }
+      ]
+    }
+  ]
+}
