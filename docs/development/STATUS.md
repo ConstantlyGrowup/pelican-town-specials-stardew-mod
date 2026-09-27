@@ -6,16 +6,21 @@
 
 | 字段 | 值 |
 |---|---|
-| overall_state | v1_5_7_released |
+| overall_state | temp_jev_video_web_committed |
 | project_phase | 原料映射默认 RAG 链路已随 v1.5.7 正式发布；GitHub Actions 与正式 Release 资产均完成核验 |
 | product_implementation_started | true |
 | active_session_id | none |
-| active_session_state | released |
+| active_session_state | none |
 | active_session_type | none |
-| current_task | none；等待下一项用户授权工作 |
+| current_task | JEV 演示网页已验收；下一项为响应式布局任务规划与实施 |
 | blocker | 无；默认 RAG 切换已经用户授权（2026-09-24） |
-| next_action | 等待下一项用户授权工作；不自动启动新 Task 或 Milestone |
+| next_action | 2026-09-27 用户已验收 JEV 演示网页并授权提交推送；完成当前提交后开启独立响应式布局任务，先规划后实施。JEV 真实付费试跑仍由用户主动点击启动。 |
 | collaboration_model | 每 Task 新 `luna_worker`（gpt-6-luna/max）实施并执行合同测试；`detector`（gpt-6-sol/medium，只读）独立审阅。主 Agent 负责状态、组织、证据核对、集成与整体文档，不默认从头重跑完整测试；仅在证据缺失、冲突或集成异常时做最小定向检查。PASS → auto_accepted → 本地 focused commit |
+
+### 2026-09-27 JEV 演示网页验收
+
+- 用户明确接受临时 JEV 演示网页并授权提交推送当前 MVP 分支。32 题试跑与 720 题完整评测分开；真实调用仍由用户点击确认后触发，开发验收没有付费实跑。
+- 源码、冻结题集、说明与 Session 随 focused commit 收口；本地 `runs/`、浏览器缓存及截图保持忽略。下一项独立任务为产品页面响应式布局，需单独规划与实施。
 
 ### 2026-09-24 Task67 启动
 

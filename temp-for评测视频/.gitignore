@@ -1,0 +1,6 @@
+runs/
+__pycache__/
+.pytest_cache/
+test-run-*/
+chrome-profile*/
+preview.png

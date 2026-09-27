@@ -1,0 +1,19 @@
+{
+  "schema_version": "temp-jev-video-v1",
+  "dish_count": 120,
+  "ingredient_count": 360,
+  "case_count": 720,
+  "positive_count": 360,
+  "negative_count": 360,
+  "unique_state_count": 720,
+  "sha256": "5D847F6EF7593AC9BB4C953DFD4C9D766784B29F1FD76114A4B16B289EFC8A1E",
+  "source_sha256": {
+    "m14_ingredient_queries.json": "7B49E7B88393CCC627DD4AEC7545AC45FDAF4786081D2E9BCC973B202796EEB7",
+    "m14_ingredient_holdout_queries.json": "1E9B49077589E8A9B9699DD4FC140359DF1A9A6389D75C7911ACE4A14D92A25C",
+    "vanilla-ingredients.json": "4D07E9B3EE45670543C1BDCFFA69F84CC2FB2829C4DB4CF2BEFD273B36374E2B"
+  },
+  "seed": 20260925,
+  "label_status": "rule_curated_cross_category",
+  "negative_rule": "For Gold fish choose Wheat Flour/Tomato; otherwise choose Salmon/Anchovy. All are explicitly cross-category; not a hard-negative benchmark.",
+  "translation_rule": "ID 246 English Wheat Flour is authoritative despite Chinese display 大麦粉."
+}
